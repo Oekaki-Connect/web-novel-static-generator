@@ -124,21 +124,47 @@ def collect_tags_for_novel(novel_slug, language):
     return tags_data
 
 def extract_local_images(markdown_content):
-    """Extract local image references from markdown content"""
-    # Regex to match ![alt](path "title") or ![alt](path) 
-    image_pattern = r'!\[([^\]]*)\]\(([^)]+?)(?:\s+"([^"]*)")?\)'
-    matches = re.findall(image_pattern, markdown_content)
-    
+    """Extract local image references from markdown content and HTML img tags"""
     local_images = []
-    for alt_text, image_path, title in matches:
+    
+    # Regex to match ![alt](path "title") or ![alt](path) 
+    markdown_image_pattern = r'!\[([^\]]*)\]\(([^)]+?)(?:\s+"([^"]*)")?\)'
+    markdown_matches = re.findall(markdown_image_pattern, markdown_content)
+    
+    for alt_text, image_path, title in markdown_matches:
         # Only process if it looks like a local file (no http/https, no leading /)
         if not image_path.startswith(('http://', 'https://', '/')):
             local_images.append({
                 'alt': alt_text,
                 'original_path': image_path,
                 'title': title or '',
-                'full_match': f'![{alt_text}]({image_path}{"" if not title else f" \"{title}\""})'
+                'full_match': f'![{alt_text}]({image_path}{"" if not title else f" \"{title}\""})',
+                'type': 'markdown'
             })
+    
+    # Regex to match <img src="path" alt="alt" title="title" ... />
+    html_image_pattern = r'<img\s+[^>]*src\s*=\s*["\']([^"\']+)["\'][^>]*>'
+    html_matches = re.findall(html_image_pattern, markdown_content, re.IGNORECASE)
+    
+    for image_path in html_matches:
+        # Only process if it looks like a local file (no http/https, no leading /)
+        if not image_path.startswith(('http://', 'https://', '/')):
+            # Find the full img tag to replace later
+            full_match_pattern = r'<img\s+[^>]*src\s*=\s*["\']' + re.escape(image_path) + r'["\'][^>]*>'
+            full_match = re.search(full_match_pattern, markdown_content, re.IGNORECASE)
+            
+            if full_match:
+                # Extract alt text if present
+                alt_match = re.search(r'alt\s*=\s*["\']([^"\']*)["\']', full_match.group(0), re.IGNORECASE)
+                alt_text = alt_match.group(1) if alt_match else ''
+                
+                local_images.append({
+                    'alt': alt_text,
+                    'original_path': image_path,
+                    'title': '',  # HTML img tags don't typically use title in the same way
+                    'full_match': full_match.group(0),
+                    'type': 'html'
+                })
     
     return local_images
 
@@ -171,12 +197,21 @@ def process_chapter_images(novel_slug, chapter_id, language, markdown_content):
             
             # Update markdown content with new path (relative to the chapter page)
             new_image_path = f"../../../images/{novel_slug}/{chapter_id}/{image_filename}"
-            new_markdown = f"![{image_info['alt']}]({new_image_path}"
-            if image_info['title']:
-                new_markdown += f' "{image_info["title"]}"'
-            new_markdown += ")"
             
-            updated_content = updated_content.replace(image_info['full_match'], new_markdown)
+            if image_info['type'] == 'markdown':
+                # Handle markdown images
+                new_markdown = f"![{image_info['alt']}]({new_image_path}"
+                if image_info['title']:
+                    new_markdown += f' "{image_info["title"]}"'
+                new_markdown += ")"
+                updated_content = updated_content.replace(image_info['full_match'], new_markdown)
+            
+            elif image_info['type'] == 'html':
+                # Handle HTML img tags - replace the src attribute
+                old_src_pattern = r'src\s*=\s*["\'][^"\']*["\']'
+                new_src = f'src="{new_image_path}"'
+                new_img_tag = re.sub(old_src_pattern, new_src, image_info['full_match'], flags=re.IGNORECASE)
+                updated_content = updated_content.replace(image_info['full_match'], new_img_tag)
     
     return updated_content
 

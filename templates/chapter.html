@@ -24,7 +24,7 @@
                 {% if lang == current_language and not translation_missing %}
                     <span class="current-language">{{ lang|upper }}</span>
                 {% else %}
-                    <a href="../{{ lang }}/{{ chapter.id }}/">{{ lang|upper }}</a>
+                    <a href="../../{{ lang }}/{{ chapter.id }}/">{{ lang|upper }}</a>
                 {% endif %}
             {% endfor %}
         </div>
