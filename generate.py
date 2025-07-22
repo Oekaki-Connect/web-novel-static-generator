@@ -5,6 +5,9 @@ import markdown
 import yaml
 import re
 from pathlib import Path
+import hashlib
+import base64
+import json
 
 BUILD_DIR = "./build"
 CONTENT_DIR = "./content"
@@ -12,6 +15,27 @@ TEMPLATES_DIR = "./templates"
 STATIC_DIR = "./static"
 
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+
+def encrypt_content_with_password(content, password):
+    """Encrypt content using XOR with SHA256 hash of password"""
+    # Create SHA256 hash of password for consistent key
+    key = hashlib.sha256(password.encode('utf-8')).digest()
+    
+    # Convert content to bytes
+    content_bytes = content.encode('utf-8')
+    
+    # XOR encrypt
+    encrypted = bytearray()
+    for i, byte in enumerate(content_bytes):
+        encrypted.append(byte ^ key[i % len(key)])
+    
+    # Return base64 encoded encrypted content
+    return base64.b64encode(encrypted).decode('utf-8')
+
+def create_password_verification_hash(password):
+    """Create a verification hash that can be checked client-side"""
+    # Use a simple hash that can be reproduced in JavaScript
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()[:16]
 
 def load_site_config():
     """Load global site configuration"""
@@ -492,7 +516,23 @@ def build_site():
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
                     # Process chapter images and update markdown
                     chapter_content_md = process_chapter_images(novel_slug, chapter_id, lang, chapter_content_md)
-                    chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                    
+                    # Handle password protection
+                    is_password_protected = 'password' in chapter_metadata and chapter_metadata['password']
+                    encrypted_content = None
+                    password_hash = None
+                    password_hint = None
+                    
+                    if is_password_protected:
+                        # Encrypt the content
+                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        encrypted_content = encrypt_content_with_password(chapter_content_html, chapter_metadata['password'])
+                        password_hash = create_password_verification_hash(chapter_metadata['password'])
+                        password_hint = chapter_metadata.get('password_hint', 'This chapter is password protected.')
+                        # Set content to placeholder for password-protected chapters
+                        chapter_content_html = '<div id="password-protected-content" style="text-align: center; padding: 2rem;"><p>This chapter is password protected.</p></div>'
+                    else:
+                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     prev_chapter = all_chapters[i-1] if i > 0 else None
                     next_chapter = all_chapters[i+1] if i < len(all_chapters) - 1 else None
@@ -526,6 +566,10 @@ def build_site():
                                                 show_tags=show_tags,
                                                 show_metadata=show_metadata,
                                                 show_translation_notes=show_translation_notes,
+                                                is_password_protected=is_password_protected,
+                                                encrypted_content=encrypted_content,
+                                                password_hash=password_hash,
+                                                password_hint=password_hint,
                                                 site_name=site_config.get('site_name', 'Web Novel Collection'),
                                                 social_title=chapter_social_meta['title'],
                                                 social_description=chapter_social_meta['description'],
@@ -540,7 +584,23 @@ def build_site():
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
                     # Process chapter images and update markdown (using primary language)
                     chapter_content_md = process_chapter_images(novel_slug, chapter_id, primary_lang, chapter_content_md)
-                    chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                    
+                    # Handle password protection (same as above)
+                    is_password_protected = 'password' in chapter_metadata and chapter_metadata['password']
+                    encrypted_content = None
+                    password_hash = None
+                    password_hint = None
+                    
+                    if is_password_protected:
+                        # Encrypt the content
+                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        encrypted_content = encrypt_content_with_password(chapter_content_html, chapter_metadata['password'])
+                        password_hash = create_password_verification_hash(chapter_metadata['password'])
+                        password_hint = chapter_metadata.get('password_hint', 'This chapter is password protected.')
+                        # Set content to placeholder for password-protected chapters
+                        chapter_content_html = '<div id="password-protected-content" style="text-align: center; padding: 2rem;"><p>This chapter is password protected.</p></div>'
+                    else:
+                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     prev_chapter = all_chapters[i-1] if i > 0 else None
                     next_chapter = all_chapters[i+1] if i < len(all_chapters) - 1 else None
@@ -577,6 +637,10 @@ def build_site():
                                                 show_tags=show_tags,
                                                 show_metadata=show_metadata,
                                                 show_translation_notes=show_translation_notes,
+                                                is_password_protected=is_password_protected,
+                                                encrypted_content=encrypted_content,
+                                                password_hash=password_hash,
+                                                password_hint=password_hint,
                                                 site_name=site_config.get('site_name', 'Web Novel Collection'),
                                                 social_title=chapter_social_meta['title'],
                                                 social_description=chapter_social_meta['description'],

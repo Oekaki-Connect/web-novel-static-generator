@@ -94,3 +94,7 @@ arcs:
         title: "Chapter 5: The Test"
       - id: "chapter-6"
         title: "Chapter 6: Allies in Darkness"
+  - title: "Premium Content"
+    chapters:
+      - id: "chapter-premium"
+        title: "Chapter Premium: Early Access 🔒"

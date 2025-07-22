@@ -652,3 +652,137 @@ footer p {
     text-decoration: none;
 }
 
+/* Password protection styling */
+.password-protection {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin: 2rem auto;
+    padding: 0;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.password-form-container {
+    padding: 2rem;
+}
+
+.password-protection h3 {
+    margin: 0 0 1rem 0;
+    color: var(--color-heading);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.password-protection p {
+    margin: 0 0 1.5rem 0;
+    color: var(--color-secondary);
+    line-height: 1.5;
+}
+
+.password-input-group {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+    align-items: center;
+}
+
+.password-input-group input {
+    flex: 1;
+    max-width: 250px;
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: var(--font-body);
+    transition: border-color 0.2s ease;
+}
+
+.password-input-group input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.unlock-button {
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-family: var(--font-body);
+}
+
+.unlock-button:hover {
+    background-color: var(--color-primary-hover);
+}
+
+.password-message {
+    background-color: #e8f5e8;
+    color: #2d5a2d;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+    border: 1px solid #c3e6c3;
+}
+
+.password-message p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.password-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin: 0.5rem 0;
+    border: 1px solid #f5c6cb;
+    font-size: 0.9rem;
+}
+
+.password-help {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+    color: var(--color-secondary);
+}
+
+.password-help p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+/* Responsive password form */
+@media (max-width: 768px) {
+    .password-protection {
+        margin: 1rem;
+        max-width: none;
+    }
+    
+    .password-form-container {
+        padding: 1.5rem;
+    }
+    
+    .password-input-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .password-input-group input {
+        max-width: none;
+        width: 100%;
+    }
+    
+    .unlock-button {
+        width: 100%;
+    }
+}
+

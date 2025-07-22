@@ -48,6 +48,87 @@
     
     <!-- Canonical URL -->
     <link rel="canonical" href="{{ social_url }}">
+    
+    {% if is_password_protected %}
+    <script>
+        // Password decryption functionality
+        function sha256(str) {
+            // Simple SHA256 implementation for client-side verification
+            const msgBuffer = new TextEncoder().encode(str);
+            return crypto.subtle.digest('SHA-256', msgBuffer).then(hashBuffer => {
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            });
+        }
+
+        function xorDecrypt(encryptedBase64, password) {
+            // Recreate the SHA256 key from password
+            return sha256(password).then(hashHex => {
+                const key = new Uint8Array(hashHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                
+                // Decode base64
+                const encrypted = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0));
+                
+                // XOR decrypt
+                const decrypted = new Uint8Array(encrypted.length);
+                for (let i = 0; i < encrypted.length; i++) {
+                    decrypted[i] = encrypted[i] ^ key[i % key.length];
+                }
+                
+                // Convert back to string
+                return new TextDecoder().decode(decrypted);
+            });
+        }
+
+        function verifyPassword(password) {
+            return sha256(password).then(hash => {
+                return hash.substring(0, 16) === '{{ password_hash }}';
+            });
+        }
+
+        function unlockContent() {
+            const passwordInput = document.getElementById('password-input');
+            const password = passwordInput.value;
+            const errorMsg = document.getElementById('password-error');
+            const loadingMsg = document.getElementById('password-loading');
+            
+            if (!password) {
+                errorMsg.textContent = 'Please enter a password.';
+                errorMsg.style.display = 'block';
+                return;
+            }
+            
+            errorMsg.style.display = 'none';
+            loadingMsg.style.display = 'block';
+            
+            verifyPassword(password).then(isValid => {
+                loadingMsg.style.display = 'none';
+                
+                if (isValid) {
+                    xorDecrypt('{{ encrypted_content }}', password).then(decryptedContent => {
+                        document.getElementById('chapter-content-wrapper').innerHTML = decryptedContent;
+                        document.getElementById('password-protection-form').style.display = 'none';
+                    });
+                } else {
+                    errorMsg.textContent = 'Invalid password. Please try again.';
+                    errorMsg.style.display = 'block';
+                }
+            });
+        }
+
+        // Allow Enter key to unlock
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordInput = document.getElementById('password-input');
+            if (passwordInput) {
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        unlockContent();
+                    }
+                });
+            }
+        });
+    </script>
+    {% endif %}
 </head>
 <body>
     <header>
@@ -122,7 +203,32 @@
             <a href="../{{ primary_language }}/{{ chapter.id }}.html">Continue reading in {{ primary_language|upper }}</a> or help contribute a translation!</p>
         </div>
         {% endif %}
-        <div class="chapter-content">
+        
+        {% if is_password_protected %}
+        <div id="password-protection-form" class="password-protection">
+            <div class="password-form-container">
+                <h3>🔒 Password Protected Content</h3>
+                <p>{{ password_hint }}</p>
+                
+                <div class="password-input-group">
+                    <input type="password" id="password-input" placeholder="Enter password" />
+                    <button onclick="unlockContent()" class="unlock-button">Unlock</button>
+                </div>
+                
+                <div id="password-loading" class="password-message" style="display: none;">
+                    <p>🔓 Unlocking content...</p>
+                </div>
+                
+                <div id="password-error" class="password-error" style="display: none;"></div>
+                
+                <div class="password-help">
+                    <p><small>Having trouble? Make sure you have the correct password from your beta reader access or Patreon messages.</small></p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div id="chapter-content-wrapper" class="chapter-content">
             {{ chapter_content | safe }}
         </div>
         
