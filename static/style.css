@@ -1,0 +1,146 @@
+/* Basic styling for the web novel site */
+
+body {
+    font-family: 'Georgia', serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+}
+
+header h1 a {
+    color: white;
+    text-decoration: none;
+}
+
+header h2 {
+    margin: 0.5rem 0 0 0;
+    font-weight: normal;
+}
+
+nav {
+    margin-bottom: 1rem;
+}
+
+nav a {
+    color: #3498db;
+    text-decoration: none;
+    margin: 0 1rem;
+    padding: 0.5rem;
+    border: 1px solid #3498db;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+nav a:hover {
+    background-color: #3498db;
+    color: white;
+}
+
+main {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.arc {
+    margin-bottom: 2rem;
+}
+
+.arc h3 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 0.5rem;
+}
+
+.arc ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.arc li {
+    margin: 0.5rem 0;
+}
+
+.arc a {
+    color: #3498db;
+    text-decoration: none;
+    padding: 0.5rem;
+    display: block;
+    border-left: 3px solid transparent;
+    transition: border-left-color 0.3s;
+}
+
+.arc a:hover {
+    border-left-color: #3498db;
+    background-color: #ecf0f1;
+}
+
+.chapter-content {
+    padding: 2rem;
+}
+
+.chapter-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1rem auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+footer {
+    background-color: #34495e;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+    margin-top: 2rem;
+}
+
+footer nav {
+    margin-bottom: 1rem;
+}
+
+footer nav a {
+    color: #ecf0f1;
+    border-color: #ecf0f1;
+}
+
+footer nav a:hover {
+    background-color: #ecf0f1;
+    color: #34495e;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    main {
+        margin: 1rem;
+        padding: 0 0.5rem;
+    }
+    
+    .chapter-content {
+        padding: 1rem;
+    }
+    
+    nav a {
+        display: block;
+        margin: 0.5rem 0;
+        text-align: center;
+    }
+}
+

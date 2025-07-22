@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ chapter_title }}</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            {% if prev_chapter %}
+            <a href="{{ prev_chapter.id }}.html">Previous Chapter</a>
+            {% endif %}
+            <a href="toc.html">Table of Contents</a>
+            {% if next_chapter %}
+            <a href="{{ next_chapter.id }}.html">Next Chapter</a>
+            {% endif %}
+        </nav>
+        <h1>{{ chapter_title }}</h1>
+    </header>
+    <main>
+        <div class="chapter-content">
+            {{ chapter_content | safe }}
+        </div>
+    </main>
+    <footer>
+        <nav>
+            {% if prev_chapter %}
+            <a href="{{ prev_chapter.id }}.html">Previous Chapter</a>
+            {% endif %}
+            <a href="toc.html">Table of Contents</a>
+            {% if next_chapter %}
+            <a href="{{ next_chapter.id }}.html">Next Chapter</a>
+            {% endif %}
+        </nav>
+        <p>&copy; 2025 My Web Novel</p>
+    </footer>
+</body>
+</html>
+

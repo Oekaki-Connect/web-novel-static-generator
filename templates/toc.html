@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table of Contents - {{ novel.title }}</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <header>
+        <h1><a href="index.html">{{ novel.title }}</a></h1>
+        <h2>Table of Contents</h2>
+    </header>
+    <main>
+        {% for arc in novel.arcs %}
+        <section class="arc">
+            <h3>{{ arc.title }}</h3>
+            <ul>
+                {% for chapter in arc.chapters %}
+                <li><a href="{{ chapter.id }}.html">{{ chapter.title }}</a></li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endfor %}
+    </main>
+    <footer>
+        <p>&copy; 2025 My Web Novel</p>
+    </footer>
+</body>
+</html>
+
