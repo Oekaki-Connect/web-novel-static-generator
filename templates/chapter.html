@@ -30,6 +30,46 @@
         </div>
         {% endif %}
         <h1>{{ chapter_title }}</h1>
+        
+        {% if chapter_metadata %}
+        <div class="chapter-metadata">
+            {% if chapter_metadata.author %}
+            <div class="metadata-item">
+                <strong>Author:</strong> {{ chapter_metadata.author }}
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.translator %}
+            <div class="metadata-item">
+                <strong>Translator:</strong> {{ chapter_metadata.translator }}
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.published %}
+            <div class="metadata-item">
+                <strong>Published:</strong> {{ chapter_metadata.published }}
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.tags %}
+            <div class="metadata-item">
+                <strong>Tags:</strong>
+                <div class="tags">
+                    {% for tag in chapter_metadata.tags %}
+                    <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.translation_notes %}
+            <div class="metadata-item translation-notes">
+                <strong>Translation Notes:</strong>
+                <p>{{ chapter_metadata.translation_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
     </header>
     <main>
         {% if translation_missing %}
@@ -42,6 +82,15 @@
         <div class="chapter-content">
             {{ chapter_content | safe }}
         </div>
+        
+        {% if chapter_metadata.translator_commentary %}
+        <div class="translator-commentary">
+            <h3>Translator's Commentary</h3>
+            <div class="commentary-content">
+                {{ chapter_metadata.translator_commentary | safe }}
+            </div>
+        </div>
+        {% endif %}
     </main>
     <footer>
         <nav>

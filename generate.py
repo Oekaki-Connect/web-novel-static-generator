@@ -3,6 +3,7 @@ import shutil
 from jinja2 import Environment, FileSystemLoader
 import markdown
 import yaml
+import re
 
 BUILD_DIR = "./build"
 CONTENT_DIR = "./content"
@@ -12,20 +13,24 @@ STATIC_DIR = "./static"
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
 def load_chapter_content(novel_slug, chapter_id, language='en'):
-    """Load chapter content from markdown file with language support"""
+    """Load chapter content from markdown file with language support and front matter parsing"""
     # Try language-specific file first
     chapter_file = os.path.join(CONTENT_DIR, novel_slug, "chapters", language, f"{chapter_id}.md")
     if os.path.exists(chapter_file):
         with open(chapter_file, 'r', encoding='utf-8') as f:
-            return f.read()
+            content = f.read()
+            front_matter, markdown_content = parse_front_matter(content)
+            return markdown_content, front_matter
     
     # Fallback to default language file (in root chapters folder)
     chapter_file = os.path.join(CONTENT_DIR, novel_slug, "chapters", f"{chapter_id}.md")
     if os.path.exists(chapter_file):
         with open(chapter_file, 'r', encoding='utf-8') as f:
-            return f.read()
+            content = f.read()
+            front_matter, markdown_content = parse_front_matter(content)
+            return markdown_content, front_matter
     
-    return f"# {chapter_id}\n\nContent not found for language: {language}."
+    return f"# {chapter_id}\n\nContent not found for language: {language}.", {}
 
 def get_available_languages(novel_slug):
     """Get list of available languages for a novel"""
@@ -44,6 +49,23 @@ def chapter_translation_exists(novel_slug, chapter_id, language):
     """Check if a chapter translation exists for a specific language"""
     chapter_file = os.path.join(CONTENT_DIR, novel_slug, "chapters", language, f"{chapter_id}.md")
     return os.path.exists(chapter_file)
+
+def parse_front_matter(content):
+    """Parse YAML front matter from markdown content"""
+    front_matter_pattern = r'^---\s*\n(.*?)\n---\s*\n(.*)$'
+    match = re.match(front_matter_pattern, content, re.DOTALL)
+    
+    if match:
+        try:
+            front_matter = yaml.safe_load(match.group(1))
+            markdown_content = match.group(2)
+            return front_matter or {}, markdown_content
+        except yaml.YAMLError:
+            # If YAML parsing fails, treat the whole thing as markdown
+            return {}, content
+    else:
+        # No front matter found
+        return {}, content
 
 def load_novels_data():
     """Load all novels from the content directory"""
@@ -157,36 +179,44 @@ def build_site():
                 
                 if translation_exists:
                     # Generate normal chapter page
-                    chapter_content_md = load_chapter_content(novel_slug, chapter_id, lang)
+                    chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
                     chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     prev_chapter = all_chapters[i-1] if i > 0 else None
                     next_chapter = all_chapters[i+1] if i < len(all_chapters) - 1 else None
 
+                    # Use front matter title if available, otherwise use chapter title from config
+                    display_title = chapter_metadata.get('title', chapter_title)
+                    
                     with open(os.path.join(lang_dir, f"{chapter_id}.html"), "w", encoding='utf-8') as f:
                         f.write(render_template("chapter.html", 
                                                 novel=novel,
                                                 chapter=chapter,
-                                                chapter_title=chapter_title,
+                                                chapter_title=display_title,
                                                 chapter_content=chapter_content_html,
+                                                chapter_metadata=chapter_metadata,
                                                 prev_chapter=prev_chapter,
                                                 next_chapter=next_chapter,
                                                 current_language=lang,
                                                 available_languages=available_languages))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
-                    chapter_content_md = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                    chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
                     chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     prev_chapter = all_chapters[i-1] if i > 0 else None
                     next_chapter = all_chapters[i+1] if i < len(all_chapters) - 1 else None
 
+                    # Use front matter title if available, otherwise use chapter title from config
+                    display_title = chapter_metadata.get('title', chapter_title)
+                    
                     with open(os.path.join(lang_dir, f"{chapter_id}.html"), "w", encoding='utf-8') as f:
                         f.write(render_template("chapter.html", 
                                                 novel=novel,
                                                 chapter=chapter,
-                                                chapter_title=chapter_title,
+                                                chapter_title=display_title,
                                                 chapter_content=chapter_content_html,
+                                                chapter_metadata=chapter_metadata,
                                                 prev_chapter=prev_chapter,
                                                 next_chapter=next_chapter,
                                                 current_language=lang,

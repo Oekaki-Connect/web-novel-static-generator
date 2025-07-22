@@ -245,3 +245,87 @@ footer nav a:hover {
     color: white;
 }
 
+/* Chapter metadata styling */
+.chapter-metadata {
+    background-color: #ecf0f1;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+    font-size: 0.9rem;
+}
+
+.metadata-item {
+    margin-bottom: 0.5rem;
+}
+
+.metadata-item:last-child {
+    margin-bottom: 0;
+}
+
+.metadata-item strong {
+    color: #2c3e50;
+}
+
+/* Tags styling */
+.tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.tag {
+    background-color: #3498db;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Translation notes styling */
+.translation-notes {
+    background-color: #e8f4fd;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+    margin: 0.5rem 0;
+}
+
+.translation-notes p {
+    margin: 0.25rem 0 0 0;
+    font-style: italic;
+    color: #2c3e50;
+}
+
+/* Translator commentary styling */
+.translator-commentary {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin: 2rem 0;
+    padding: 1.5rem;
+}
+
+.translator-commentary h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+.commentary-content {
+    line-height: 1.6;
+    color: #495057;
+}
+
+.commentary-content p {
+    margin-bottom: 1rem;
+}
+
+.commentary-content p:last-child {
+    margin-bottom: 0;
+}
+
