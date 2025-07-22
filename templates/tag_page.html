@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tag: {{ tag_name }} - {{ novel.title }}</title>
+    <link rel="stylesheet" href="../../../../static/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="../">← All Tags</a>
+            <a href="../../toc.html">← Table of Contents</a>
+        </nav>
+        <h1>{{ novel.title }}</h1>
+        {% if available_languages and available_languages|length > 1 %}
+        <div class="language-switcher">
+            <h3>Languages:</h3>
+            {% for lang in available_languages %}
+                {% if lang == current_language %}
+                    <span class="current-language">{{ lang|upper }}</span>
+                {% else %}
+                    <a href="../../../{{ lang }}/tags/{{ tag_slug }}/">{{ lang|upper }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        <h2>Tag: <span class="tag-name">{{ tag_name }}</span></h2>
+    </header>
+    <main>
+        <div class="tag-chapters">
+            <p class="tag-description">{{ chapters|length }} chapter{{ 's' if chapters|length != 1 else '' }} tagged with "{{ tag_name }}"</p>
+            
+            <div class="chapter-list">
+                {% for chapter in chapters %}
+                <div class="chapter-item">
+                    <h3><a href="../../{{ chapter.id }}.html">{{ chapter.title }}</a></h3>
+                    <span class="chapter-id">{{ chapter.id }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+    <footer>
+        <p>&copy; 2025 {{ novel.title }}</p>
+    </footer>
+</body>
+</html>

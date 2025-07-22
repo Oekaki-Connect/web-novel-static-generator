@@ -56,7 +56,7 @@
                 <strong>Tags:</strong>
                 <div class="tags">
                     {% for tag in chapter_metadata.tags %}
-                    <span class="tag">{{ tag }}</span>
+                    <a href="tags/{{ tag|slugify_tag }}/" class="tag">{{ tag }}</a>
                     {% endfor %}
                 </div>
             </div>
