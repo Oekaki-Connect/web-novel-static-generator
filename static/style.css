@@ -21,6 +21,41 @@
     --shadow-md: none;
 }
 
+/* Dark mode color scheme */
+[data-theme="dark"] {
+    --color-base: #2d2d2d;
+    --color-contrast: #e0e0e0;
+    --color-heading: #f0f0f0;
+    --color-primary: #ffffff;
+    --color-primary-hover: #cccccc;
+    --color-secondary: #b0b0b0;
+    --color-accent: #3a3a3a;
+}
+
+/* Auto dark mode based on system preference */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-base: #2d2d2d;
+        --color-contrast: #e0e0e0;
+        --color-heading: #f0f0f0;
+        --color-primary: #ffffff;
+        --color-primary-hover: #cccccc;
+        --color-secondary: #b0b0b0;
+        --color-accent: #3a3a3a;
+    }
+    
+    /* Override auto dark mode if user has manually set light mode */
+    [data-theme="light"] {
+        --color-base: #f9f9f9;
+        --color-contrast: #333333;
+        --color-heading: #222222;
+        --color-primary: #111111;
+        --color-primary-hover: #333333;
+        --color-secondary: #666666;
+        --color-accent: #f7f7f7;
+    }
+}
+
 body {
     font-family: var(--font-body);
     font-size: 16px;
@@ -783,6 +818,354 @@ footer p {
     
     .unlock-button {
         width: 100%;
+    }
+}
+
+/* Footer styling */
+.footer-links {
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.footer-links a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    font-size: 14px;
+    margin: 0 1rem;
+    display: inline-block;
+}
+
+.footer-links a:hover {
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
+.footer-additional {
+    font-size: 12px;
+    color: var(--color-secondary);
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .footer-links a {
+        display: block;
+        margin: 0.5rem 0;
+    }
+}
+
+/* Dark mode toggle styling */
+.theme-toggle-container {
+    text-align: center;
+    margin-top: 1rem;
+    padding: 0.5rem;
+    font-size: 14px;
+}
+
+.theme-toggle-text {
+    color: var(--color-secondary);
+}
+
+.theme-option {
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--color-secondary);
+    font-weight: normal;
+}
+
+.theme-option.active {
+    font-weight: bold;
+    color: var(--color-primary);
+}
+
+.theme-option:hover {
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
+/* Dark mode specific styling adjustments */
+[data-theme="dark"] .chapter-metadata {
+    background-color: #3a3a3a;
+    border-color: #555555;
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .metadata-item strong {
+    color: var(--color-heading);
+}
+
+[data-theme="dark"] .translation-notes {
+    background-color: #3a3a3a;
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .translation-notes p {
+    color: var(--color-secondary);
+}
+
+[data-theme="dark"] .translator-commentary {
+    background-color: #3a3a3a;
+    border-color: #555555;
+}
+
+[data-theme="dark"] .translator-commentary h3 {
+    color: var(--color-heading);
+    border-bottom-color: #555555;
+}
+
+[data-theme="dark"] .commentary-content {
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .tag-card {
+    background-color: var(--color-accent);
+    border-color: #555555;
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .tag-description {
+    background-color: #3a3a3a;
+    color: var(--color-secondary);
+    border-left-color: #666666;
+}
+
+[data-theme="dark"] .chapter-item {
+    background-color: var(--color-accent);
+    border-color: #555555;
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .password-protection {
+    background-color: #3a3a3a;
+    border-color: #555555;
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .password-input-group input {
+    background-color: var(--color-base);
+    border-color: #555555;
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .password-input-group input:focus {
+    border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .translation-notice {
+    background-color: #b8860b;
+    border-left-color: #daa520;
+}
+
+[data-theme="dark"] .tag {
+    background-color: #555555;
+    color: #e0e0e0;
+    border-color: #555555;
+}
+
+[data-theme="dark"] .tag:hover {
+    background-color: #666666;
+    border-color: #666666;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .tags-link {
+    background-color: #555555;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .tags-link:hover {
+    background-color: #666666;
+    color: #e0e0e0;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chapter-metadata {
+        background-color: #3a3a3a;
+        border-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .metadata-item strong {
+        color: #f0f0f0;
+    }
+    
+    .translation-notes {
+        background-color: #3a3a3a;
+        color: #e0e0e0;
+    }
+    
+    .translation-notes p {
+        color: #b0b0b0;
+    }
+    
+    .translator-commentary {
+        background-color: #3a3a3a;
+        border-color: #555555;
+    }
+    
+    .translator-commentary h3 {
+        color: #f0f0f0;
+        border-bottom-color: #555555;
+    }
+    
+    .commentary-content {
+        color: #e0e0e0;
+    }
+    
+    .tag-card {
+        background-color: #3a3a3a;
+        border-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .tag-description {
+        background-color: #3a3a3a;
+        color: #b0b0b0;
+        border-left-color: #666666;
+    }
+    
+    .chapter-item {
+        background-color: #3a3a3a;
+        border-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .password-protection {
+        background-color: #3a3a3a;
+        border-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .password-input-group input {
+        background-color: #2d2d2d;
+        border-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .password-input-group input:focus {
+        border-color: #ffffff;
+    }
+    
+    .translation-notice {
+        background-color: #b8860b;
+        border-left-color: #daa520;
+    }
+    
+    /* Override auto dark mode if user has manually set light mode */
+    [data-theme="light"] .chapter-metadata {
+        background-color: #f5f5f5;
+        border-color: #e0e0e0;
+        color: #333333;
+    }
+    
+    [data-theme="light"] .metadata-item strong {
+        color: #2c3e50;
+    }
+    
+    [data-theme="light"] .translation-notes {
+        background-color: #f5f5f5;
+        color: #333333;
+    }
+    
+    [data-theme="light"] .translation-notes p {
+        color: #2c3e50;
+    }
+    
+    [data-theme="light"] .translator-commentary {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+    }
+    
+    [data-theme="light"] .translator-commentary h3 {
+        color: #2c3e50;
+        border-bottom-color: #e9ecef;
+    }
+    
+    [data-theme="light"] .commentary-content {
+        color: #495057;
+    }
+    
+    [data-theme="light"] .tag-card {
+        background-color: white;
+        border-color: #dee2e6;
+        color: #333333;
+    }
+    
+    [data-theme="light"] .tag-description {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        border-left-color: #ccc;
+    }
+    
+    [data-theme="light"] .chapter-item {
+        background-color: white;
+        border-color: #dee2e6;
+        color: #333333;
+    }
+    
+    [data-theme="light"] .password-protection {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        color: #333333;
+    }
+    
+    [data-theme="light"] .password-input-group input {
+        background-color: white;
+        border-color: #dee2e6;
+        color: #333333;
+    }
+    
+    [data-theme="light"] .password-input-group input:focus {
+        border-color: #111111;
+    }
+    
+    [data-theme="light"] .translation-notice {
+        background-color: #f39c12;
+        border-left-color: #e67e22;
+    }
+    
+    .tag {
+        background-color: #555555;
+        color: #e0e0e0;
+        border-color: #555555;
+    }
+    
+    .tag:hover {
+        background-color: #666666;
+        border-color: #666666;
+        color: #e0e0e0;
+    }
+    
+    .tags-link {
+        background-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .tags-link:hover {
+        background-color: #666666;
+        color: #e0e0e0;
+    }
+    
+    /* Override auto dark mode if user has manually set light mode */
+    [data-theme="light"] .tag {
+        background-color: #111111;
+        color: white;
+        border-color: #111111;
+    }
+    
+    [data-theme="light"] .tag:hover {
+        background-color: #333333;
+        border-color: #333333;
+        color: white;
+    }
+    
+    [data-theme="light"] .tags-link {
+        background-color: #111111;
+        color: white;
+    }
+    
+    [data-theme="light"] .tags-link:hover {
+        background-color: #333333;
+        color: white;
     }
 }
 

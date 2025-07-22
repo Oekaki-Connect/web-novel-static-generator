@@ -98,3 +98,5 @@ arcs:
     chapters:
       - id: "chapter-premium"
         title: "Chapter Premium: Early Access 🔒"
+      - id: "chapter-hidden"
+        title: "Chapter Hidden: Secret Interlude 👁️"

@@ -17,6 +17,14 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Clean URLs**: SEO-friendly URLs without .html extensions
 - **Responsive Design**: Mobile-friendly layout
 - **GitHub Integration**: Automated deployment via GitHub Actions
+- **Password Protection**: Secure premium/beta content with client-side encryption
+- **Hidden Chapters**: Chapters accessible only by direct link (not in navigation)
+- **Footer System**: Consistent footers with story-specific customization
+- **Dark Mode Toggle**: System-aware dark/light theme with localStorage persistence
+- **RSS Feeds**: Automatic RSS generation for site and individual stories
+- **Comments System**: Integrated Utterances comments with theme switching
+- **robots.txt Generation**: Automatic SEO indexing control
+- **Sitemap Generation**: XML sitemaps for search engine optimization
 
 ## Project Structure
 
@@ -37,6 +45,7 @@ web-novel-generator/
 │   └── tag_page.html          # Individual tag page template
 ├── static/
 │   ├── style.css              # Main stylesheet
+│   ├── theme-toggle.js        # Dark mode toggle functionality
 │   └── images/                # Image assets
 ├── build/                     # Generated site (auto-created)
 ├── site_config.yaml           # Site-wide configuration
@@ -73,6 +82,27 @@ social_embeds:
 # SEO settings
 seo:
   allow_indexing: true
+
+# Footer configuration
+footer:
+  copyright: "© 2025 Your Web Novel Collection"
+  links:
+    - text: "Privacy Policy"
+      url: "/privacy/"
+    - text: "Contact"
+      url: "/contact/"
+
+# Comments system (Utterances)
+comments:
+  enabled: true
+  repo: "your-username/your-comments-repo"
+  issue_term: "pathname"
+  label: "utterance-comment"
+
+# RSS feed settings
+rss:
+  enabled: true
+  max_items: 20
 ```
 
 ### 3. Configure Your Novel
@@ -103,6 +133,19 @@ social_embeds:
 seo:
   allow_indexing: true
   meta_description: "Read Your Awesome Novel - an epic fantasy web novel"
+
+# Comments configuration for this story
+comments:
+  enabled: true  # Enable comments on TOC and chapters
+
+# Custom footer for this story (optional)
+footer:
+  copyright: "© 2025 Your Awesome Novel - Original work by Author Name"
+  links:
+    - text: "Support the Author"
+      url: "https://ko-fi.com/author"
+    - text: "Original Source"
+      url: "https://example.com/original"
 ```
 
 ### 4. Add Chapter Content
@@ -116,6 +159,10 @@ author: "Original Author"
 published: "2025-01-15"
 tags: ["adventure", "magic", "prophecy"]
 translation_notes: "Cultural context about specific terms"
+hidden: false          # Set to true to hide from navigation (accessible by direct link only)
+password: "secret123"   # Optional: password protect this chapter
+password_hint: "Available for beta readers and Patreon supporters. Check your email for the password."
+comments: true          # Enable/disable comments for this chapter
 
 # Social media settings for this chapter
 social_embeds:
@@ -236,6 +283,134 @@ Chapters are displayed in the order they appear in the `chapters` array within e
 
 ## Advanced Features
 
+### Password Protection
+
+Secure premium or beta content with client-side encryption:
+
+```markdown
+---
+title: "Premium Chapter: Early Access"
+password: "your-secret-password"
+password_hint: "Available for beta readers and Patreon supporters. Check your email for the password."
+---
+
+Your premium content here...
+```
+
+**Features:**
+- Client-side XOR encryption with SHA256 password hashing
+- Custom password hints for users
+- Encrypted content is never sent to unauthorized users
+- Works without server-side processing
+
+### Hidden Chapters
+
+Create chapters accessible only by direct link:
+
+```markdown
+---
+title: "Secret Chapter"
+hidden: true
+---
+
+This chapter won't appear in navigation but can be accessed directly.
+```
+
+**Use Cases:**
+- Easter eggs and bonus content
+- Beta reader exclusive chapters
+- Special event content
+- Author notes or behind-the-scenes content
+
+### Comments System
+
+Integrated Utterances comments that automatically sync with your dark mode:
+
+**Site Configuration:**
+```yaml
+comments:
+  enabled: true
+  repo: "your-username/your-comments-repo"
+  issue_term: "pathname"
+  label: "utterance-comment"
+```
+
+**Chapter Control:**
+```markdown
+---
+comments: false  # Disable comments for this chapter
+---
+```
+
+**Features:**
+- GitHub-based comment system
+- Automatic theme switching (light/dark)
+- Story-level and chapter-level control
+- No comments on password-protected content
+
+### Dark Mode Toggle
+
+System-aware dark/light theme with user preference persistence:
+
+**Features:**
+- Detects system theme preference automatically
+- Footer text toggle: "[ light mode | dark mode ]"
+- Active mode shown in bold
+- Saves preference in localStorage
+- Switches Utterances comment themes automatically
+- Optimized dark mode styling for all UI elements
+
+### RSS Feeds
+
+Automatic RSS feed generation for content syndication:
+
+**Generated Files:**
+- `/rss.xml` - Site-wide feed with latest chapters from all stories
+- `/story-name/rss.xml` - Story-specific feeds
+
+**Features:**
+- Configurable maximum items per feed
+- Proper RSS 2.0 format with metadata
+- Automatic chapter descriptions and links
+- Story-specific feeds for targeted subscriptions
+
+### robots.txt and Sitemap
+
+Automatic SEO optimization files:
+
+**robots.txt:**
+- Controls search engine indexing
+- Respects `allow_indexing` settings in config files
+- Links to sitemap for better discovery
+
+**sitemap.xml:**
+- Comprehensive XML sitemap
+- All public pages included
+- Proper priority and change frequency settings
+- Supports search engine optimization
+
+### Footer System
+
+Consistent footers with story-specific customization:
+
+**Site-level Footer:**
+```yaml
+footer:
+  copyright: "© 2025 Your Website"
+  links:
+    - text: "Privacy Policy"
+      url: "/privacy/"
+```
+
+**Story-level Override:**
+```yaml
+footer:
+  copyright: "© 2025 Story Title - Original work by Author"
+  links:
+    - text: "Support the Author"
+      url: "https://ko-fi.com/author"
+```
+
 ### Chapter Front Matter
 
 Add metadata to your chapters using YAML front matter:
@@ -267,6 +442,10 @@ Your chapter content here...
 - `tags`: Array of tags for categorization
 - `translation_notes`: Cultural/linguistic context
 - `translator_commentary`: Extended commentary displayed at chapter end
+- `hidden`: Hide chapter from navigation (accessible by direct link only)
+- `password`: Password protect the chapter content
+- `password_hint`: Hint text shown to users for password-protected content
+- `comments`: Enable/disable comments for this specific chapter
 - `social_embeds`: Social media sharing configuration
   - `image`: Custom social media image
   - `description`: Social media description
@@ -367,7 +546,8 @@ This generator is provided as-is for creating web novel sites. Customize as need
 Feel free to extend this generator with additional features:
 - Search functionality
 - Reading progress tracking
-- Dark/light theme toggle
 - Chapter bookmarking
-- RSS feeds for updates
+- User authentication system
+- Advanced analytics
+- Email newsletter integration
 

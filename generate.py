@@ -37,6 +37,357 @@ def create_password_verification_hash(password):
     # Use a simple hash that can be reproduced in JavaScript
     return hashlib.sha256(password.encode('utf-8')).hexdigest()[:16]
 
+def build_footer_content(site_config, novel_config=None, page_type='site'):
+    """Build footer content based on site and story configurations"""
+    footer_data = {}
+    
+    # Determine copyright text
+    if novel_config and novel_config.get('footer', {}).get('custom_text'):
+        footer_data['copyright'] = novel_config['footer']['custom_text']
+    elif novel_config and novel_config.get('copyright'):
+        footer_data['copyright'] = novel_config['copyright']
+    else:
+        site_name = site_config.get('site_name', 'Web Novel Collection')
+        footer_data['copyright'] = f"© 2025 {site_name}"
+    
+    # Build footer links
+    footer_links = []
+    
+    # Add story-specific links if available
+    if novel_config and novel_config.get('footer', {}).get('links'):
+        footer_links.extend(novel_config['footer']['links'])
+    
+    # Add site-wide footer links if available
+    if site_config.get('footer', {}).get('links'):
+        footer_links.extend(site_config['footer']['links'])
+    
+    footer_data['links'] = footer_links
+    
+    # Add additional footer text
+    if site_config.get('footer', {}).get('additional_text'):
+        footer_data['additional_text'] = site_config['footer']['additional_text']
+    
+    return footer_data
+
+def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=None):
+    """Generate RSS feed for site or specific story"""
+    from datetime import datetime
+    
+    site_url = site_config.get('site_url', '').rstrip('/')
+    site_name = site_config.get('site_name', 'Web Novel Collection')
+    
+    if novel_config and novel_slug:
+        # Story-specific RSS feed
+        feed_title = novel_config.get('title', 'Web Novel')
+        feed_description = novel_config.get('description', 'Web Novel RSS Feed')
+        feed_link = f"{site_url}/{novel_slug}/"
+        feed_items = []
+        
+        # Get chapters for this novel
+        available_languages = get_available_languages(novel_slug)
+        primary_lang = novel_config.get('primary_language', 'en')
+        
+        all_chapters = []
+        for arc in novel_config.get("arcs", []):
+            all_chapters.extend(arc.get("chapters", []))
+        
+        # Sort chapters by published date (most recent first)
+        chapter_items = []
+        for chapter in all_chapters:
+            chapter_id = chapter["id"]
+            try:
+                chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                
+                # Skip hidden chapters, password-protected, or non-indexed chapters
+                if (is_chapter_hidden(chapter_metadata) or 
+                    ('password' in chapter_metadata and chapter_metadata['password']) or
+                    chapter_metadata.get('seo', {}).get('allow_indexing') is False):
+                    continue
+                
+                published_date = chapter_metadata.get('published')
+                if published_date:
+                    try:
+                        pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
+                        chapter_items.append({
+                            'id': chapter_id,
+                            'title': chapter_metadata.get('title', chapter['title']),
+                            'link': f"{site_url}/{novel_slug}/{primary_lang}/{chapter_id}/",
+                            'description': chapter_metadata.get('social_embeds', {}).get('description', ''),
+                            'pub_date': pub_datetime,
+                            'content': convert_markdown_to_html(chapter_content_md[:500] + '...' if len(chapter_content_md) > 500 else chapter_content_md)
+                        })
+                    except:
+                        pass  # Skip chapters with invalid dates
+            except:
+                continue
+        
+        # Sort by date (newest first) and take latest 20
+        chapter_items.sort(key=lambda x: x['pub_date'], reverse=True)
+        feed_items = chapter_items[:20]
+        
+    else:
+        # Site-wide RSS feed
+        feed_title = site_name
+        feed_description = site_config.get('site_description', 'Web Novel Collection RSS Feed')
+        feed_link = site_url
+        feed_items = []
+        
+        # Collect recent chapters from all novels
+        all_chapter_items = []
+        for novel in novels_data:
+            novel_slug = novel['slug']
+            novel_config = load_novel_config(novel_slug)
+            
+            # Skip novels that don't allow indexing
+            if novel_config.get('seo', {}).get('allow_indexing') is False:
+                continue
+            
+            primary_lang = novel_config.get('primary_language', 'en')
+            
+            all_chapters = []
+            for arc in novel.get("arcs", []):
+                all_chapters.extend(arc.get("chapters", []))
+            
+            for chapter in all_chapters:
+                chapter_id = chapter["id"]
+                try:
+                    chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                    
+                    # Skip hidden, password-protected, or non-indexed chapters
+                    if (is_chapter_hidden(chapter_metadata) or 
+                        ('password' in chapter_metadata and chapter_metadata['password']) or
+                        chapter_metadata.get('seo', {}).get('allow_indexing') is False):
+                        continue
+                    
+                    published_date = chapter_metadata.get('published')
+                    if published_date:
+                        try:
+                            pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
+                            all_chapter_items.append({
+                                'id': chapter_id,
+                                'title': f"{novel.get('title', '')}: {chapter_metadata.get('title', chapter['title'])}",
+                                'link': f"{site_url}/{novel_slug}/{primary_lang}/{chapter_id}/",
+                                'description': chapter_metadata.get('social_embeds', {}).get('description', ''),
+                                'pub_date': pub_datetime,
+                                'content': convert_markdown_to_html(chapter_content_md[:300] + '...' if len(chapter_content_md) > 300 else chapter_content_md)
+                            })
+                        except:
+                            pass
+                except:
+                    continue
+        
+        # Sort by date (newest first) and take latest 50
+        all_chapter_items.sort(key=lambda x: x['pub_date'], reverse=True)
+        feed_items = all_chapter_items[:50]
+    
+    # Build RSS XML
+    current_time = datetime.now()
+    
+    rss_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>{feed_title}</title>
+    <link>{feed_link}</link>
+    <description>{feed_description}</description>
+    <language>en-us</language>
+    <lastBuildDate>{current_time.strftime('%a, %d %b %Y %H:%M:%S %z')}</lastBuildDate>
+    <generator>Web Novel Static Generator</generator>
+"""
+    
+    for item in feed_items:
+        pub_date_str = item['pub_date'].strftime('%a, %d %b %Y %H:%M:%S %z') if item['pub_date'] else ''
+        
+        rss_content += f"""    <item>
+        <title>{item['title']}</title>
+        <link>{item['link']}</link>
+        <description><![CDATA[{item['description']}]]></description>
+        <content:encoded><![CDATA[{item['content']}]]></content:encoded>
+        <pubDate>{pub_date_str}</pubDate>
+        <guid>{item['link']}</guid>
+    </item>
+"""
+    
+    rss_content += """</channel>
+</rss>"""
+    
+    return rss_content
+
+def generate_sitemap_xml(site_config, novels_data):
+    """Generate sitemap.xml file for SEO"""
+    from datetime import datetime
+    
+    sitemap_entries = []
+    site_url = site_config.get('site_url', '').rstrip('/')
+    
+    if not site_url:
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n</urlset>"
+    
+    # Add front page
+    sitemap_entries.append(f"""    <url>
+        <loc>{site_url}/</loc>
+        <changefreq>weekly</changefreq>
+        <priority>1.0</priority>
+    </url>""")
+    
+    # Add novel pages
+    for novel in novels_data:
+        novel_slug = novel['slug']
+        novel_config = load_novel_config(novel_slug)
+        
+        # Skip novels that don't allow indexing
+        if novel_config.get('seo', {}).get('allow_indexing') is False:
+            continue
+            
+        available_languages = get_available_languages(novel_slug)
+        
+        for lang in available_languages:
+            # Add TOC pages
+            sitemap_entries.append(f"""    <url>
+        <loc>{site_url}/{novel_slug}/{lang}/toc/</loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>""")
+            
+            # Add tag index pages
+            sitemap_entries.append(f"""    <url>
+        <loc>{site_url}/{novel_slug}/{lang}/tags/</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>""")
+            
+            # Add individual chapters
+            all_chapters = []
+            for arc in novel.get("arcs", []):
+                all_chapters.extend(arc.get("chapters", []))
+            
+            for chapter in all_chapters:
+                chapter_id = chapter["id"]
+                try:
+                    chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
+                    
+                    # Skip chapters that don't allow indexing, are password-protected, or are hidden
+                    chapter_allow_indexing = chapter_metadata.get('seo', {}).get('allow_indexing')
+                    is_password_protected = 'password' in chapter_metadata and chapter_metadata['password']
+                    is_hidden = is_chapter_hidden(chapter_metadata)
+                    
+                    if chapter_allow_indexing is False or is_password_protected or is_hidden:
+                        continue
+                    
+                    # Get published date if available
+                    lastmod = ""
+                    if chapter_metadata.get('published'):
+                        try:
+                            # Try to parse the date
+                            pub_date = datetime.strptime(chapter_metadata['published'], '%Y-%m-%d')
+                            lastmod = f"\n        <lastmod>{pub_date.strftime('%Y-%m-%d')}</lastmod>"
+                        except:
+                            pass
+                    
+                    sitemap_entries.append(f"""    <url>
+        <loc>{site_url}/{novel_slug}/{lang}/{chapter_id}/</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>{lastmod}
+    </url>""")
+                    
+                except:
+                    # Skip chapters that don't exist for this language
+                    continue
+            
+            # Add tag pages
+            tags_data = collect_tags_for_novel(novel_slug, lang)
+            for tag in tags_data.keys():
+                tag_slug = slugify_tag(tag)
+                sitemap_entries.append(f"""    <url>
+        <loc>{site_url}/{novel_slug}/{lang}/tags/{tag_slug}/</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>""")
+    
+    sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(sitemap_entries)}
+</urlset>"""
+    
+    return sitemap_content
+
+def generate_robots_txt(site_config, novels_data):
+    """Generate robots.txt file based on site and story configurations"""
+    robots_content = ["# Robots.txt for Web Novel Static Generator"]
+    
+    # Add sitemap reference
+    site_url = site_config.get('site_url', '').rstrip('/')
+    if site_url:
+        robots_content.append(f"Sitemap: {site_url}/sitemap.xml")
+        robots_content.append("")
+    
+    # Check site-wide indexing settings
+    site_allow_indexing = site_config.get('seo', {}).get('allow_indexing', True)
+    
+    if not site_allow_indexing:
+        # If site doesn't allow indexing, disallow all
+        robots_content.extend([
+            "User-agent: *",
+            "Disallow: /",
+            ""
+        ])
+    else:
+        robots_content.extend([
+            "User-agent: *",
+            "Allow: /",
+            ""
+        ])
+        
+        # Add disallow rules for specific novels or chapters that don't allow indexing
+        disallowed_paths = []
+        
+        for novel in novels_data:
+            novel_slug = novel['slug']
+            novel_config = load_novel_config(novel_slug)
+            
+            # Check novel-level indexing settings
+            novel_allow_indexing = novel_config.get('seo', {}).get('allow_indexing')
+            if novel_allow_indexing is False:
+                disallowed_paths.append(f"Disallow: /{novel_slug}/")
+                continue
+            
+            # Check individual chapters for indexing settings
+            available_languages = get_available_languages(novel_slug)
+            for lang in available_languages:
+                all_chapters = []
+                for arc in novel.get("arcs", []):
+                    all_chapters.extend(arc.get("chapters", []))
+                
+                for chapter in all_chapters:
+                    chapter_id = chapter["id"]
+                    try:
+                        chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
+                        
+                        # Check chapter-level indexing
+                        chapter_allow_indexing = chapter_metadata.get('seo', {}).get('allow_indexing')
+                        if chapter_allow_indexing is False:
+                            disallowed_paths.append(f"Disallow: /{novel_slug}/{lang}/{chapter_id}/")
+                        
+                        # Also disallow password-protected and hidden content
+                        if 'password' in chapter_metadata and chapter_metadata['password']:
+                            disallowed_paths.append(f"Disallow: /{novel_slug}/{lang}/{chapter_id}/")
+                        
+                        # Disallow hidden chapters
+                        if is_chapter_hidden(chapter_metadata):
+                            disallowed_paths.append(f"Disallow: /{novel_slug}/{lang}/{chapter_id}/")
+                            
+                    except:
+                        # Skip chapters that don't exist for this language
+                        continue
+        
+        # Add all disallow rules
+        if disallowed_paths:
+            robots_content.extend(disallowed_paths)
+            robots_content.append("")
+    
+    robots_content.append("# Generated by Web Novel Static Generator")
+    
+    return "\n".join(robots_content)
+
 def load_site_config():
     """Load global site configuration"""
     config_file = "site_config.yaml"
@@ -157,6 +508,94 @@ def should_show_translation_notes(novel_config, chapter_front_matter):
     # Fall back to novel config
     return novel_config.get('display', {}).get('show_translation_notes', True)
 
+def should_enable_comments(site_config, novel_config, chapter_metadata, page_type):
+    """Determine if comments should be enabled based on config hierarchy"""
+    # Check chapter-level override first
+    if 'comments' in chapter_metadata and 'enabled' in chapter_metadata['comments']:
+        return chapter_metadata['comments']['enabled']
+    
+    # Check story-level config based on page type
+    if page_type == 'chapter' and novel_config.get('comments', {}).get('chapter_comments') is not None:
+        return novel_config['comments']['chapter_comments']
+    elif page_type == 'toc' and novel_config.get('comments', {}).get('toc_comments') is not None:
+        return novel_config['comments']['toc_comments']
+    elif novel_config.get('comments', {}).get('enabled') is not None:
+        return novel_config['comments']['enabled']
+    
+    # Fall back to site config
+    return site_config.get('comments', {}).get('enabled', False)
+
+def build_comments_config(site_config):
+    """Build comments configuration for templates"""
+    comments_config = site_config.get('comments', {})
+    
+    return {
+        'repo': comments_config.get('utterances_repo', ''),
+        'issue_term': comments_config.get('utterances_issue_term', 'pathname'),
+        'label': comments_config.get('utterances_label', 'comment'),
+        'theme': comments_config.get('utterances_theme', 'github-light')
+    }
+
+def is_chapter_hidden(chapter_metadata):
+    """Check if chapter is marked as hidden"""
+    return chapter_metadata.get('hidden', False)
+
+def get_navigation_chapters(novel_slug, all_chapters, current_chapter_id, lang):
+    """Get previous and next chapters for navigation, skipping hidden chapters"""
+    visible_chapters = []
+    
+    # Filter out hidden chapters from navigation
+    for chapter in all_chapters:
+        try:
+            _, chapter_metadata = load_chapter_content(novel_slug, chapter['id'], lang)
+            if not is_chapter_hidden(chapter_metadata):
+                visible_chapters.append(chapter)
+        except:
+            # Include chapters that can't be loaded (they might exist in other languages)
+            visible_chapters.append(chapter)
+    
+    # Find current chapter position in visible chapters
+    current_index = -1
+    for i, chapter in enumerate(visible_chapters):
+        if chapter['id'] == current_chapter_id:
+            current_index = i
+            break
+    
+    if current_index == -1:
+        # Current chapter is not in visible list (probably hidden), no navigation
+        return None, None
+    
+    prev_chapter = visible_chapters[current_index - 1] if current_index > 0 else None
+    next_chapter = visible_chapters[current_index + 1] if current_index < len(visible_chapters) - 1 else None
+    
+    return prev_chapter, next_chapter
+
+def filter_hidden_chapters_from_novel(novel, novel_slug, lang):
+    """Create a copy of novel data with hidden chapters filtered out for TOC display"""
+    filtered_novel = novel.copy()
+    filtered_arcs = []
+    
+    for arc in novel.get('arcs', []):
+        filtered_chapters = []
+        
+        for chapter in arc.get('chapters', []):
+            try:
+                _, chapter_metadata = load_chapter_content(novel_slug, chapter['id'], lang)
+                if not is_chapter_hidden(chapter_metadata):
+                    filtered_chapters.append(chapter)
+            except:
+                # Include chapters that can't be loaded (they might exist in other languages)
+                filtered_chapters.append(chapter)
+        
+        # Only include arcs that have visible chapters
+        if filtered_chapters:
+            filtered_arc = arc.copy()
+            filtered_arc['chapters'] = filtered_chapters
+            filtered_arcs.append(filtered_arc)
+    
+    filtered_novel['arcs'] = filtered_arcs
+    return filtered_novel
+
 def load_chapter_content(novel_slug, chapter_id, language='en'):
     """Load chapter content from markdown file with language support and front matter parsing"""
     # Try language-specific file first
@@ -251,6 +690,10 @@ def collect_tags_for_novel(novel_slug, language):
                     with open(chapter_file, 'r', encoding='utf-8') as f:
                         content = f.read()
                         front_matter, _ = parse_front_matter(content)
+                        
+                        # Skip hidden chapters from tag collections
+                        if is_chapter_hidden(front_matter):
+                            continue
                         
                         chapter_tags = front_matter.get('tags', [])
                         chapter_title = front_matter.get('title', f'Chapter {chapter_id}')
@@ -439,10 +882,28 @@ def build_site():
 
     novels_data = load_novels_data()
 
+    # Generate robots.txt
+    robots_txt_content = generate_robots_txt(site_config, novels_data)
+    with open(os.path.join(BUILD_DIR, "robots.txt"), "w", encoding='utf-8') as f:
+        f.write(robots_txt_content)
+
+    # Generate sitemap.xml
+    sitemap_xml_content = generate_sitemap_xml(site_config, novels_data)
+    with open(os.path.join(BUILD_DIR, "sitemap.xml"), "w", encoding='utf-8') as f:
+        f.write(sitemap_xml_content)
+
+    # Generate site-wide RSS feed
+    site_rss_content = generate_rss_feed(site_config, novels_data)
+    with open(os.path.join(BUILD_DIR, "rss.xml"), "w", encoding='utf-8') as f:
+        f.write(site_rss_content)
+
     # Build social metadata for front page
     front_page_url = site_config.get('site_url', '').rstrip('/')
     social_meta = build_social_meta(site_config, {}, {}, 'index', site_config.get('site_name', 'Web Novel Collection'), front_page_url)
     seo_meta = build_seo_meta(site_config, {}, {}, 'index')
+
+    # Build footer data for front page
+    footer_data = build_footer_content(site_config, page_type='site')
 
     # Render front page with all novels
     with open(os.path.join(BUILD_DIR, "index.html"), "w", encoding='utf-8') as f:
@@ -456,7 +917,8 @@ def build_site():
                                seo_meta_description=seo_meta.get('meta_description'),
                                seo_keywords=social_meta.get('keywords'),
                                allow_indexing=seo_meta.get('allow_indexing', True),
-                               twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
+                               twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                               footer_data=footer_data))
 
     # Process each novel
     for novel in novels_data:
@@ -468,6 +930,11 @@ def build_site():
         # Create novel directory
         novel_dir = os.path.join(BUILD_DIR, novel_slug)
         os.makedirs(novel_dir, exist_ok=True)
+
+        # Generate story-specific RSS feed
+        story_rss_content = generate_rss_feed(site_config, novels_data, novel_config, novel_slug)
+        with open(os.path.join(novel_dir, "rss.xml"), "w", encoding='utf-8') as f:
+            f.write(story_rss_content)
 
         # Process each language
         for lang in available_languages:
@@ -483,9 +950,19 @@ def build_site():
             toc_social_meta = build_social_meta(site_config, novel_config, {}, 'toc', f"{novel.get('title', '')} - Table of Contents", toc_url)
             toc_seo_meta = build_seo_meta(site_config, novel_config, {}, 'toc')
             
+            # Build footer data for TOC
+            footer_data = build_footer_content(site_config, novel_config, 'toc')
+            
+            # Build comments configuration for TOC
+            toc_comments_enabled = should_enable_comments(site_config, novel_config, {}, 'toc')
+            comments_config = build_comments_config(site_config)
+            
+            # Filter out hidden chapters for TOC display
+            filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
+            
             with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
                 f.write(render_template("toc.html", 
-                                       novel=novel, 
+                                       novel=filtered_novel, 
                                        current_language=lang, 
                                        available_languages=available_languages,
                                        site_name=site_config.get('site_name', 'Web Novel Collection'),
@@ -496,7 +973,13 @@ def build_site():
                                        seo_meta_description=toc_seo_meta.get('meta_description'),
                                        seo_keywords=toc_social_meta.get('keywords'),
                                        allow_indexing=toc_seo_meta.get('allow_indexing', True),
-                                       twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
+                                       twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                       footer_data=footer_data,
+                                       comments_enabled=toc_comments_enabled,
+                                       comments_repo=comments_config['repo'],
+                                       comments_issue_term=comments_config['issue_term'],
+                                       comments_label=comments_config['label'],
+                                       comments_theme=comments_config['theme']))
 
             # Render chapter pages for this novel/language
             all_chapters = []
@@ -534,8 +1017,8 @@ def build_site():
                     else:
                         chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
-                    prev_chapter = all_chapters[i-1] if i > 0 else None
-                    next_chapter = all_chapters[i+1] if i < len(all_chapters) - 1 else None
+                    # Use navigation function to skip hidden chapters
+                    prev_chapter, next_chapter = get_navigation_chapters(novel_slug, all_chapters, chapter_id, lang)
 
                     # Use front matter title if available, otherwise use chapter title from config
                     display_title = chapter_metadata.get('title', chapter_title)
@@ -549,6 +1032,13 @@ def build_site():
                     chapter_url = f"{site_config.get('site_url', '').rstrip('/')}/{novel_slug}/{lang}/{chapter_id}/"
                     chapter_social_meta = build_social_meta(site_config, novel_config, chapter_metadata, 'chapter', display_title, chapter_url)
                     chapter_seo_meta = build_seo_meta(site_config, novel_config, chapter_metadata, 'chapter')
+                    
+                    # Build footer data for chapter
+                    footer_data = build_footer_content(site_config, novel_config, 'chapter')
+                    
+                    # Build comments configuration
+                    comments_enabled = should_enable_comments(site_config, novel_config, chapter_metadata, 'chapter')
+                    comments_config = build_comments_config(site_config)
                     
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
@@ -578,7 +1068,13 @@ def build_site():
                                                 seo_meta_description=chapter_seo_meta.get('meta_description'),
                                                 seo_keywords=chapter_social_meta.get('keywords'),
                                                 allow_indexing=chapter_seo_meta.get('allow_indexing', True),
-                                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
+                                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                                footer_data=footer_data,
+                                                comments_enabled=comments_enabled,
+                                                comments_repo=comments_config['repo'],
+                                                comments_issue_term=comments_config['issue_term'],
+                                                comments_label=comments_config['label'],
+                                                comments_theme=comments_config['theme']))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
@@ -602,8 +1098,8 @@ def build_site():
                     else:
                         chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
-                    prev_chapter = all_chapters[i-1] if i > 0 else None
-                    next_chapter = all_chapters[i+1] if i < len(all_chapters) - 1 else None
+                    # Use navigation function to skip hidden chapters
+                    prev_chapter, next_chapter = get_navigation_chapters(novel_slug, all_chapters, chapter_id, lang)
 
                     # Use front matter title if available, otherwise use chapter title from config
                     display_title = chapter_metadata.get('title', chapter_title)
@@ -617,6 +1113,13 @@ def build_site():
                     chapter_url = f"{site_config.get('site_url', '').rstrip('/')}/{novel_slug}/{lang}/{chapter_id}/"
                     chapter_social_meta = build_social_meta(site_config, novel_config, chapter_metadata, 'chapter', display_title, chapter_url)
                     chapter_seo_meta = build_seo_meta(site_config, novel_config, chapter_metadata, 'chapter')
+                    
+                    # Build footer data for chapter (missing translation case)
+                    footer_data = build_footer_content(site_config, novel_config, 'chapter')
+                    
+                    # Build comments configuration (missing translation case)
+                    comments_enabled = should_enable_comments(site_config, novel_config, chapter_metadata, 'chapter')
+                    comments_config = build_comments_config(site_config)
                     
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
@@ -649,7 +1152,13 @@ def build_site():
                                                 seo_meta_description=chapter_seo_meta.get('meta_description'),
                                                 seo_keywords=chapter_social_meta.get('keywords'),
                                                 allow_indexing=chapter_seo_meta.get('allow_indexing', True),
-                                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
+                                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                                footer_data=footer_data,
+                                                comments_enabled=comments_enabled,
+                                                comments_repo=comments_config['repo'],
+                                                comments_issue_term=comments_config['issue_term'],
+                                                comments_label=comments_config['label'],
+                                                comments_theme=comments_config['theme']))
 
         # Generate tag pages for this language (after all chapters are processed)
         for lang in available_languages:

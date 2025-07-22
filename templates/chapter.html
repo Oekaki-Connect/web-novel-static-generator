@@ -49,6 +49,9 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="{{ social_url }}">
     
+    <!-- Theme Toggle Script -->
+    <script src="../../../static/theme-toggle.js"></script>
+    
     {% if is_password_protected %}
     <script>
         // Password decryption functionality
@@ -240,6 +243,20 @@
             </div>
         </div>
         {% endif %}
+        
+        {% if comments_enabled and not is_password_protected %}
+        <div class="comments-section">
+            <h3>Comments</h3>
+            <script src="https://utteranc.es/client.js"
+                    repo="{{ comments_repo }}"
+                    issue-term="{{ comments_issue_term }}"
+                    label="{{ comments_label }}"
+                    theme="{{ comments_theme }}"
+                    crossorigin="anonymous"
+                    async>
+            </script>
+        </div>
+        {% endif %}
     </main>
     <footer>
         <nav>
@@ -251,7 +268,17 @@
             <a href="../{{ next_chapter.id }}/">Next Chapter</a>
             {% endif %}
         </nav>
-        <p>&copy; 2025 My Web Novel</p>
+        <p>{{ footer_data.copyright }}</p>
+        {% if footer_data.links %}
+        <nav class="footer-links">
+            {% for link in footer_data.links %}
+            <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
+            {% endfor %}
+        </nav>
+        {% endif %}
+        {% if footer_data.additional_text %}
+        <p class="footer-additional">{{ footer_data.additional_text }}</p>
+        {% endif %}
     </footer>
 </body>
 </html>
