@@ -7,7 +7,7 @@ site_author: "Site Owner Name"
 # Social media embeds (Open Graph / Twitter Cards)
 social_embeds:
   # Default image for the site (used when no story/chapter image is specified)
-  default_image: "https://your-username.github.io/web-novel-static-generator/static/images/site-default-social.jpg"
+  default_image: "/static/images/site-default-social.jpg"
   
   # Default title prefix/suffix for social embeds
   title_format: "{title} | Web Novel Collection"
@@ -69,7 +69,7 @@ footer:
   
   # Additional footer links
   links:
-    - text: "Privacy Policy"
-      url: "/privacy/"
-    - text: "Contact"
-      url: "/contact/"
+    - text: "Oekaki Connect"
+      url: "https://www.oekakiconnect.net/"
+    - text: "Oekaki.io"
+      url: "https://www.oekaki.io/"
