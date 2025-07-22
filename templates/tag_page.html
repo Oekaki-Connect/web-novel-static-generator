@@ -33,10 +33,10 @@
             
             <div class="chapter-list">
                 {% for chapter in chapters %}
-                <div class="chapter-item">
-                    <h3><a href="../../{{ chapter.id }}/">{{ chapter.title }}</a></h3>
+                <a href="../../{{ chapter.id }}/" class="chapter-item">
+                    <h3>{{ chapter.title }}</h3>
                     <span class="chapter-id">{{ chapter.id }}</span>
-                </div>
+                </a>
                 {% endfor %}
             </div>
         </div>

@@ -1,0 +1,54 @@
+# Configuration file for My Awesome Web Novel
+title: "My Awesome Web Novel"
+description: "An epic fantasy adventure following the journey of heroes in the land of Eldoria"
+slug: "my-awesome-web-novel"
+primary_language: "en"
+
+# Display settings - these can be overridden in individual chapter front matter
+display:
+  # Show tags on chapter pages by default (can be overridden with 'show_tags: false' in chapter front matter)
+  show_tags: true
+  
+  # Show chapter metadata (author, published date, etc.) on chapter pages
+  show_metadata: true
+  
+  # Show translation notes on chapter pages
+  show_translation_notes: true
+
+# Navigation settings
+navigation:
+  # Show "Browse by Tags" link on table of contents
+  show_tags_link: true
+
+# Language settings
+languages:
+  default: "en"
+  available: ["en", "jp"]
+  
+# Author information
+author:
+  name: "Original Author"
+  
+# Copyright settings
+copyright: "2025 My Awesome Web Novel"
+
+# Story structure
+arcs:
+  - title: "Arc 1: The Beginning"
+    chapters:
+      - id: "chapter-1"
+        title: "Chapter 1: The Prophecy"
+      - id: "chapter-2"
+        title: "Chapter 2: A New Journey"
+  - title: "Arc 2: The Quest"
+    chapters:
+      - id: "chapter-3"
+        title: "Chapter 3: Ancient Ruins"
+      - id: "chapter-4"
+        title: "Chapter 4: The Guardian"
+  - title: "Arc 3: The Trials"
+    chapters:
+      - id: "chapter-5"
+        title: "Chapter 5: The Test"
+      - id: "chapter-6"
+        title: "Chapter 6: Allies in Darkness"

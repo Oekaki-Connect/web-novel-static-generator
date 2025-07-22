@@ -1,98 +1,178 @@
-/* Basic styling for the web novel site */
+/* Basic styling for the web novel site - Inspired by Ozy Translations */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+    /* Minimal academic color scheme inspired by Ozy Translations */
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --color-base: #f9f9f9;
+    --color-contrast: #333333;
+    --color-heading: #222222;
+    --color-primary: #111111;
+    --color-primary-hover: #333333;
+    --color-secondary: #666666;
+    --color-accent: #f7f7f7;
+    --content-width: 650px;
+    --content-width-wide: 700px;
+    --line-height: 1.6;
+    --border-radius: 4px;
+    /* Minimal shadows - remove decorative elements */
+    --shadow: none;
+    --shadow-md: none;
+}
 
 body {
-    font-family: 'Georgia', serif;
-    line-height: 1.6;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: var(--line-height);
     margin: 0;
     padding: 0;
-    background-color: #f9f9f9;
-    color: #333;
+    background-color: var(--color-base);
+    color: var(--color-contrast);
+    font-weight: 400;
+    /* Remove decorative font smoothing for more academic look */
 }
 
 header {
-    background-color: #2c3e50;
-    color: white;
-    padding: 1rem;
+    background-color: var(--color-base);
+    color: var(--color-contrast);
+    padding: 2rem 1rem 1.5rem;
     text-align: center;
+    /* Remove border and shadow for cleaner academic look */
 }
 
 header h1 {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    font-weight: 600;
     margin: 0;
+    color: var(--color-heading);
 }
 
 header h1 a {
-    color: white;
+    color: var(--color-accent);
     text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+header h1 a:hover {
+    color: var(--color-primary);
 }
 
 header h2 {
-    margin: 0.5rem 0 0 0;
-    font-weight: normal;
+    font-family: var(--font-heading);
+    font-size: 18px;
+    margin: 0.75rem 0 0 0;
+    font-weight: 400;
+    color: var(--color-secondary);
 }
 
 nav {
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 nav a {
-    color: #3498db;
-    text-decoration: none;
-    margin: 0 1rem;
-    padding: 0.5rem;
-    border: 1px solid #3498db;
-    border-radius: 4px;
-    display: inline-block;
+    color: var(--color-primary);
+    text-decoration: underline;
+    margin: 0 0.5em;
+    padding: 0;
+    border: none;
+    display: inline;
+    font-weight: normal;
+    font-size: 16px;
+    /* Remove fancy transitions for academic look */
 }
 
 nav a:hover {
-    background-color: #3498db;
-    color: white;
+    color: var(--color-primary-hover);
+    text-decoration: none;
 }
 
+/* Remove pipe separators - they look weird on navigation */
+
 main {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: var(--content-width-wide);
+    margin: 1rem auto;
+    padding: 0 20px;
+    background-color: var(--color-base);
+    /* Remove border-radius and shadow for minimal look */
+}
+
+/* Chapter content gets narrower width for better readability */
+.chapter-content {
+    max-width: var(--content-width);
+    margin: 0 auto;
+    padding: 20px 0;
 }
 
 .arc {
-    margin-bottom: 2rem;
+    margin-bottom: 2em;
 }
 
 .arc h3 {
-    color: #2c3e50;
-    border-bottom: 2px solid #3498db;
-    padding-bottom: 0.5rem;
+    font-family: var(--font-heading);
+    color: var(--color-heading);
+    /* Remove decorative border */
+    font-size: 20px;
+    font-weight: 600;
+    margin-top: 2em;
+    margin-bottom: 1em;
 }
 
 .arc ul {
     list-style-type: none;
     padding: 0;
+    margin-top: 1em;
 }
 
 .arc li {
-    margin: 0.5rem 0;
+    margin: 0.5em 0;
 }
 
 .arc a {
-    color: #3498db;
-    text-decoration: none;
-    padding: 0.5rem;
-    display: block;
-    border-left: 3px solid transparent;
-    transition: border-left-color 0.3s;
+    color: var(--color-primary);
+    text-decoration: underline;
+    padding: 0;
+    display: inline;
+    /* Remove fancy hover effects */
+    font-weight: normal;
 }
 
 .arc a:hover {
-    border-left-color: #3498db;
-    background-color: #ecf0f1;
+    color: var(--color-primary-hover);
+    text-decoration: none;
 }
 
-.chapter-content {
-    padding: 2rem;
+.chapter-content h1 {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--color-heading);
+    margin: 0.5em 0 1.5em 0;
+    /* Remove decorative border */
+}
+
+.chapter-content p {
+    margin-bottom: 1.2em;
+    text-align: justify;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.chapter-content p:last-of-type {
+    margin-bottom: 0;
+}
+
+/* Scene breaks with centered asterisks */
+.scene-break {
+    text-align: center;
+    margin: 2em 0;
+    font-weight: bold;
+    color: var(--color-contrast);
+}
+
+.scene-break::before {
+    content: '***';
 }
 
 .chapter-content img {
@@ -100,16 +180,16 @@ main {
     height: auto;
     display: block;
     margin: 1rem auto;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* Remove decorative styling for minimal look */
 }
 
 footer {
-    background-color: #34495e;
-    color: white;
+    background-color: var(--color-base);
+    color: var(--color-secondary);
     text-align: center;
-    padding: 1rem;
-    margin-top: 2rem;
+    padding: 2rem 1rem;
+    margin-top: 3rem;
+    /* Remove border for cleaner look */
 }
 
 footer nav {
@@ -117,71 +197,160 @@ footer nav {
 }
 
 footer nav a {
-    color: #ecf0f1;
-    border-color: #ecf0f1;
+    color: var(--color-primary);
+    text-decoration: underline;
+    font-size: 16px;
+    margin: 0 0.5em;
 }
 
 footer nav a:hover {
-    background-color: #ecf0f1;
-    color: #34495e;
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
+footer p {
+    font-size: 14px;
+    margin: 0;
+    color: var(--color-secondary);
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
+    :root {
+        --content-width: 95vw;
+        --content-width-wide: 95vw;
+    }
+    
+    body {
+        font-size: 15px;
+    }
+    
+    header {
+        padding: 1.5rem 1rem;
+    }
+    
+    header h1 {
+        font-size: 1.875rem;
+    }
+    
+    header h2 {
+        font-size: 1.25rem;
+    }
+    
     main {
-        margin: 1rem;
-        padding: 0 0.5rem;
+        margin: 2rem 1rem;
+        padding: 0 1rem;
     }
     
     .chapter-content {
-        padding: 1rem;
+        padding: 2rem 1rem;
+        font-size: 1rem;
+    }
+    
+    .chapter-content h1 {
+        font-size: 1.75rem;
+    }
+    
+    .chapter-content p {
+        text-align: left;
     }
     
     nav a {
         display: block;
         margin: 0.5rem 0;
         text-align: center;
+        padding: 0.75rem 1rem;
+    }
+    
+    .language-switcher {
+        padding: 1rem;
+    }
+    
+    .novel-card {
+        margin: 1.5rem 0;
+        padding: 1.5rem;
+    }
+    
+    .tags-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .tag-card {
+        padding: 1.25rem;
     }
 }
 
-/* Language switcher styling */
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.625rem;
+    }
+    
+    .chapter-content {
+        padding: 1.5rem 0.75rem;
+    }
+    
+    .novel-card {
+        padding: 1.25rem;
+    }
+    
+    .language-switcher h3 {
+        font-size: 0.8rem;
+    }
+    
+    .language-switcher a,
+    .language-switcher .current-language {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.65rem;
+    }
+    
+    /* Tags are now centered at all resolutions */
+}
+
+/* Language switcher styling - Minimal academic style */
 .language-switcher {
-    margin: 1rem 0;
-    padding: 1rem;
-    background-color: #ecf0f1;
-    border-radius: 4px;
+    margin: 1.5rem 0;
+    padding: 0;
+    background-color: var(--color-base);
+    /* Remove decorative styling */
 }
 
 .language-switcher h3 {
     margin: 0 0 0.5rem 0;
-    font-size: 1rem;
-    color: #2c3e50;
+    font-size: 16px;
+    font-weight: normal;
+    color: var(--color-secondary);
+    /* Remove fancy styling */
 }
 
 .language-switcher a, .language-switcher .current-language {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    margin: 0.25rem;
-    border-radius: 3px;
-    text-decoration: none;
-    font-size: 0.9rem;
+    display: inline;
+    padding: 0;
+    margin: 0 0.5em 0 0;
+    text-decoration: underline;
+    font-size: 16px;
+    font-weight: normal;
+    /* Remove transitions and fancy styling */
 }
 
 .language-switcher a {
-    color: #3498db;
-    border: 1px solid #3498db;
+    color: var(--color-primary);
+    /* Remove borders and background */
 }
 
 .language-switcher a:hover {
-    background-color: #3498db;
-    color: white;
+    color: var(--color-primary-hover);
+    text-decoration: none;
 }
 
 .language-switcher .current-language {
-    background-color: #2c3e50;
-    color: white;
-    border: 1px solid #2c3e50;
+    color: var(--color-contrast);
+    text-decoration: none;
+    font-weight: bold;
+    /* Remove background styling */
 }
+
+/* Removed pipe separators from language switcher for cleaner look */
 
 /* Translation notice styling */
 .translation-notice {
@@ -207,52 +376,71 @@ footer nav a:hover {
     text-decoration: none;
 }
 
-/* Novel card styling for front page */
+/* Novel card styling for front page - Minimal academic style */
 .novel-card {
-    margin: 2rem 0;
-    padding: 1.5rem;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin: 2em 0;
+    padding: 0;
+    background-color: var(--color-base);
+    /* Remove decorative elements */
 }
 
 .novel-card h2 {
-    margin-top: 0;
-    color: #2c3e50;
+    font-family: var(--font-heading);
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 2em;
+    margin-bottom: 1em;
+    color: var(--color-heading);
 }
 
 .novel-card h2 a {
-    color: #2c3e50;
+    color: var(--color-heading);
     text-decoration: none;
 }
 
 .novel-card h2 a:hover {
-    color: #3498db;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.novel-card p {
+    color: var(--color-contrast);
+    line-height: 1.6;
+    margin-bottom: 1.2em;
+    text-align: justify;
+}
+
+.novel-card p:last-of-type {
+    margin-bottom: 0;
 }
 
 .novel-card p:last-of-type a {
-    color: #3498db;
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    border: 1px solid #3498db;
-    border-radius: 4px;
-    display: inline-block;
-    margin-top: 0.5rem;
+    color: var(--color-primary);
+    text-decoration: underline;
+    /* Remove button styling for simple link */
+    padding: 0;
+    border: none;
+    background: none;
+    display: inline;
+    margin-top: 0;
+    font-weight: normal;
 }
 
 .novel-card p:last-of-type a:hover {
-    background-color: #3498db;
-    color: white;
+    color: var(--color-primary-hover);
+    text-decoration: none;
 }
 
 /* Chapter metadata styling */
 .chapter-metadata {
-    background-color: #ecf0f1;
-    padding: 1rem;
-    margin: 1rem 0;
-    border-radius: 4px;
-    border-left: 4px solid #3498db;
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    padding: 1.5rem;
+    margin: 2rem auto;
+    border-radius: var(--border-radius);
+    /* Remove thick blue left border */
     font-size: 0.9rem;
+    max-width: var(--content-width);
 }
 
 .metadata-item {
@@ -269,36 +457,41 @@ footer nav a:hover {
 
 /* Tags styling */
 .tags {
-    display: inline-flex;
+    display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    margin-top: 0.25rem;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    justify-content: center;
 }
 
 .tag {
-    background-color: #3498db;
+    background-color: var(--color-primary);
     color: white;
-    padding: 0.2rem 0.5rem;
-    border-radius: 12px;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 500;
     text-decoration: none;
     display: inline-block;
-    transition: background-color 0.3s ease;
+    transition: all 0.2s ease;
+    border: 1px solid var(--color-primary);
 }
 
 .tag:hover {
-    background-color: #2980b9;
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
     color: white;
     text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
 }
 
 /* Translation notes styling */
 .translation-notes {
-    background-color: #e8f4fd;
+    background-color: #f5f5f5;
     padding: 0.75rem;
     border-radius: 4px;
-    border-left: 4px solid #3498db;
+    /* Remove thick blue left border */
     margin: 0.5rem 0;
 }
 
@@ -351,27 +544,26 @@ footer nav a:hover {
     border: 1px solid #dee2e6;
     border-radius: 8px;
     padding: 1.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: box-shadow 0.3s ease;
+    /* Remove shadows for minimal look */
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s ease;
 }
 
 .tag-card:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: var(--color-primary);
+    text-decoration: none;
 }
 
 .tag-card h3 {
     margin-top: 0;
     margin-bottom: 0.5rem;
-    color: #2c3e50;
+    color: var(--color-heading);
 }
 
-.tag-card h3 a {
-    color: #2c3e50;
-    text-decoration: none;
-}
-
-.tag-card h3 a:hover {
-    color: #3498db;
+.tag-card:hover h3 {
+    color: var(--color-primary);
 }
 
 .tag-count {
@@ -383,8 +575,8 @@ footer nav a:hover {
 
 /* Individual tag page styling */
 .tag-name {
-    color: #3498db;
-    background-color: #ecf0f1;
+    color: var(--color-secondary);
+    background-color: #f5f5f5;
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
     font-size: 0.9em;
@@ -397,7 +589,7 @@ footer nav a:hover {
     padding: 1rem;
     background-color: #f8f9fa;
     border-radius: 4px;
-    border-left: 4px solid #3498db;
+    border-left: 4px solid #ccc;
 }
 
 .chapter-list {
@@ -411,24 +603,24 @@ footer nav a:hover {
     border: 1px solid #dee2e6;
     border-radius: 6px;
     padding: 1rem;
-    transition: border-color 0.3s ease;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s ease;
 }
 
 .chapter-item:hover {
-    border-color: #3498db;
+    border-color: var(--color-primary);
+    text-decoration: none;
 }
 
 .chapter-item h3 {
     margin: 0 0 0.5rem 0;
+    color: var(--color-heading);
 }
 
-.chapter-item h3 a {
-    color: #2c3e50;
-    text-decoration: none;
-}
-
-.chapter-item h3 a:hover {
-    color: #3498db;
+.chapter-item:hover h3 {
+    color: var(--color-primary);
 }
 
 .chapter-id {
@@ -444,18 +636,18 @@ footer nav a:hover {
 }
 
 .tags-link {
-    background-color: #3498db;
+    background-color: var(--color-primary);
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 6px;
     text-decoration: none;
     display: inline-block;
     font-weight: 500;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.2s ease;
 }
 
 .tags-link:hover {
-    background-color: #2980b9;
+    background-color: var(--color-primary-hover);
     color: white;
     text-decoration: none;
 }

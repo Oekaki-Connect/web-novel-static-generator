@@ -4,6 +4,10 @@ author: "Original Author"
 published: "2025-01-16"
 tags: ["adventure", "travel", "beginning", "character-development"]
 translation_notes: "The concept of 'journey' here implies both physical and spiritual transformation."
+# Override display settings for this chapter
+show_tags: false  # Hide tags for this specific chapter
+show_metadata: true
+show_translation_notes: true
 ---
 
 # Chapter 2: A New Journey Begins

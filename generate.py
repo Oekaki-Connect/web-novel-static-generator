@@ -13,6 +13,41 @@ STATIC_DIR = "./static"
 
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
+def load_novel_config(novel_slug):
+    """Load configuration for a specific novel"""
+    config_file = os.path.join(CONTENT_DIR, novel_slug, "config.yaml")
+    if os.path.exists(config_file):
+        with open(config_file, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+    return {}
+
+def should_show_tags(novel_config, chapter_front_matter):
+    """Determine if tags should be shown based on config and front matter"""
+    # Check front matter override first
+    if 'show_tags' in chapter_front_matter:
+        return chapter_front_matter['show_tags']
+    
+    # Fall back to novel config
+    return novel_config.get('display', {}).get('show_tags', True)
+
+def should_show_metadata(novel_config, chapter_front_matter):
+    """Determine if metadata should be shown based on config and front matter"""
+    # Check front matter override first
+    if 'show_metadata' in chapter_front_matter:
+        return chapter_front_matter['show_metadata']
+    
+    # Fall back to novel config
+    return novel_config.get('display', {}).get('show_metadata', True)
+
+def should_show_translation_notes(novel_config, chapter_front_matter):
+    """Determine if translation notes should be shown based on config and front matter"""
+    # Check front matter override first
+    if 'show_translation_notes' in chapter_front_matter:
+        return chapter_front_matter['show_translation_notes']
+    
+    # Fall back to novel config
+    return novel_config.get('display', {}).get('show_translation_notes', True)
+
 def load_chapter_content(novel_slug, chapter_id, language='en'):
     """Load chapter content from markdown file with language support and front matter parsing"""
     # Try language-specific file first
@@ -299,6 +334,7 @@ def build_site():
     # Process each novel
     for novel in novels_data:
         novel_slug = novel['slug']
+        novel_config = load_novel_config(novel_slug)
         available_languages = get_available_languages(novel_slug)
         novel['languages'] = available_languages
         
@@ -343,6 +379,11 @@ def build_site():
                     # Use front matter title if available, otherwise use chapter title from config
                     display_title = chapter_metadata.get('title', chapter_title)
                     
+                    # Determine what to display based on config and front matter
+                    show_tags = should_show_tags(novel_config, chapter_metadata)
+                    show_metadata = should_show_metadata(novel_config, chapter_metadata)
+                    show_translation_notes = should_show_translation_notes(novel_config, chapter_metadata)
+                    
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
                     with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
@@ -355,7 +396,10 @@ def build_site():
                                                 prev_chapter=prev_chapter,
                                                 next_chapter=next_chapter,
                                                 current_language=lang,
-                                                available_languages=available_languages))
+                                                available_languages=available_languages,
+                                                show_tags=show_tags,
+                                                show_metadata=show_metadata,
+                                                show_translation_notes=show_translation_notes))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
@@ -368,6 +412,11 @@ def build_site():
 
                     # Use front matter title if available, otherwise use chapter title from config
                     display_title = chapter_metadata.get('title', chapter_title)
+                    
+                    # Determine what to display based on config and front matter
+                    show_tags = should_show_tags(novel_config, chapter_metadata)
+                    show_metadata = should_show_metadata(novel_config, chapter_metadata)
+                    show_translation_notes = should_show_translation_notes(novel_config, chapter_metadata)
                     
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
@@ -384,7 +433,10 @@ def build_site():
                                                 primary_language=primary_lang,
                                                 requested_language=lang,
                                                 translation_missing=True,
-                                                available_languages=available_languages))
+                                                available_languages=available_languages,
+                                                show_tags=show_tags,
+                                                show_metadata=show_metadata,
+                                                show_translation_notes=show_translation_notes))
 
         # Generate tag pages for this language (after all chapters are processed)
         for lang in available_languages:

@@ -31,7 +31,7 @@
         {% endif %}
         <h1>{{ chapter_title }}</h1>
         
-        {% if chapter_metadata %}
+        {% if chapter_metadata and show_metadata %}
         <div class="chapter-metadata">
             {% if chapter_metadata.author %}
             <div class="metadata-item">
@@ -51,7 +51,7 @@
             </div>
             {% endif %}
             
-            {% if chapter_metadata.tags %}
+            {% if chapter_metadata.tags and show_tags %}
             <div class="metadata-item">
                 <strong>Tags:</strong>
                 <div class="tags">
@@ -62,7 +62,7 @@
             </div>
             {% endif %}
             
-            {% if chapter_metadata.translation_notes %}
+            {% if chapter_metadata.translation_notes and show_translation_notes %}
             <div class="metadata-item translation-notes">
                 <strong>Translation Notes:</strong>
                 <p>{{ chapter_metadata.translation_notes }}</p>

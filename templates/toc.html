@@ -8,7 +8,7 @@
 </head>
 <body>
     <header>
-        <nav><a href="../../">← Back to Novels</a></nav>
+        <nav><a href="../../../">← Back to Novels</a></nav>
         <h1>{{ novel.title }}</h1>
         {% if available_languages and available_languages|length > 1 %}
         <div class="language-switcher">
@@ -17,14 +17,14 @@
                 {% if lang == current_language %}
                     <span class="current-language">{{ lang|upper }}</span>
                 {% else %}
-                    <a href="../{{ lang }}/toc/">{{ lang|upper }}</a>
+                    <a href="../../{{ lang }}/toc/">{{ lang|upper }}</a>
                 {% endif %}
             {% endfor %}
         </div>
         {% endif %}
         <h2>Table of Contents</h2>
         <nav class="toc-nav">
-            <a href="tags/" class="tags-link">📁 Browse by Tags</a>
+            <a href="../tags/" class="tags-link">Browse by Tags</a>
         </nav>
     </header>
     <main>

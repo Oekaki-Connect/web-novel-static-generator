@@ -28,10 +28,10 @@
         {% if tags_data %}
             <div class="tags-grid">
                 {% for tag, chapters in tags_data.items() %}
-                <div class="tag-card">
-                    <h3><a href="{{ tag_slug_map[tag] }}/">{{ tag }}</a></h3>
+                <a href="{{ tag_slug_map[tag] }}/" class="tag-card">
+                    <h3>{{ tag }}</h3>
                     <p class="tag-count">{{ chapters|length }} chapter{{ 's' if chapters|length != 1 else '' }}</p>
-                </div>
+                </a>
                 {% endfor %}
             </div>
         {% else %}
