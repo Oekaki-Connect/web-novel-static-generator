@@ -4,10 +4,15 @@ A Python-based static website generator specifically designed for web novels, wi
 
 ## Features
 
-- **Front Page**: Clean landing page with novel title and description
+- **Multi-Novel Support**: Host multiple novels from the same repository
+- **Translation System**: Full multi-language support with language switching
+- **Front Page**: Clean landing page listing all available novels
 - **Table of Contents**: Organized by story arcs with manual chapter sorting
 - **Chapter Pages**: Individual pages for each chapter with navigation
-- **Image Support**: Embedded images in chapter content
+- **Tag System**: Categorize chapters with tags for easy discovery
+- **Chapter Images**: Chapter-specific image support with automatic processing
+- **Front Matter Support**: Rich metadata including author, translator, tags, and commentary
+- **Clean URLs**: SEO-friendly URLs without .html extensions
 - **Responsive Design**: Mobile-friendly layout
 - **GitHub Integration**: Automated deployment via GitHub Actions
 
@@ -80,7 +85,37 @@ Modify the chapter content generation in the `build_site()` function.
 
 ### 4. Add Images
 
-Place images in the `static/images/` directory and reference them in your chapter content:
+You have two options for adding images to your novel:
+
+#### Chapter-Specific Images (Recommended)
+
+Place images directly in the chapter's source directory and reference them with simple filenames:
+
+```markdown
+![The Ancient Scroll](ancient_scroll.jpg "A mysterious scroll with golden edges")
+```
+
+**Directory Structure:**
+```
+content/
+  my-awesome-web-novel/
+    chapters/
+      chapter-1.md          ← Your chapter file
+      ancient_scroll.jpg    ← Your chapter image
+      jp/                   ← Japanese translations
+        chapter-1.md
+        ancient_scroll_jp.jpg  ← Japanese version of the image
+```
+
+**Benefits:**
+- Images stay organized with their chapters
+- Easy for contributors to manage
+- Automatic copying and path resolution during build
+- Language-specific images supported
+
+#### Global Images (Legacy)
+
+You can also place images in the `static/images/` directory for site-wide use:
 
 ```markdown
 ![Description](static/images/your-image.jpg)
@@ -149,6 +184,60 @@ Chapters are displayed in the order they appear in the `chapters` array within e
 ```
 
 ## Advanced Features
+
+### Chapter Front Matter
+
+Add metadata to your chapters using YAML front matter:
+
+```markdown
+---
+title: "Chapter 1: The Beginning"
+author: "Original Author"
+translator: "Translator Name"
+published: "2025-01-15"
+tags: ["adventure", "magic", "prophecy"]
+translation_notes: "Cultural context about specific terms used"
+translator_commentary: |
+  This chapter establishes the fantasy setting beautifully. I chose to 
+  translate certain terms to maintain the magical atmosphere while 
+  keeping them accessible to readers.
+---
+
+# Chapter 1: The Beginning
+
+Your chapter content here...
+```
+
+**Supported Fields:**
+- `title`: Override chapter title
+- `author`: Original author name
+- `translator`: Translator credit (for translations)
+- `published`: Publication date
+- `tags`: Array of tags for categorization
+- `translation_notes`: Cultural/linguistic context
+- `translator_commentary`: Extended commentary displayed at chapter end
+
+### Tag System
+
+Tags automatically create browsable indexes:
+- **All Tags Page**: `/novel/language/tags/` - Lists all tags with chapter counts
+- **Tag Pages**: `/novel/language/tags/tag-name/` - Shows all chapters with that tag
+- **Clickable Tags**: All tags in chapter metadata are clickable links
+
+Perfect for organizing content by theme, genre, or story elements.
+
+### Multi-Language Support
+
+**URL Structure:**
+- English: `/my-awesome-web-novel/en/chapter-1/`
+- Japanese: `/my-awesome-web-novel/jp/chapter-1/`
+- Tags: `/my-awesome-web-novel/jp/tags/予言/` (supports Unicode)
+
+**Translation Workflow:**
+1. Create language subdirectory: `chapters/jp/`
+2. Add translated chapters with front matter
+3. Language switcher appears automatically
+4. Missing translations show helpful notices
 
 ### Loading Content from Files
 

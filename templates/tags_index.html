@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tags - {{ novel.title }}</title>
-    <link rel="stylesheet" href="../../../static/style.css">
+    <link rel="stylesheet" href="../../../../static/style.css">
 </head>
 <body>
     <header>
-        <nav><a href="../toc.html">← Back to Table of Contents</a></nav>
+        <nav><a href="../toc/">← Back to Table of Contents</a></nav>
         <h1>{{ novel.title }}</h1>
         {% if available_languages and available_languages|length > 1 %}
         <div class="language-switcher">

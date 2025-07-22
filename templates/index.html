@@ -14,9 +14,9 @@
         {% if novels %}
             {% for novel in novels %}
             <section class="novel-card">
-                <h2><a href="{{ novel.slug }}/en/toc.html">{{ novel.title }}</a></h2>
+                <h2><a href="{{ novel.slug }}/en/toc/">{{ novel.title }}</a></h2>
                 <p>{{ novel.description }}</p>
-                <p><a href="{{ novel.slug }}/en/toc.html">Read Now</a></p>
+                <p><a href="{{ novel.slug }}/en/toc/">Read Now</a></p>
             </section>
             {% endfor %}
         {% else %}

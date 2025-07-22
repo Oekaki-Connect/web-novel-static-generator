@@ -4,17 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ chapter_title }}</title>
-    <link rel="stylesheet" href="../../static/style.css">
+    <link rel="stylesheet" href="../../../static/style.css">
 </head>
 <body>
     <header>
         <nav>
             {% if prev_chapter %}
-            <a href="{{ prev_chapter.id }}.html">Previous Chapter</a>
+            <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
             {% endif %}
-            <a href="toc.html">Table of Contents</a>
+            <a href="../toc/">Table of Contents</a>
             {% if next_chapter %}
-            <a href="{{ next_chapter.id }}.html">Next Chapter</a>
+            <a href="../{{ next_chapter.id }}/">Next Chapter</a>
             {% endif %}
         </nav>
         {% if available_languages and available_languages|length > 1 %}
@@ -24,7 +24,7 @@
                 {% if lang == current_language and not translation_missing %}
                     <span class="current-language">{{ lang|upper }}</span>
                 {% else %}
-                    <a href="../{{ lang }}/{{ chapter.id }}.html">{{ lang|upper }}</a>
+                    <a href="../{{ lang }}/{{ chapter.id }}/">{{ lang|upper }}</a>
                 {% endif %}
             {% endfor %}
         </div>
@@ -95,11 +95,11 @@
     <footer>
         <nav>
             {% if prev_chapter %}
-            <a href="{{ prev_chapter.id }}.html">Previous Chapter</a>
+            <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
             {% endif %}
-            <a href="toc.html">Table of Contents</a>
+            <a href="../toc/">Table of Contents</a>
             {% if next_chapter %}
-            <a href="{{ next_chapter.id }}.html">Next Chapter</a>
+            <a href="../{{ next_chapter.id }}/">Next Chapter</a>
             {% endif %}
         </nav>
         <p>&copy; 2025 My Web Novel</p>

@@ -10,4 +10,6 @@ translation_notes: "The word 'Eldoria' is derived from the ancient term for 'gol
 
 In the ancient city of Eldoria, a young scribe named Aria discovered a mysterious scroll that would change the fate of the realm forever.
 
+![The Ancient Scroll](ancient_scroll.jpg "A mysterious scroll with golden edges")
+
 The parchment crackled under her careful touch, its golden edges glinting in the candlelight. Ancient runes danced across the surface, telling of a hero who would rise when darkness threatened to consume all.

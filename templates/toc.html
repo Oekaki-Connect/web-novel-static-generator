@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Table of Contents - {{ novel.title }}</title>
-    <link rel="stylesheet" href="../../static/style.css">
+    <link rel="stylesheet" href="../../../static/style.css">
 </head>
 <body>
     <header>
-        <nav><a href="../../index.html">← Back to Novels</a></nav>
+        <nav><a href="../../">← Back to Novels</a></nav>
         <h1>{{ novel.title }}</h1>
         {% if available_languages and available_languages|length > 1 %}
         <div class="language-switcher">
@@ -17,7 +17,7 @@
                 {% if lang == current_language %}
                     <span class="current-language">{{ lang|upper }}</span>
                 {% else %}
-                    <a href="../{{ lang }}/toc.html">{{ lang|upper }}</a>
+                    <a href="../{{ lang }}/toc/">{{ lang|upper }}</a>
                 {% endif %}
             {% endfor %}
         </div>
@@ -33,7 +33,7 @@
             <h3>{{ arc.title }}</h3>
             <ul>
                 {% for chapter in arc.chapters %}
-                <li><a href="{{ chapter.id }}.html">{{ chapter.title }}</a></li>
+                <li><a href="../{{ chapter.id }}/">{{ chapter.title }}</a></li>
                 {% endfor %}
             </ul>
         </section>

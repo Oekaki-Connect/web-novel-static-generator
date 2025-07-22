@@ -4,6 +4,7 @@ from jinja2 import Environment, FileSystemLoader
 import markdown
 import yaml
 import re
+from pathlib import Path
 
 BUILD_DIR = "./build"
 CONTENT_DIR = "./content"
@@ -122,6 +123,63 @@ def collect_tags_for_novel(novel_slug, language):
     
     return tags_data
 
+def extract_local_images(markdown_content):
+    """Extract local image references from markdown content"""
+    # Regex to match ![alt](path "title") or ![alt](path) 
+    image_pattern = r'!\[([^\]]*)\]\(([^)]+?)(?:\s+"([^"]*)")?\)'
+    matches = re.findall(image_pattern, markdown_content)
+    
+    local_images = []
+    for alt_text, image_path, title in matches:
+        # Only process if it looks like a local file (no http/https, no leading /)
+        if not image_path.startswith(('http://', 'https://', '/')):
+            local_images.append({
+                'alt': alt_text,
+                'original_path': image_path,
+                'title': title or '',
+                'full_match': f'![{alt_text}]({image_path}{"" if not title else f" \"{title}\""})'
+            })
+    
+    return local_images
+
+def process_chapter_images(novel_slug, chapter_id, language, markdown_content):
+    """Process and copy chapter images, return updated markdown content"""
+    local_images = extract_local_images(markdown_content)
+    if not local_images:
+        return markdown_content
+    
+    # Determine chapter source directory
+    if language == 'en':
+        chapter_source_dir = os.path.join(CONTENT_DIR, novel_slug, "chapters")
+    else:
+        chapter_source_dir = os.path.join(CONTENT_DIR, novel_slug, "chapters", language)
+    
+    # Create images directory in build
+    build_images_dir = os.path.join(BUILD_DIR, "images", novel_slug, chapter_id)
+    os.makedirs(build_images_dir, exist_ok=True)
+    
+    updated_content = markdown_content
+    
+    for image_info in local_images:
+        source_image_path = os.path.join(chapter_source_dir, image_info['original_path'])
+        
+        if os.path.exists(source_image_path):
+            # Copy image to build directory
+            image_filename = os.path.basename(image_info['original_path'])
+            dest_image_path = os.path.join(build_images_dir, image_filename)
+            shutil.copy2(source_image_path, dest_image_path)
+            
+            # Update markdown content with new path (relative to the chapter page)
+            new_image_path = f"../../../images/{novel_slug}/{chapter_id}/{image_filename}"
+            new_markdown = f"![{image_info['alt']}]({new_image_path}"
+            if image_info['title']:
+                new_markdown += f' "{image_info["title"]}"'
+            new_markdown += ")"
+            
+            updated_content = updated_content.replace(image_info['full_match'], new_markdown)
+    
+    return updated_content
+
 # Add the slugify_tag function as a Jinja2 filter
 env.filters['slugify_tag'] = slugify_tag
 
@@ -219,7 +277,9 @@ def build_site():
             os.makedirs(lang_dir, exist_ok=True)
 
             # Render table of contents page for this novel/language
-            with open(os.path.join(lang_dir, "toc.html"), "w", encoding='utf-8') as f:
+            toc_dir = os.path.join(lang_dir, "toc")
+            os.makedirs(toc_dir, exist_ok=True)
+            with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
                 f.write(render_template("toc.html", novel=novel, current_language=lang, available_languages=available_languages))
 
             # Render chapter pages for this novel/language
@@ -238,6 +298,8 @@ def build_site():
                 if translation_exists:
                     # Generate normal chapter page
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
+                    # Process chapter images and update markdown
+                    chapter_content_md = process_chapter_images(novel_slug, chapter_id, lang, chapter_content_md)
                     chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     prev_chapter = all_chapters[i-1] if i > 0 else None
@@ -246,7 +308,9 @@ def build_site():
                     # Use front matter title if available, otherwise use chapter title from config
                     display_title = chapter_metadata.get('title', chapter_title)
                     
-                    with open(os.path.join(lang_dir, f"{chapter_id}.html"), "w", encoding='utf-8') as f:
+                    chapter_dir = os.path.join(lang_dir, chapter_id)
+                    os.makedirs(chapter_dir, exist_ok=True)
+                    with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
                         f.write(render_template("chapter.html", 
                                                 novel=novel,
                                                 chapter=chapter,
@@ -260,6 +324,8 @@ def build_site():
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                    # Process chapter images and update markdown (using primary language)
+                    chapter_content_md = process_chapter_images(novel_slug, chapter_id, primary_lang, chapter_content_md)
                     chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     prev_chapter = all_chapters[i-1] if i > 0 else None
@@ -268,7 +334,9 @@ def build_site():
                     # Use front matter title if available, otherwise use chapter title from config
                     display_title = chapter_metadata.get('title', chapter_title)
                     
-                    with open(os.path.join(lang_dir, f"{chapter_id}.html"), "w", encoding='utf-8') as f:
+                    chapter_dir = os.path.join(lang_dir, chapter_id)
+                    os.makedirs(chapter_dir, exist_ok=True)
+                    with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
                         f.write(render_template("chapter.html", 
                                                 novel=novel,
                                                 chapter=chapter,
