@@ -1,0 +1,1 @@
+# web-novel-static-generator
