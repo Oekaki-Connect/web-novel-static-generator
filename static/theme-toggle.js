@@ -59,6 +59,41 @@
         }
     }
     
+    function initializeUtterances() {
+        // Look for comments sections that need Utterances initialization
+        const commentsSections = document.querySelectorAll('.comments-section');
+        commentsSections.forEach(section => {
+            const existingScript = section.querySelector('script[src*="utteranc.es"]');
+            const existingIframe = section.querySelector('iframe[src*="utteranc.es"]');
+            
+            // Only initialize if script exists but iframe doesn't (meaning script didn't execute)
+            if (existingScript && !existingIframe) {
+                // Get script attributes
+                const repo = existingScript.getAttribute('repo');
+                const issueTerm = existingScript.getAttribute('issue-term');
+                const label = existingScript.getAttribute('label');
+                const currentTheme = getCurrentTheme();
+                const theme = currentTheme === 'dark' ? 'github-dark' : 'github-light';
+                
+                // Remove the non-working script
+                existingScript.remove();
+                
+                // Create and configure new script
+                const newScript = document.createElement('script');
+                newScript.src = 'https://utteranc.es/client.js';
+                newScript.setAttribute('repo', repo);
+                newScript.setAttribute('issue-term', issueTerm);
+                newScript.setAttribute('label', label);
+                newScript.setAttribute('theme', theme);
+                newScript.setAttribute('crossorigin', 'anonymous');
+                newScript.async = true;
+                
+                // Append to the comments section
+                section.appendChild(newScript);
+            }
+        });
+    }
+    
     function createToggleButton() {
         // Find footer element to append theme toggle
         const footer = document.querySelector('footer');
@@ -135,6 +170,9 @@
             }
         });
     }
+    
+    // Make initializeUtterances available globally for password-protected content
+    window.initializeUtterances = initializeUtterances;
     
     // Initialize when DOM is ready
     if (document.readyState === 'loading') {

@@ -111,6 +111,12 @@
                     xorDecrypt('{{ encrypted_content }}', password).then(decryptedContent => {
                         document.getElementById('chapter-content-wrapper').innerHTML = decryptedContent;
                         document.getElementById('password-protection-form').style.display = 'none';
+                        
+                        // Initialize Utterances comments if they exist in the decrypted content
+                        if (typeof window.initializeUtterances === 'function') {
+                            // Small delay to ensure DOM is updated
+                            setTimeout(() => window.initializeUtterances(), 100);
+                        }
                     });
                 } else {
                     errorMsg.textContent = 'Invalid password. Please try again.';

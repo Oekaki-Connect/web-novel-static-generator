@@ -1007,9 +1007,41 @@ def build_site():
                     password_hint = None
                     
                     if is_password_protected:
-                        # Encrypt the content
+                        # Convert markdown to HTML first
                         chapter_content_html = convert_markdown_to_html(chapter_content_md)
-                        encrypted_content = encrypt_content_with_password(chapter_content_html, chapter_metadata['password'])
+                        
+                        # Build the complete content to be encrypted including comments
+                        complete_content = f'<div class="chapter-content">\n{chapter_content_html}\n</div>'
+                        
+                        # Add translator commentary if present
+                        if chapter_metadata.get('translator_commentary'):
+                            complete_content += f'''
+                        <div class="translator-commentary">
+                            <h3>Translator's Commentary</h3>
+                            <div class="commentary-content">
+                                {chapter_metadata['translator_commentary']}
+                            </div>
+                        </div>'''
+                        
+                        # Add comments section if enabled
+                        comments_enabled = should_enable_comments(site_config, novel_config, chapter_metadata, 'chapter')
+                        if comments_enabled:
+                            comments_config = build_comments_config(site_config)
+                            complete_content += f'''
+                        <div class="comments-section">
+                            <h3>Comments</h3>
+                            <script src="https://utteranc.es/client.js"
+                                    repo="{comments_config['repo']}"
+                                    issue-term="{comments_config['issue_term']}"
+                                    label="{comments_config['label']}"
+                                    theme="{comments_config['theme']}"
+                                    crossorigin="anonymous"
+                                    async>
+                            </script>
+                        </div>'''
+                        
+                        # Encrypt the complete content
+                        encrypted_content = encrypt_content_with_password(complete_content, chapter_metadata['password'])
                         password_hash = create_password_verification_hash(chapter_metadata['password'])
                         password_hint = chapter_metadata.get('password_hint', 'This chapter is password protected.')
                         # Set content to placeholder for password-protected chapters
@@ -1088,9 +1120,41 @@ def build_site():
                     password_hint = None
                     
                     if is_password_protected:
-                        # Encrypt the content
+                        # Convert markdown to HTML first
                         chapter_content_html = convert_markdown_to_html(chapter_content_md)
-                        encrypted_content = encrypt_content_with_password(chapter_content_html, chapter_metadata['password'])
+                        
+                        # Build the complete content to be encrypted including comments
+                        complete_content = f'<div class="chapter-content">\n{chapter_content_html}\n</div>'
+                        
+                        # Add translator commentary if present
+                        if chapter_metadata.get('translator_commentary'):
+                            complete_content += f'''
+                        <div class="translator-commentary">
+                            <h3>Translator's Commentary</h3>
+                            <div class="commentary-content">
+                                {chapter_metadata['translator_commentary']}
+                            </div>
+                        </div>'''
+                        
+                        # Add comments section if enabled
+                        comments_enabled = should_enable_comments(site_config, novel_config, chapter_metadata, 'chapter')
+                        if comments_enabled:
+                            comments_config = build_comments_config(site_config)
+                            complete_content += f'''
+                        <div class="comments-section">
+                            <h3>Comments</h3>
+                            <script src="https://utteranc.es/client.js"
+                                    repo="{comments_config['repo']}"
+                                    issue-term="{comments_config['issue_term']}"
+                                    label="{comments_config['label']}"
+                                    theme="{comments_config['theme']}"
+                                    crossorigin="anonymous"
+                                    async>
+                            </script>
+                        </div>'''
+                        
+                        # Encrypt the complete content
+                        encrypted_content = encrypt_content_with_password(complete_content, chapter_metadata['password'])
                         password_hash = create_password_verification_hash(chapter_metadata['password'])
                         password_hint = chapter_metadata.get('password_hint', 'This chapter is password protected.')
                         # Set content to placeholder for password-protected chapters
