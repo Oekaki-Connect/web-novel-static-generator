@@ -12,6 +12,8 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Tag System**: Categorize chapters with tags for easy discovery
 - **Chapter Images**: Chapter-specific image support with automatic processing
 - **Front Matter Support**: Rich metadata including author, translator, tags, and commentary
+- **Social Media Integration**: Open Graph and Twitter Card meta tags for rich social sharing
+- **SEO Optimization**: Configurable meta descriptions, keywords, and indexing controls
 - **Clean URLs**: SEO-friendly URLs without .html extensions
 - **Responsive Design**: Mobile-friendly layout
 - **GitHub Integration**: Automated deployment via GitHub Actions
@@ -25,15 +27,19 @@ web-novel-generator/
 │       └── deploy.yml          # GitHub Actions workflow
 ├── content/
 │   └── novel_title/
+│       ├── config.yaml         # Novel configuration
 │       └── chapters/           # Chapter content files
 ├── templates/
 │   ├── index.html             # Front page template
 │   ├── toc.html               # Table of contents template
-│   └── chapter.html           # Chapter page template
+│   ├── chapter.html           # Chapter page template
+│   ├── tags_index.html        # Tags index template
+│   └── tag_page.html          # Individual tag page template
 ├── static/
 │   ├── style.css              # Main stylesheet
 │   └── images/                # Image assets
 ├── build/                     # Generated site (auto-created)
+├── site_config.yaml           # Site-wide configuration
 ├── generate.py                # Main generator script
 ├── requirements.txt           # Python dependencies
 └── README.md                  # This file
@@ -49,41 +55,86 @@ Clone or download this generator and install dependencies:
 pip install -r requirements.txt
 ```
 
-### 2. Configure Your Novel
+### 2. Configure Your Site
 
-Edit the `load_novel_data()` function in `generate.py` to define your novel structure:
+Create a `site_config.yaml` file in the root directory for global settings:
 
-```python
-def load_novel_data():
-    novel_data = {
-        "title": "Your Novel Title",
-        "description": "Your novel description",
-        "arcs": [
-            {
-                "title": "Arc 1: Beginning",
-                "chapters": [
-                    {"id": "chapter-1", "title": "Chapter 1: The Start"},
-                    {"id": "prologue", "title": "Prologue"},
-                    {"id": "chapter-2", "title": "Chapter 2: The Journey"},
-                ]
-            },
-            # Add more arcs...
-        ]
-    }
-    return novel_data
+```yaml
+site_name: "Your Web Novel Collection"
+site_url: "https://your-username.github.io/your-repo-name"
+site_description: "A collection of translated web novels and original stories"
+
+# Social media embed settings
+social_embeds:
+  default_image: "https://your-username.github.io/your-repo-name/static/images/site-default-social.jpg"
+  title_format: "{title} | Your Web Novel Collection"
+  twitter_handle: "your_twitter_handle"
+
+# SEO settings
+seo:
+  allow_indexing: true
 ```
 
-### 3. Add Chapter Content
+### 3. Configure Your Novel
 
-For each chapter, you can either:
+Create `content/your-novel-name/config.yaml`:
 
-**Option A: Modify the generator to load from files**
-Create markdown files in `content/novel_title/chapters/` and modify the generator to read them.
+```yaml
+title: "Your Awesome Novel"
+description: "An epic fantasy adventure"
+primary_language: "en"
 
-**Option B: Edit the generator directly**
-Modify the chapter content generation in the `build_site()` function.
+# Story arcs and chapters
+arcs:
+  - title: "Arc 1: Beginning"
+    chapters:
+      - id: "chapter-1"
+        title: "Chapter 1: The Start"
+      - id: "chapter-2"
+        title: "Chapter 2: The Journey"
 
-### 4. Add Images
+# Social media settings for this story
+social_embeds:
+  image: "/static/images/your-novel-social.jpg"
+  description: "Follow the epic journey in this fantasy adventure"
+  keywords: ["fantasy", "adventure", "web novel"]
+
+# SEO settings for this story
+seo:
+  allow_indexing: true
+  meta_description: "Read Your Awesome Novel - an epic fantasy web novel"
+```
+
+### 4. Add Chapter Content
+
+Create markdown files in `content/your-novel-name/chapters/` with front matter:
+
+```markdown
+---
+title: "Chapter 1: The Beginning"
+author: "Original Author"
+published: "2025-01-15"
+tags: ["adventure", "magic", "prophecy"]
+translation_notes: "Cultural context about specific terms"
+
+# Social media settings for this chapter
+social_embeds:
+  image: "/static/images/chapter-1-social.jpg"
+  description: "The hero begins their epic journey"
+  keywords: ["chapter 1", "beginning", "fantasy"]
+
+# SEO settings for this chapter
+seo:
+  allow_indexing: true
+  meta_description: "Chapter 1 - The hero's journey begins"
+---
+
+# Chapter 1: The Beginning
+
+Your chapter content here...
+```
+
+### 5. Add Images
 
 You have two options for adding images to your novel:
 
@@ -121,7 +172,7 @@ You can also place images in the `static/images/` directory for site-wide use:
 ![Description](static/images/your-image.jpg)
 ```
 
-### 5. Generate the Site
+### 6. Generate the Site
 
 ```bash
 python generate.py
@@ -129,7 +180,7 @@ python generate.py
 
 The generated site will be in the `build/` directory.
 
-### 6. Test Locally
+### 7. Test Locally
 
 ```bash
 cd build
@@ -216,6 +267,13 @@ Your chapter content here...
 - `tags`: Array of tags for categorization
 - `translation_notes`: Cultural/linguistic context
 - `translator_commentary`: Extended commentary displayed at chapter end
+- `social_embeds`: Social media sharing configuration
+  - `image`: Custom social media image
+  - `description`: Social media description
+  - `keywords`: Keywords for SEO and social sharing
+- `seo`: SEO configuration
+  - `allow_indexing`: Control search engine indexing
+  - `meta_description`: Custom meta description
 
 ### Tag System
 
@@ -239,38 +297,43 @@ Perfect for organizing content by theme, genre, or story elements.
 3. Language switcher appears automatically
 4. Missing translations show helpful notices
 
-### Loading Content from Files
+### Social Media Integration
 
-To load chapter content from markdown files, modify the `build_site()` function:
+The generator automatically creates rich social media previews:
 
-```python
-def load_chapter_content(chapter_id):
-    chapter_file = os.path.join(CONTENT_DIR, "novel_title", "chapters", f"{chapter_id}.md")
-    if os.path.exists(chapter_file):
-        with open(chapter_file, 'r', encoding='utf-8') as f:
-            return f.read()
-    return f"# {chapter_id}\n\nContent not found."
-```
+**Open Graph Tags** (Facebook, LinkedIn, Discord):
+- `og:title`, `og:description`, `og:image`
+- `og:url`, `og:type`, `og:site_name`
+- Article-specific tags for chapters
 
-### YAML Front Matter
+**Twitter Cards**:
+- `twitter:card`, `twitter:title`, `twitter:description`
+- `twitter:image`, `twitter:site`, `twitter:creator`
 
-You can add YAML front matter to chapter files for metadata:
+**Hierarchical Configuration**:
+- Site-wide defaults in `site_config.yaml`
+- Story-level settings in `content/novel/config.yaml`
+- Chapter-level overrides in front matter
+- Chapter settings override story settings, story settings override site defaults
 
-```markdown
----
-title: "Chapter 1: The Beginning"
-arc: "Arc 1: The Start"
-order: 1
----
+### SEO Optimization
 
-# Chapter 1: The Beginning
+**Meta Tags**:
+- Configurable meta descriptions and keywords
+- Robots meta tag for indexing control
+- Canonical URLs for all pages
 
-Your chapter content here...
-```
+**Structured Data**:
+- Article metadata for chapters
+- Publication dates and author information
+- Tag-based content organization
 
 ### Multiple Novels
 
-To support multiple novels, create subdirectories in `content/` and modify the generator to process multiple novel configurations.
+The generator automatically detects and processes multiple novels:
+1. Create subdirectories in `content/` for each novel
+2. Add a `config.yaml` file in each novel directory
+3. The front page will list all available novels
 
 ## Dependencies
 

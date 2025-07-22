@@ -13,6 +13,91 @@ STATIC_DIR = "./static"
 
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
+def load_site_config():
+    """Load global site configuration"""
+    config_file = "site_config.yaml"
+    if os.path.exists(config_file):
+        with open(config_file, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+    return {}
+
+def build_social_meta(site_config, novel_config, chapter_metadata, page_type, title, url):
+    """Build social media metadata for a page"""
+    social_meta = {}
+    
+    # Determine social title
+    if 'social_embeds' in chapter_metadata and 'title' in chapter_metadata['social_embeds']:
+        social_meta['title'] = chapter_metadata['social_embeds']['title']
+    elif page_type == 'chapter':
+        social_meta['title'] = title
+    elif page_type == 'toc':
+        social_meta['title'] = f"{novel_config.get('title', '')} - Table of Contents"
+    else:
+        social_meta['title'] = title
+    
+    # Apply title format if specified
+    title_format = site_config.get('social_embeds', {}).get('title_format', '{title}')
+    social_meta['title'] = title_format.format(title=social_meta['title'])
+    
+    # Determine social description
+    if 'social_embeds' in chapter_metadata and 'description' in chapter_metadata['social_embeds']:
+        social_meta['description'] = chapter_metadata['social_embeds']['description']
+    elif novel_config.get('social_embeds', {}).get('description'):
+        social_meta['description'] = novel_config['social_embeds']['description']
+    else:
+        social_meta['description'] = site_config.get('social_embeds', {}).get('default_description', site_config.get('site_description', ''))
+    
+    # Determine social image (absolute URL)
+    site_url = site_config.get('site_url', '').rstrip('/')
+    if 'social_embeds' in chapter_metadata and 'image' in chapter_metadata['social_embeds']:
+        image_path = chapter_metadata['social_embeds']['image']
+    elif novel_config.get('social_embeds', {}).get('image'):
+        image_path = novel_config['social_embeds']['image']
+    else:
+        image_path = site_config.get('social_embeds', {}).get('default_image', '/static/images/default-social.jpg')
+    
+    # Convert to absolute URL if relative
+    if image_path.startswith('/'):
+        social_meta['image'] = site_url + image_path
+    else:
+        social_meta['image'] = image_path
+    
+    # Set URL
+    social_meta['url'] = url
+    
+    # Build keywords
+    keywords = []
+    if 'social_embeds' in chapter_metadata and 'keywords' in chapter_metadata['social_embeds']:
+        keywords.extend(chapter_metadata['social_embeds']['keywords'])
+    elif novel_config.get('social_embeds', {}).get('keywords'):
+        keywords.extend(novel_config['social_embeds']['keywords'])
+    
+    social_meta['keywords'] = ', '.join(keywords) if keywords else None
+    
+    return social_meta
+
+def build_seo_meta(site_config, novel_config, chapter_metadata, page_type):
+    """Build SEO metadata for a page"""
+    seo_meta = {}
+    
+    # Determine if indexing is allowed (chapter > story > site)
+    if 'seo' in chapter_metadata and 'allow_indexing' in chapter_metadata['seo']:
+        seo_meta['allow_indexing'] = chapter_metadata['seo']['allow_indexing']
+    elif novel_config.get('seo', {}).get('allow_indexing') is not None:
+        seo_meta['allow_indexing'] = novel_config['seo']['allow_indexing']
+    else:
+        seo_meta['allow_indexing'] = site_config.get('seo', {}).get('allow_indexing', True)
+    
+    # Determine meta description
+    if 'seo' in chapter_metadata and 'meta_description' in chapter_metadata['seo']:
+        seo_meta['meta_description'] = chapter_metadata['seo']['meta_description']
+    elif novel_config.get('seo', {}).get('meta_description'):
+        seo_meta['meta_description'] = novel_config['seo']['meta_description']
+    else:
+        seo_meta['meta_description'] = site_config.get('site_description', '')
+    
+    return seo_meta
+
 def load_novel_config(novel_slug):
     """Load configuration for a specific novel"""
     config_file = os.path.join(CONTENT_DIR, novel_slug, "config.yaml")
@@ -324,12 +409,30 @@ def build_site():
     os.makedirs(BUILD_DIR)
 
     copy_static_assets()
+    
+    # Load site configuration
+    site_config = load_site_config()
 
     novels_data = load_novels_data()
 
+    # Build social metadata for front page
+    front_page_url = site_config.get('site_url', '').rstrip('/')
+    social_meta = build_social_meta(site_config, {}, {}, 'index', site_config.get('site_name', 'Web Novel Collection'), front_page_url)
+    seo_meta = build_seo_meta(site_config, {}, {}, 'index')
+
     # Render front page with all novels
     with open(os.path.join(BUILD_DIR, "index.html"), "w", encoding='utf-8') as f:
-        f.write(render_template("index.html", novels=novels_data))
+        f.write(render_template("index.html", 
+                               novels=novels_data,
+                               site_name=site_config.get('site_name', 'Web Novel Collection'),
+                               social_title=social_meta['title'],
+                               social_description=social_meta['description'],
+                               social_image=social_meta['image'],
+                               social_url=social_meta['url'],
+                               seo_meta_description=seo_meta.get('meta_description'),
+                               seo_keywords=social_meta.get('keywords'),
+                               allow_indexing=seo_meta.get('allow_indexing', True),
+                               twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
 
     # Process each novel
     for novel in novels_data:
@@ -350,8 +453,26 @@ def build_site():
             # Render table of contents page for this novel/language
             toc_dir = os.path.join(lang_dir, "toc")
             os.makedirs(toc_dir, exist_ok=True)
+            
+            # Build social metadata for TOC
+            toc_url = f"{site_config.get('site_url', '').rstrip('/')}/{novel_slug}/{lang}/toc/"
+            toc_social_meta = build_social_meta(site_config, novel_config, {}, 'toc', f"{novel.get('title', '')} - Table of Contents", toc_url)
+            toc_seo_meta = build_seo_meta(site_config, novel_config, {}, 'toc')
+            
             with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
-                f.write(render_template("toc.html", novel=novel, current_language=lang, available_languages=available_languages))
+                f.write(render_template("toc.html", 
+                                       novel=novel, 
+                                       current_language=lang, 
+                                       available_languages=available_languages,
+                                       site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                       social_title=toc_social_meta['title'],
+                                       social_description=toc_social_meta['description'], 
+                                       social_image=toc_social_meta['image'],
+                                       social_url=toc_social_meta['url'],
+                                       seo_meta_description=toc_seo_meta.get('meta_description'),
+                                       seo_keywords=toc_social_meta.get('keywords'),
+                                       allow_indexing=toc_seo_meta.get('allow_indexing', True),
+                                       twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
 
             # Render chapter pages for this novel/language
             all_chapters = []
@@ -384,6 +505,11 @@ def build_site():
                     show_metadata = should_show_metadata(novel_config, chapter_metadata)
                     show_translation_notes = should_show_translation_notes(novel_config, chapter_metadata)
                     
+                    # Build social metadata for chapter
+                    chapter_url = f"{site_config.get('site_url', '').rstrip('/')}/{novel_slug}/{lang}/{chapter_id}/"
+                    chapter_social_meta = build_social_meta(site_config, novel_config, chapter_metadata, 'chapter', display_title, chapter_url)
+                    chapter_seo_meta = build_seo_meta(site_config, novel_config, chapter_metadata, 'chapter')
+                    
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
                     with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
@@ -399,7 +525,16 @@ def build_site():
                                                 available_languages=available_languages,
                                                 show_tags=show_tags,
                                                 show_metadata=show_metadata,
-                                                show_translation_notes=show_translation_notes))
+                                                show_translation_notes=show_translation_notes,
+                                                site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                                social_title=chapter_social_meta['title'],
+                                                social_description=chapter_social_meta['description'],
+                                                social_image=chapter_social_meta['image'],
+                                                social_url=chapter_social_meta['url'],
+                                                seo_meta_description=chapter_seo_meta.get('meta_description'),
+                                                seo_keywords=chapter_social_meta.get('keywords'),
+                                                allow_indexing=chapter_seo_meta.get('allow_indexing', True),
+                                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
@@ -417,6 +552,11 @@ def build_site():
                     show_tags = should_show_tags(novel_config, chapter_metadata)
                     show_metadata = should_show_metadata(novel_config, chapter_metadata)
                     show_translation_notes = should_show_translation_notes(novel_config, chapter_metadata)
+                    
+                    # Build social metadata for chapter (using primary language metadata)
+                    chapter_url = f"{site_config.get('site_url', '').rstrip('/')}/{novel_slug}/{lang}/{chapter_id}/"
+                    chapter_social_meta = build_social_meta(site_config, novel_config, chapter_metadata, 'chapter', display_title, chapter_url)
+                    chapter_seo_meta = build_seo_meta(site_config, novel_config, chapter_metadata, 'chapter')
                     
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
@@ -436,7 +576,16 @@ def build_site():
                                                 available_languages=available_languages,
                                                 show_tags=show_tags,
                                                 show_metadata=show_metadata,
-                                                show_translation_notes=show_translation_notes))
+                                                show_translation_notes=show_translation_notes,
+                                                site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                                social_title=chapter_social_meta['title'],
+                                                social_description=chapter_social_meta['description'],
+                                                social_image=chapter_social_meta['image'],
+                                                social_url=chapter_social_meta['url'],
+                                                seo_meta_description=chapter_seo_meta.get('meta_description'),
+                                                seo_keywords=chapter_social_meta.get('keywords'),
+                                                allow_indexing=chapter_seo_meta.get('allow_indexing', True),
+                                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle')))
 
         # Generate tag pages for this language (after all chapters are processed)
         for lang in available_languages:

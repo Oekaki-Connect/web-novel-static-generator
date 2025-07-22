@@ -32,6 +32,48 @@ author:
 # Copyright settings
 copyright: "2025 My Awesome Web Novel"
 
+# Social media embeds (Open Graph / Twitter Cards)
+social_embeds:
+  # Story-specific social image (absolute URL or relative to site root)
+  image: "/static/images/my-awesome-web-novel-social.jpg"
+  
+  # Story description for social embeds (overrides site default)
+  description: "Follow Aria's journey as she discovers ancient prophecies and embarks on an epic adventure through the mystical land of Eldoria."
+  
+  # Keywords for this story
+  keywords: ["fantasy", "adventure", "prophecy", "magic", "web novel", "translation"]
+
+# SEO settings
+seo:
+  # Allow indexing for this story (overrides site default)
+  allow_indexing: true
+  
+  # Custom meta description
+  meta_description: "An epic fantasy web novel about ancient prophecies and magical adventures in the land of Eldoria."
+
+# Comments settings  
+comments:
+  # Enable comments for this story (overrides site default)
+  enabled: true
+  
+  # Enable comments on table of contents
+  toc_comments: true
+  
+  # Enable comments on chapters by default
+  chapter_comments: true
+
+# Footer settings
+footer:
+  # Custom footer text for this story (optional, uses site default if not specified)
+  custom_text: "© 2025 My Awesome Web Novel - Original work by Sample Author"
+  
+  # Additional story-specific footer links
+  links:
+    - text: "Support the Author"
+      url: "https://ko-fi.com/author"
+    - text: "Original Source" 
+      url: "https://example.com/original"
+
 # Story structure
 arcs:
   - title: "Arc 1: The Beginning"

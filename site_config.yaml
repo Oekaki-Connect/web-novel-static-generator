@@ -1,0 +1,75 @@
+# Global site configuration
+site_name: "Web Novel Collection"
+site_description: "A collection of translated web novels and original stories"
+site_url: "https://your-username.github.io/web-novel-static-generator"  # Update this to your actual site URL
+site_author: "Site Owner Name"
+
+# Social media embeds (Open Graph / Twitter Cards)
+social_embeds:
+  # Default image for the site (used when no story/chapter image is specified)
+  default_image: "https://your-username.github.io/web-novel-static-generator/static/images/site-default-social.jpg"
+  
+  # Default title prefix/suffix for social embeds
+  title_format: "{title} | Web Novel Collection"
+  
+  # Default description if none provided
+  default_description: "Read translated web novels and original stories"
+  
+  # Twitter handle (without @)
+  twitter_handle: "your_twitter_handle"
+  
+  # Facebook App ID (optional)
+  facebook_app_id: ""
+
+# SEO and indexing
+seo:
+  # Allow search engines to index the site by default
+  allow_indexing: true
+  
+  # Generate robots.txt
+  generate_robots_txt: true
+  
+  # Generate sitemap.xml
+  generate_sitemap: true
+
+# RSS feeds
+rss:
+  # Generate RSS feeds
+  generate_feeds: true
+  
+  # Site-wide feed settings
+  site_feed:
+    title: "Web Novel Collection - Latest Chapters"
+    description: "Latest chapter updates from all novels"
+    
+  # Per-story feeds (generated automatically for each story)
+  story_feeds_enabled: true
+
+# Comments system (utterances)
+comments:
+  # Enable comments site-wide
+  enabled: true
+  
+  # GitHub repository for utterances (format: "username/repo-name")
+  utterances_repo: "Oekaki-Connect/web-novel-utterance-comments"
+  
+  # Utterances theme
+  utterances_theme: "github-light"
+  
+  # Issue term for utterances
+  utterances_issue_term: "pathname"
+  
+  # Label for utterances
+  utterances_label: "utterance-comment"
+
+# Footer configuration
+footer:
+  # Default copyright text
+  copyright: "© 2025 Web Novel Collection"
+  
+  # Additional footer links
+  links:
+    - text: "Privacy Policy"
+      url: "/privacy/"
+    - text: "Contact"
+      url: "/contact/"
