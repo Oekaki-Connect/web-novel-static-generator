@@ -1,0 +1,9 @@
+- the social embed images should not be hard coded in the yaml like this:
+social_embeds:
+  # Default image for the site (used when no story/chapter image is specified)
+  default_image: "https://your-username.github.io/web-novel-static-generator/static/images/site-default-social.jpg"
+instead they should use the site_url and be relative to that like this:
+social_embeds:
+  # Default image for the site (used when no story/chapter image is specified)
+  default_image: "/static/images/site-default-social.jpg"
+it looks like the site_config.yaml is wrong but in the story the config.yaml looks correct
