@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ chapter_title }}</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="../../static/style.css">
 </head>
 <body>
     <header>
@@ -17,9 +17,28 @@
             <a href="{{ next_chapter.id }}.html">Next Chapter</a>
             {% endif %}
         </nav>
+        {% if available_languages and available_languages|length > 1 %}
+        <div class="language-switcher">
+            <h3>Languages:</h3>
+            {% for lang in available_languages %}
+                {% if lang == current_language and not translation_missing %}
+                    <span class="current-language">{{ lang|upper }}</span>
+                {% else %}
+                    <a href="../{{ lang }}/{{ chapter.id }}.html">{{ lang|upper }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
         <h1>{{ chapter_title }}</h1>
     </header>
     <main>
+        {% if translation_missing %}
+        <div class="translation-notice">
+            <p><strong>Translation Notice:</strong> This chapter is not yet available in {{ requested_language|upper }}. 
+            You are viewing the {{ primary_language|upper }} version. 
+            <a href="../{{ primary_language }}/{{ chapter.id }}.html">Continue reading in {{ primary_language|upper }}</a> or help contribute a translation!</p>
+        </div>
+        {% endif %}
         <div class="chapter-content">
             {{ chapter_content | safe }}
         </div>

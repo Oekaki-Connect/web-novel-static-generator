@@ -4,11 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Table of Contents - {{ novel.title }}</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="../../static/style.css">
 </head>
 <body>
     <header>
-        <h1><a href="index.html">{{ novel.title }}</a></h1>
+        <nav><a href="../../index.html">← Back to Novels</a></nav>
+        <h1>{{ novel.title }}</h1>
+        {% if available_languages and available_languages|length > 1 %}
+        <div class="language-switcher">
+            <h3>Languages:</h3>
+            {% for lang in available_languages %}
+                {% if lang == current_language %}
+                    <span class="current-language">{{ lang|upper }}</span>
+                {% else %}
+                    <a href="../{{ lang }}/toc.html">{{ lang|upper }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
         <h2>Table of Contents</h2>
     </header>
     <main>
