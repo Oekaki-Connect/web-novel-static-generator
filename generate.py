@@ -11,9 +11,16 @@ STATIC_DIR = "./static"
 
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
+def load_chapter_content(chapter_id):
+    """Load chapter content from markdown file"""
+    chapter_file = os.path.join(CONTENT_DIR, "my-awesome-web-novel", "chapters", f"{chapter_id}.md")
+    if os.path.exists(chapter_file):
+        with open(chapter_file, 'r', encoding='utf-8') as f:
+            return f.read()
+    return f"# {chapter_id}\n\nContent not found."
+
 def load_novel_data():
-    # This function will load novel data from a structured source (e.g., YAML/Markdown files)
-    # For now, we'll use dummy data.
+    # Novel data structure with all created chapters
     novel_data = {
         "title": "My Awesome Web Novel",
         "description": "A thrilling adventure across mystical lands and perilous quests.",
@@ -30,6 +37,13 @@ def load_novel_data():
                 "chapters": [
                     {"id": "chapter-3", "title": "Chapter 3: Ancient Ruins"},
                     {"id": "chapter-4", "title": "Chapter 4: The Guardian"},
+                ]
+            },
+            {
+                "title": "Arc 3: The Trials",
+                "chapters": [
+                    {"id": "chapter-5", "title": "Chapter 5: The Test"},
+                    {"id": "chapter-6", "title": "Chapter 6: Allies in Darkness"},
                 ]
             },
         ]
@@ -75,8 +89,8 @@ def build_site():
         chapter_id = chapter["id"]
         chapter_title = chapter["title"]
         
-        # Dummy content for now
-        chapter_content_md = f"# {chapter_title}\n\nThis is the content for {chapter_title}.\n\n![Example Image](static/images/example.jpg)"
+        # Load actual content from markdown file
+        chapter_content_md = load_chapter_content(chapter_id)
         chapter_content_html = convert_markdown_to_html(chapter_content_md)
 
         prev_chapter = all_chapters[i-1] if i > 0 else None
