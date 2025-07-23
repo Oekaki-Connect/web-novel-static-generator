@@ -292,7 +292,7 @@
                 <strong>Author:</strong> 
                 {% set author_username = chapter_metadata.author | find_author_username(authors_config) %}
                 {% if author_username %}
-                <a href="../../../authors/{{ author_username }}/" class="author-link">{{ chapter_metadata.author }}</a>
+                <a href="../../../authors/{{ author_username }}/" class="metadata-author-link">{{ chapter_metadata.author }}</a>
                 {% else %}
                 {{ chapter_metadata.author }}
                 {% endif %}
@@ -304,7 +304,7 @@
                 <strong>Translator:</strong> 
                 {% set translator_username = chapter_metadata.translator | find_author_username(authors_config) %}
                 {% if translator_username %}
-                <a href="../../../authors/{{ translator_username }}/" class="author-link">{{ chapter_metadata.translator }}</a>
+                <a href="../../../authors/{{ translator_username }}/" class="metadata-author-link">{{ chapter_metadata.translator }}</a>
                 {% else %}
                 {{ chapter_metadata.translator }}
                 {% endif %}

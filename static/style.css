@@ -1031,6 +1031,18 @@ footer p {
     color: var(--color-base);
 }
 
+/* Chapter metadata author/translator links - normal text link style */
+.metadata-author-link {
+    color: var(--color-primary);
+    text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.metadata-author-link:hover {
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
 .authors-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
