@@ -30,6 +30,7 @@ def _check_ebooklib():
 
 BUILD_DIR = "./build"
 CONTENT_DIR = "./content"
+PAGES_DIR = "./pages"
 TEMPLATES_DIR = "./templates"
 STATIC_DIR = "./static"
 
@@ -255,6 +256,65 @@ def generate_sitemap_xml(site_config, novels_data):
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
     </url>""")
+    
+    # Add page index
+    available_languages = site_config.get('languages', {}).get('available', ['en'])
+    for lang in available_languages:
+        index_filename = f"pages-{lang}.html" if lang != 'en' else "pages.html"
+        sitemap_entries.append(f"""    <url>
+        <loc>{site_url}/{index_filename}</loc>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>""")
+    
+    # Add static pages
+    all_pages = get_all_pages()
+    available_languages = site_config.get('languages', {}).get('available', ['en'])
+    
+    for page_data in all_pages:
+        page_slug = page_data['slug']
+        # Load page metadata to check if it should be included
+        for lang in available_languages:
+            try:
+                _, page_metadata = load_page_content(page_slug, lang)
+                
+                # Skip pages that don't allow indexing, are drafts, or are password-protected
+                if should_skip_page(page_metadata, INCLUDE_DRAFTS):
+                    continue
+                    
+                page_allow_indexing = page_metadata.get('seo', {}).get('allow_indexing')
+                is_password_protected = 'password' in page_metadata and page_metadata['password']
+                
+                if page_allow_indexing is False or is_password_protected:
+                    continue
+                
+                # Build the page URL
+                if '/' in page_slug:
+                    # Nested page (e.g., "resources/translation-guide")
+                    page_url = f"{site_url}/{page_slug}/{lang}/"
+                else:
+                    # Top-level page (e.g., "about")
+                    page_url = f"{site_url}/{page_slug}/{lang}/"
+                
+                # Get updated date if available
+                lastmod = ""
+                if page_metadata.get('updated'):
+                    try:
+                        from datetime import datetime
+                        update_date = datetime.strptime(page_metadata['updated'], '%Y-%m-%d')
+                        lastmod = f"\n        <lastmod>{update_date.strftime('%Y-%m-%d')}</lastmod>"
+                    except:
+                        pass
+                
+                sitemap_entries.append(f"""    <url>
+        <loc>{page_url}</loc>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>{lastmod}
+    </url>""")
+                    
+            except:
+                # Skip pages that don't exist for this language
+                continue
     
     # Add novel pages
     for novel in novels_data:
@@ -715,6 +775,150 @@ def get_chapters_for_epub(novel_config, novel_slug, language='en', include_draft
             })
     
     return visible_chapters
+
+
+def load_page_content(page_slug, language='en'):
+    """Load page content from markdown file with language support and front matter parsing"""
+    # Try language-specific file first
+    if language != 'en':
+        page_file = os.path.join(PAGES_DIR, language, f"{page_slug}.md")
+        if os.path.exists(page_file):
+            with open(page_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                front_matter, markdown_content = parse_front_matter(content)
+                return markdown_content, front_matter
+    
+    # Fallback to default language file
+    page_file = os.path.join(PAGES_DIR, f"{page_slug}.md")
+    if os.path.exists(page_file):
+        with open(page_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            front_matter, markdown_content = parse_front_matter(content)
+            return markdown_content, front_matter
+    
+    return None, {}
+
+def load_nested_page_content(page_path, language='en'):
+    """Load nested page content (e.g., resources/translation-guide)"""
+    page_slug = page_path.replace('/', os.sep)
+    
+    # Try language-specific file first
+    if language != 'en':
+        page_file = os.path.join(PAGES_DIR, language, f"{page_slug}.md")
+        if os.path.exists(page_file):
+            with open(page_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                front_matter, markdown_content = parse_front_matter(content)
+                return markdown_content, front_matter
+    
+    # Fallback to default language file
+    page_file = os.path.join(PAGES_DIR, f"{page_slug}.md")
+    if os.path.exists(page_file):
+        with open(page_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            front_matter, markdown_content = parse_front_matter(content)
+            return markdown_content, front_matter
+    
+    return None, {}
+
+def get_all_pages():
+    """Get list of all available pages"""
+    pages = []
+    
+    if not os.path.exists(PAGES_DIR):
+        return pages
+    
+    def scan_pages_directory(directory, prefix=""):
+        for item in os.listdir(directory):
+            item_path = os.path.join(directory, item)
+            
+            if os.path.isfile(item_path) and item.endswith('.md'):
+                page_slug = prefix + item[:-3]  # Remove .md extension
+                try:
+                    content, metadata = load_page_content(page_slug.replace(os.sep, '/'))
+                    if content:
+                        pages.append({
+                            'slug': page_slug.replace(os.sep, '/'),
+                            'title': metadata.get('title', page_slug),
+                            'description': metadata.get('description', ''),
+                            'metadata': metadata
+                        })
+                except:
+                    continue
+            elif os.path.isdir(item_path) and not item.startswith('.') and len(item) != 2:  # Ignore language dirs
+                scan_pages_directory(item_path, prefix + item + "/")
+    
+    scan_pages_directory(PAGES_DIR)
+    return pages
+
+def get_available_page_languages(page_slug):
+    """Get list of available languages for a page"""
+    languages = ['en']  # Default language
+    
+    if not os.path.exists(PAGES_DIR):
+        return languages
+    
+    # Check for language-specific versions
+    for item in os.listdir(PAGES_DIR):
+        item_path = os.path.join(PAGES_DIR, item)
+        if os.path.isdir(item_path) and len(item) == 2:  # Assume 2-letter language codes
+            page_file = os.path.join(item_path, f"{page_slug}.md")
+            if os.path.exists(page_file):
+                languages.append(item)
+    
+    return sorted(set(languages))
+
+def should_skip_page(page_metadata, include_drafts=False):
+    """Check if a page should be skipped during generation"""
+    if page_metadata.get('hidden', False):
+        return True
+    if page_metadata.get('draft', False) and not include_drafts:
+        return True
+    return False
+
+def build_page_navigation(site_config, current_language='en', current_page_slug=None):
+    """Build navigation menus from static pages"""
+    if not os.path.exists(PAGES_DIR):
+        return {'header': [], 'footer': []}
+    
+    navigation = {'header': [], 'footer': []}
+    all_pages = get_all_pages()
+    
+    # Filter pages for current language and collect nav items
+    nav_items = {'header': [], 'footer': []}
+    
+    for page_data in all_pages:
+        page_slug = page_data['slug']
+        page_metadata = page_data['metadata']
+        
+        # Skip if page should be skipped
+        if should_skip_page(page_metadata, INCLUDE_DRAFTS):
+            continue
+        
+        # Check if page is available in current language
+        page_languages = get_available_page_languages(page_slug)
+        if current_language not in page_languages:
+            continue
+        
+        # Check navigation placement
+        nav_placement = page_metadata.get('navigation')
+        if nav_placement in ['header', 'footer']:
+            nav_order = page_metadata.get('nav_order', 999)
+            
+            nav_items[nav_placement].append({
+                'title': page_metadata.get('title', page_slug),
+                'url': f"{page_slug}/{current_language}/",
+                'slug': page_slug,
+                'order': nav_order,
+                'active': page_slug == current_page_slug
+            })
+    
+    # Sort by nav_order
+    for placement in ['header', 'footer']:
+        nav_items[placement].sort(key=lambda x: x['order'])
+        navigation[placement] = nav_items[placement]
+    
+    return navigation
 
 
 def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None, language='en'):
@@ -1320,8 +1524,11 @@ def should_show_translation_notes(novel_config, chapter_front_matter):
 def should_enable_comments(site_config, novel_config, chapter_metadata, page_type):
     """Determine if comments should be enabled based on config hierarchy"""
     # Check chapter-level override first
-    if 'comments' in chapter_metadata and 'enabled' in chapter_metadata['comments']:
-        return chapter_metadata['comments']['enabled']
+    if 'comments' in chapter_metadata:
+        if isinstance(chapter_metadata['comments'], bool):
+            return chapter_metadata['comments']
+        elif isinstance(chapter_metadata['comments'], dict) and 'enabled' in chapter_metadata['comments']:
+            return chapter_metadata['comments']['enabled']
     
     # Check story-level config based on page type
     if page_type == 'chapter' and novel_config.get('comments', {}).get('chapter_comments') is not None:
@@ -1790,6 +1997,252 @@ def copy_static_assets():
     if os.path.exists(STATIC_DIR):
         shutil.copytree(STATIC_DIR, os.path.join(BUILD_DIR, "static"), dirs_exist_ok=True)
 
+def generate_static_pages(site_config):
+    """Generate all static pages"""
+    if not os.path.exists(PAGES_DIR):
+        print("No pages directory found, skipping static page generation.")
+        return
+    
+    print("Generating static pages...")
+    
+    # Get all available pages
+    all_pages = get_all_pages()
+    
+    # Get available languages from site config or scan pages
+    available_languages = site_config.get('languages', {}).get('available', ['en'])
+    
+    for page_data in all_pages:
+        page_slug = page_data['slug']
+        
+        # Handle nested paths (e.g., "resources/translation-guide")
+        if '/' in page_slug:
+            page_languages = get_available_page_languages(page_slug)
+        else:
+            page_languages = get_available_page_languages(page_slug)
+        
+        for lang in available_languages:
+            if lang not in page_languages:
+                continue
+            
+            # Load page content for this language
+            if '/' in page_slug:
+                page_content, page_metadata = load_nested_page_content(page_slug, lang)
+            else:
+                page_content, page_metadata = load_page_content(page_slug, lang)
+            
+            if not page_content:
+                continue
+            
+            # Skip if page should be skipped
+            if should_skip_page(page_metadata, INCLUDE_DRAFTS):
+                print(f"      Skipping draft/hidden page: {page_slug} ({lang})")
+                continue
+            
+            # Create page directory
+            page_dir = os.path.join(BUILD_DIR, page_slug, lang)
+            os.makedirs(page_dir, exist_ok=True)
+            
+            # Calculate breadcrumb depth
+            breadcrumb_depth = page_slug.count('/') + 2  # +2 for lang and page itself
+            
+            # Build breadcrumbs
+            breadcrumbs = [{'title': 'Home', 'url': '../' * breadcrumb_depth}]
+            if '/' in page_slug:
+                parts = page_slug.split('/')
+                url_parts = []
+                for i, part in enumerate(parts[:-1]):
+                    url_parts.append(part)
+                    breadcrumbs.append({
+                        'title': part.title(),
+                        'url': '../' * (breadcrumb_depth - i - 1) + '/'.join(url_parts) + f'/{lang}/'
+                    })
+            breadcrumbs.append({'title': page_metadata.get('title', page_slug)})
+            
+            # Handle password protection
+            is_password_protected = 'password' in page_metadata and page_metadata['password']
+            encrypted_content = None
+            password_hash = None
+            
+            if is_password_protected:
+                # Convert markdown to HTML
+                page_content_html = markdown.markdown(page_content)
+                
+                # Encrypt content
+                password = page_metadata['password']
+                password_hash = hashlib.sha256(password.encode()).hexdigest()
+                
+                # Simple XOR encryption
+                encrypted_content = ''
+                for i, char in enumerate(page_content_html):
+                    encrypted_content += chr(ord(char) ^ ord(password[i % len(password)]))
+            else:
+                # Convert markdown to HTML
+                page_content_html = markdown.markdown(page_content)
+            
+            # Build social and SEO metadata
+            page_url = f"{site_config.get('site_url', '').rstrip('/')}/{page_slug}/{lang}/"
+            social_meta = build_social_meta(site_config, {}, page_metadata, 'page', page_metadata.get('title', ''), page_url)
+            seo_meta = build_seo_meta(site_config, {}, page_metadata, 'page')
+            
+            # Check if comments are enabled
+            comments_enabled = should_enable_comments(site_config, {}, page_metadata, 'page')
+            comments_config = build_comments_config(site_config)
+            
+            # Get footer data
+            footer_data = build_footer_content(site_config, {}, 'page')
+            
+            # Build navigation
+            page_navigation = build_page_navigation(site_config, lang, page_slug)
+            
+            # Language URLs for switcher
+            language_urls = {}
+            for available_lang in page_languages:
+                if available_lang in available_languages:
+                    language_urls[available_lang] = f"../{available_lang}/"
+            
+            # Get navigation data
+            navigation_data = build_page_navigation(site_config, lang, page_slug)
+            
+            # Generate page HTML
+            page_html = render_template("page.html",
+                                       page=page_metadata,
+                                       content=page_content_html if not is_password_protected else '',
+                                       current_language=lang,
+                                       available_languages=page_languages,
+                                       language_urls=language_urls,
+                                       breadcrumbs=breadcrumbs,
+                                       breadcrumb_depth=breadcrumb_depth,
+                                       site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                       site_navigation=navigation_data['header'],
+                                       footer_navigation=navigation_data['footer'],
+                                       is_password_protected=is_password_protected,
+                                       encrypted_content=encrypted_content,
+                                       password_hash=password_hash,
+                                       password_hint=page_metadata.get('password_hint'),
+                                       social_title=social_meta['title'],
+                                       social_description=social_meta['description'],
+                                       social_image=social_meta['image'],
+                                       social_url=social_meta['url'],
+                                       seo_meta_description=seo_meta.get('meta_description'),
+                                       seo_keywords=social_meta.get('keywords'),
+                                       allow_indexing=seo_meta.get('allow_indexing', True),
+                                       twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                       footer_data=footer_data,
+                                       comments_enabled=comments_enabled,
+                                       comments_repo=comments_config['repo'],
+                                       comments_issue_term=comments_config['issue_term'],
+                                       comments_label=comments_config['label'],
+                                       comments_theme=comments_config['theme'])
+            
+            # Write page
+            with open(os.path.join(page_dir, "index.html"), "w", encoding='utf-8') as f:
+                f.write(page_html)
+            
+            print(f"    Generated page: {page_slug} ({lang})")
+    
+    print("Static pages generated.")
+    
+    # Generate page index
+    generate_page_index(site_config)
+
+def generate_page_index(site_config):
+    """Generate page index files showing all available static pages"""
+    print("Generating page index...")
+    
+    all_pages = get_all_pages()
+    available_languages = site_config.get('languages', {}).get('available', ['en'])
+    
+    for lang in available_languages:
+        # Collect pages for this language
+        page_categories = {}
+        
+        for page_data in all_pages:
+            page_slug = page_data['slug']
+            
+            try:
+                _, page_metadata = load_page_content(page_slug, lang)
+                
+                # Skip drafts unless include_drafts is True
+                if should_skip_page(page_metadata, INCLUDE_DRAFTS):
+                    continue
+                
+                # Determine category (top-level vs nested pages)
+                if '/' in page_slug:
+                    category = page_slug.split('/')[0].title()
+                else:
+                    category = 'Main Pages'
+                
+                if category not in page_categories:
+                    page_categories[category] = []
+                
+                # Check if password protected
+                is_password_protected = 'password' in page_metadata and page_metadata['password']
+                
+                # Get available languages for this page
+                page_languages = get_available_page_languages(page_slug)
+                
+                # Build page URL
+                if '/' in page_slug:
+                    page_url = f"{page_slug}/{lang}/"
+                else:
+                    page_url = f"{page_slug}/{lang}/"
+                
+                page_info = {
+                    'title': page_metadata.get('title', page_slug.replace('/', ' - ').title()),
+                    'description': page_metadata.get('description', ''),
+                    'url': page_url,
+                    'updated': page_metadata.get('updated'),
+                    'is_password_protected': is_password_protected,
+                    'languages': page_languages,
+                    'slug': page_slug
+                }
+                
+                page_categories[category].append(page_info)
+                
+            except:
+                # Skip pages that don't exist for this language
+                continue
+        
+        # Sort categories and pages within categories
+        for category in page_categories:
+            page_categories[category].sort(key=lambda x: x['title'])
+        
+        # Get site navigation
+        navigation_data = build_page_navigation(site_config, lang)
+        
+        # Get footer data
+        footer_data = build_footer_content(site_config, {}, 'page')
+        
+        # Generate social meta
+        social_meta = {
+            'title': f"Site Pages | {site_config.get('site_name', 'Web Novel Collection')}",
+            'description': f"Browse all pages available on {site_config.get('site_name', 'Web Novel Collection')}",
+            'image': site_config.get('site_url', '').rstrip('/') + site_config.get('social_embeds', {}).get('default_image', '/static/images/site-default-social.jpg'),
+            'url': site_config.get('site_url', '').rstrip('/') + '/pages/'
+        }
+        
+        # Generate page index HTML
+        page_index_html = render_template("page_index.html",
+                                         current_language=lang,
+                                         available_languages=available_languages,
+                                         site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                         site_navigation=navigation_data['header'],
+                                         footer_navigation=navigation_data['footer'],
+                                         page_categories=page_categories,
+                                         footer_data=footer_data,
+                                         social_image=social_meta['image'],
+                                         site_url=site_config.get('site_url', '').rstrip('/'),
+                                         twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'))
+        
+        # Write page index file
+        index_filename = f"pages-{lang}.html" if lang != 'en' else "pages.html"
+        with open(os.path.join(BUILD_DIR, index_filename), "w", encoding='utf-8') as f:
+            f.write(page_index_html)
+        
+        print(f"    Generated page index: {index_filename}")
+    
+    print("Page index generated.")
+
 def render_template(template_name, **kwargs):
     template = env.get_template(template_name)
     return template.render(**kwargs)
@@ -1807,6 +2260,9 @@ def build_site(include_drafts=False):
     
     # Load site configuration
     site_config = load_site_config()
+    
+    # Generate static pages
+    generate_static_pages(site_config)
 
     # Load all novels for processing
     all_novels_data = load_all_novels_data()

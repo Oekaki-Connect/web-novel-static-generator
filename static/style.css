@@ -85,7 +85,7 @@ header h1 {
 }
 
 header h1 a {
-    color: var(--color-accent);
+    color: var(--color-heading);
     text-decoration: none;
     transition: color 0.2s ease;
 }
@@ -1889,6 +1889,11 @@ footer p {
 }
 
 @media (prefers-color-scheme: dark) {
+    .page-header h1,
+    .page-content h1 {
+        color: #f0f0f0 !important;
+    }
+    
     .chapter-metadata {
         background-color: #3a3a3a;
         border-color: #555555;
@@ -1984,6 +1989,11 @@ footer p {
     }
     
     /* Override auto dark mode if user has manually set light mode */
+    [data-theme="light"] .page-header h1,
+    [data-theme="light"] .page-content h1 {
+        color: var(--color-heading) !important;
+    }
+    
     [data-theme="light"] .chapter-metadata {
         background-color: #f5f5f5;
         border-color: #e0e0e0;
@@ -2294,6 +2304,150 @@ footer p {
         max-width: 120px;
         padding: 0.4rem 0.75rem;
         font-size: 0.85rem;
+    }
+}
+
+/* Page Index Styles */
+.page-header h1 {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: var(--color-heading);
+    text-align: center;
+}
+
+.page-header .page-description {
+    color: var(--color-secondary);
+    text-align: center;
+    margin-bottom: 2rem;
+    font-style: italic;
+}
+
+.page-body a {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.page-body a:hover {
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
+.page-category {
+    margin-bottom: 2rem;
+}
+
+.page-category h2 {
+    border-bottom: 2px solid var(--color-accent);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    color: var(--color-heading);
+}
+
+.page-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.page-item {
+    background: var(--color-accent);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border-left: 3px solid var(--color-primary);
+}
+
+.page-item h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.page-item h3 a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.page-item h3 a:hover {
+    color: var(--color-primary-hover);
+    text-decoration: underline;
+}
+
+.page-item .page-description {
+    color: var(--color-secondary);
+    margin: 0 0 0.5rem 0;
+    font-style: italic;
+}
+
+.page-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--color-secondary);
+}
+
+.page-meta span {
+    background: var(--color-base);
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+}
+
+.page-protected {
+    color: #e67e22 !important;
+    font-weight: 500;
+}
+
+.page-updated {
+    color: var(--color-secondary);
+}
+
+.page-languages {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+/* Dark mode styles for page index */
+[data-theme="dark"] .page-header h1,
+[data-theme="dark"] .page-content h1 {
+    color: #f0f0f0 !important;
+}
+
+[data-theme="dark"] .page-header .page-description {
+    color: var(--color-secondary);
+}
+
+[data-theme="dark"] .page-body a {
+    color: var(--color-primary);
+}
+
+[data-theme="dark"] .page-body a:hover {
+    color: var(--color-primary-hover);
+}
+
+[data-theme="dark"] .page-item {
+    background: var(--color-accent);
+    border-left-color: var(--color-primary);
+}
+
+[data-theme="dark"] .page-meta span {
+    background: #575757;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .page-protected {
+    background: #575757 !important;
+    color: #ff9800 !important;
+}
+
+/* Mobile responsiveness for page index */
+@media (max-width: 768px) {
+    .page-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .page-item {
+        padding: 0.75rem;
     }
 }
 

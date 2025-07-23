@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Pages | {{ site_name }}</title>
+    <link rel="stylesheet" href="static/style.css">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Browse all pages available on {{ site_name }}">
+    <meta name="keywords" content="site pages, index, navigation">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Site Pages | {{ site_name }}">
+    <meta property="og:description" content="Browse all pages available on {{ site_name }}">
+    <meta property="og:image" content="{{ social_image }}">
+    <meta property="og:url" content="{{ site_url }}/pages/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ site_name }}">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Site Pages | {{ site_name }}">
+    <meta name="twitter:description" content="Browse all pages available on {{ site_name }}">
+    <meta name="twitter:image" content="{{ social_image }}">
+    {% if twitter_handle %}
+    <meta name="twitter:site" content="@{{ twitter_handle }}">
+    {% endif %}
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ site_url }}/pages/">
+    
+    <!-- Theme Toggle Script -->
+    <script src="static/theme-toggle.js"></script>
+</head>
+<body>
+    <header>
+        <h1><a href="./">{{ site_name }}</a></h1>
+        
+        {% if site_navigation %}
+        <nav class="site-navigation">
+            {% for nav_item in site_navigation %}
+            <a href="{{ nav_item.url }}">{{ nav_item.title }}</a>
+            {% endfor %}
+        </nav>
+        {% endif %}
+    </header>
+    
+    <main>
+        <!-- Breadcrumb Navigation -->
+        <nav class="breadcrumbs">
+            <a href="./">Home</a> > Site Pages
+        </nav>
+        
+        <!-- Language Switcher -->
+        {% if available_languages and available_languages|length > 1 %}
+        <div class="language-switcher">
+            {% for lang in available_languages %}
+                {% if lang == current_language %}
+                    <span class="current-language">{{ lang|upper }}</span>
+                {% else %}
+                    <a href="pages-{{ lang }}.html">{{ lang|upper }}</a>
+                {% endif %}
+                {% if not loop.last %} | {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Page Index Content -->
+        <article class="page-content">
+            <header class="page-header">
+                <h1>Site Pages</h1>
+                <p class="page-description">Browse all available pages on this site</p>
+            </header>
+            
+            <div class="page-body">
+                {% if page_categories %}
+                {% for category, pages in page_categories.items() %}
+                <section class="page-category">
+                    {% if category != 'uncategorized' %}
+                    <h2>{{ category|title }}</h2>
+                    {% endif %}
+                    
+                    <div class="page-list">
+                        {% for page in pages %}
+                        <div class="page-item">
+                            <h3><a href="{{ page.url }}">{{ page.title }}</a></h3>
+                            {% if page.description %}
+                            <p class="page-description">{{ page.description }}</p>
+                            {% endif %}
+                            <div class="page-meta">
+                                {% if page.updated %}
+                                <span class="page-updated">Updated: {{ page.updated }}</span>
+                                {% endif %}
+                                {% if page.is_password_protected %}
+                                <span class="page-protected">🔒 Protected</span>
+                                {% endif %}
+                                {% if page.languages %}
+                                <span class="page-languages">Languages: {{ page.languages|join(', ')|upper }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endfor %}
+                {% else %}
+                <p>No pages available.</p>
+                {% endif %}
+            </div>
+        </article>
+    </main>
+    
+    <footer>
+        <p>{{ footer_data.copyright }}</p>
+        {% if footer_data.links or footer_navigation %}
+        <nav class="footer-links">
+            {% if footer_navigation %}
+            {% for nav_item in footer_navigation %}
+            <a href="{{ nav_item.url }}">{{ nav_item.title }}</a>
+            {% endfor %}
+            {% endif %}
+            {% if footer_data.links %}
+            {% for link in footer_data.links %}
+            <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
+            {% endfor %}
+            {% endif %}
+        </nav>
+        {% endif %}
+        {% if footer_data.additional_text %}
+        <p class="footer-additional">{{ footer_data.additional_text }}</p>
+        {% endif %}
+    </footer>
+</body>
+</html>

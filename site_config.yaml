@@ -4,6 +4,10 @@ site_description: "A collection of translated web novels and original stories"
 site_url: "https://oekaki-connect.github.io/web-novel"  # Update this to your actual site URL
 site_author: "Site Owner Name"
 
+# Multi-language support
+languages:
+  available: ["en", "jp"]  # Available languages for the site
+
 # Social media embeds (Open Graph / Twitter Cards)
 social_embeds:
   # Default image for the site (used when no story/chapter image is specified)

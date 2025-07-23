@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="{{ current_language }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }} | {{ site_name }}</title>
+    <link rel="stylesheet" href="{{ '../' * breadcrumb_depth }}static/style.css">
+    
+    <!-- SEO Meta Tags -->
+    {% if seo_meta_description %}
+    <meta name="description" content="{{ seo_meta_description }}">
+    {% endif %}
+    {% if seo_keywords %}
+    <meta name="keywords" content="{{ seo_keywords }}">
+    {% endif %}
+    {% if not allow_indexing %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{ social_title }}">
+    <meta property="og:description" content="{{ social_description }}">
+    <meta property="og:image" content="{{ social_image }}">
+    <meta property="og:url" content="{{ social_url }}">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="{{ site_name }}">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ social_title }}">
+    <meta name="twitter:description" content="{{ social_description }}">
+    <meta name="twitter:image" content="{{ social_image }}">
+    {% if twitter_handle %}
+    <meta name="twitter:site" content="@{{ twitter_handle }}">
+    {% endif %}
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ social_url }}">
+    
+    <!-- Theme Toggle Script -->
+    <script src="{{ '../' * breadcrumb_depth }}static/theme-toggle.js"></script>
+    
+    {% if page.custom_css %}
+    <link rel="stylesheet" href="{{ '../' * breadcrumb_depth }}static/css/{{ page.custom_css }}.css">
+    {% endif %}
+</head>
+<body>
+    <header>
+        <h1><a href="{{ '../' * breadcrumb_depth }}">{{ site_name }}</a></h1>
+        
+        {% if site_navigation %}
+        <nav class="site-navigation">
+            {% for nav_item in site_navigation %}
+            <a href="{{ '../' * breadcrumb_depth }}{{ nav_item.url }}" 
+               {% if nav_item.active %}class="active"{% endif %}>{{ nav_item.title }}</a>
+            {% endfor %}
+        </nav>
+        {% endif %}
+    </header>
+    
+    <main>
+        <!-- Breadcrumb Navigation -->
+        {% if breadcrumbs %}
+        <nav class="breadcrumbs">
+            {% for crumb in breadcrumbs %}
+                {% if not loop.last %}<a href="{{ crumb.url }}">{{ crumb.title }}</a> > {% else %}{{ crumb.title }}{% endif %}
+            {% endfor %}
+        </nav>
+        {% endif %}
+        
+        <!-- Language Switcher -->
+        {% if available_languages and available_languages|length > 1 %}
+        <div class="language-switcher">
+            {% for lang in available_languages %}
+                {% if lang == current_language %}
+                    <span class="current-language">{{ lang|upper }}</span>
+                {% else %}
+                    <a href="{{ language_urls[lang] }}">{{ lang|upper }}</a>
+                {% endif %}
+                {% if not loop.last %} | {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Password Protection -->
+        {% if is_password_protected %}
+        <div class="password-protection">
+            <h2>🔒 Protected Content</h2>
+            <p>This page is password protected.</p>
+            {% if password_hint %}
+            <p class="password-hint">{{ password_hint }}</p>
+            {% endif %}
+            <form class="password-form" onsubmit="return unlockPage(event)">
+                <div class="password-input-group">
+                    <input type="password" id="password-input" placeholder="Enter password" required>
+                    <button type="submit" class="unlock-button">Unlock</button>
+                </div>
+                <div id="password-message" class="password-message"></div>
+            </form>
+        </div>
+        
+        <div id="protected-content" class="protected-content" style="display: none;">
+            {{ encrypted_content }}
+        </div>
+        
+        <script>
+            const passwordHash = "{{ password_hash }}";
+            const encryptedData = "{{ encrypted_content }}";
+            
+            function unlockPage(event) {
+                event.preventDefault();
+                const password = document.getElementById('password-input').value;
+                const messageDiv = document.getElementById('password-message');
+                
+                // Simple XOR decryption with SHA256 hashing
+                const hashedPassword = CryptoJS.SHA256(password).toString();
+                
+                if (hashedPassword === passwordHash) {
+                    try {
+                        const decrypted = xorDecrypt(encryptedData, password);
+                        document.querySelector('.password-protection').style.display = 'none';
+                        document.getElementById('protected-content').innerHTML = decrypted;
+                        document.getElementById('protected-content').style.display = 'block';
+                        
+                        // Initialize comments if present
+                        if (typeof initializeUtterances === 'function') {
+                            initializeUtterances();
+                        }
+                        
+                        messageDiv.textContent = '';
+                        return false;
+                    } catch (e) {
+                        messageDiv.textContent = 'Error decrypting content. Please try again.';
+                        messageDiv.className = 'password-message error';
+                        return false;
+                    }
+                } else {
+                    messageDiv.textContent = 'Incorrect password. Please try again.';
+                    messageDiv.className = 'password-message error';
+                    return false;
+                }
+            }
+            
+            function xorDecrypt(encrypted, key) {
+                let decrypted = '';
+                for (let i = 0; i < encrypted.length; i++) {
+                    decrypted += String.fromCharCode(encrypted.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+                }
+                return decrypted;
+            }
+        </script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+        {% else %}
+        
+        <!-- Page Content -->
+        <article class="page-content">
+            <header class="page-header">
+                <h1>{{ page.title }}</h1>
+                {% if page.description %}
+                <p class="page-description">{{ page.description }}</p>
+                {% endif %}
+                {% if page.updated %}
+                <p class="page-updated">Last updated: {{ page.updated }}</p>
+                {% endif %}
+            </header>
+            
+            <div class="page-body">
+                {{ content }}
+            </div>
+        </article>
+        
+        {% endif %}
+        
+        <!-- Comments Section -->
+        {% if comments_enabled and not is_password_protected %}
+        <div class="comments-section">
+            <h3>Comments</h3>
+            <div id="utterances-container" 
+                 data-repo="{{ comments_repo }}"
+                 data-issue-term="{{ comments_issue_term }}"
+                 data-label="{{ comments_label }}">
+            </div>
+        </div>
+        {% endif %}
+    </main>
+    
+    <footer>
+        <p>{{ footer_data.copyright }}</p>
+        {% if footer_data.links or footer_navigation %}
+        <nav class="footer-links">
+            {% if footer_navigation %}
+            {% for nav_item in footer_navigation %}
+            <a href="{{ '../' * breadcrumb_depth }}{{ nav_item.url }}">{{ nav_item.title }}</a>
+            {% endfor %}
+            {% endif %}
+            {% if footer_data.links %}
+            {% for link in footer_data.links %}
+            <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
+            {% endfor %}
+            {% endif %}
+        </nav>
+        {% endif %}
+        {% if footer_data.additional_text %}
+        <p class="footer-additional">{{ footer_data.additional_text }}</p>
+        {% endif %}
+    </footer>
+    
+    {% if page.custom_js %}
+    <script src="{{ '../' * breadcrumb_depth }}static/js/{{ page.custom_js }}.js"></script>
+    {% endif %}
+</body>
+</html>
