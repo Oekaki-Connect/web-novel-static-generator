@@ -1,7 +1,7 @@
 # Global site configuration
 site_name: "Web Novel Collection"
 site_description: "A collection of translated web novels and original stories"
-site_url: "https://your-username.github.io/web-novel-static-generator"  # Update this to your actual site URL
+site_url: "https://oekaki-connect.github.io/web-novel"  # Update this to your actual site URL
 site_author: "Site Owner Name"
 
 # Social media embeds (Open Graph / Twitter Cards)
