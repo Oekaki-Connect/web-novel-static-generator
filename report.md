@@ -16,13 +16,13 @@ The Web Novel Static Generator is a sophisticated Python-based static site gener
 ### Main Components
 
 #### 1. Core Generator (`generate.py`)
-**File Size**: 1,269 lines of Python code
 **Primary Functions**:
 - **Site Configuration Management**: Loads global and novel-specific configurations
 - **Content Processing**: Converts markdown to HTML with front matter parsing
 - **Template Rendering**: Uses Jinja2 for dynamic page generation
 - **Asset Management**: Handles static files and chapter-specific images
 - **Multi-language Support**: Manages translation workflows and language switching
+- **EPUB Generation**: Creates high-quality EPUB files for offline reading
 - **Security Features**: Implements client-side encryption for premium content
 - **SEO Generation**: Creates sitemaps, robots.txt, and meta tags
 - **RSS Feed Generation**: Produces site-wide and story-specific feeds
@@ -35,6 +35,9 @@ The Web Novel Static Generator is a sophisticated Python-based static site gener
 - Comments integration with Utterances
 - Image processing and path resolution
 - Navigation generation with hidden chapter filtering
+- EPUB generation with multi-language support
+- Reading progress tracking with localStorage
+- Chapter completion detection via scroll tracking
 
 #### 2. Template System (`templates/`)
 **Template Engine**: Jinja2
@@ -169,6 +172,39 @@ content/
 - **CSS Variables**: Clean theme implementation with CSS custom properties
 - **User Experience**: Footer-based toggle with active state indication
 
+### 8. EPUB Generation System
+**Implementation**:
+- **Library**: Uses ebooklib for EPUB creation and manipulation
+- **Multi-language Support**: Generates separate EPUB files per language
+- **Content Organization**: Full story and individual arc downloads
+- **Image Embedding**: Proper image processing with centering support
+- **Cover Integration**: Story and arc cover images as first pages
+- **Chapter Pagination**: Clean chapter separation and formatting
+- **E-reader Compatibility**: Standards-compliant EPUB3 format
+
+**Features**:
+- **Full Story Downloads**: Complete novel as single EPUB file
+- **Arc Downloads**: Individual story arcs as separate EPUB files
+- **Language Variants**: Separate files for each translated language
+- **Cover Art**: Automatic cover image integration
+- **Rich Metadata**: Author, title, publication date, and description
+- **Chapter Navigation**: Proper table of contents and chapter links
+
+### 9. Reading Progress Tracking
+**Implementation**:
+- **Storage**: Browser localStorage for cross-session persistence
+- **Tracking Method**: Automatic scroll detection for chapter completion
+- **Visual Indicators**: Chapter status shown on table of contents
+- **Multi-story Support**: Per-novel progress tracking
+- **Continue Reading**: Latest completed chapter display
+
+**Features**:
+- **Visit Tracking**: Mark chapters as visited when opened
+- **Completion Detection**: Auto-detect when reader reaches chapter end
+- **Progress Indicators**: Visual symbols (○ visited, ✓ completed)
+- **Latest Chapter**: "Continue Reading" section with last completed chapter
+- **Privacy-First**: All data stored locally in browser
+
 ## File Structure and Organization
 
 ### Source Structure
@@ -198,7 +234,15 @@ build/
 ├── robots.txt                      # SEO indexing control
 ├── sitemap.xml                     # Site map for search engines
 ├── rss.xml                         # Site-wide RSS feed
-├── static/                         # Static assets
+├── static/
+│   ├── style.css                   # Main stylesheet
+│   ├── theme-toggle.js            # Dark mode functionality
+│   ├── images/                     # Global assets
+│   └── epub/                       # Generated EPUB files
+│       ├── novel-name.epub         # Full story EPUB
+│       ├── novel-name_jp.epub      # Japanese version
+│       ├── novel-name-arc-1.epub   # Individual arc EPUBs
+│       └── ...
 ├── images/                         # Processed chapter images
 └── novel-name/
     ├── rss.xml                     # Story-specific RSS feed
@@ -285,6 +329,7 @@ build/
 - **Jinja2 3.1.2**: Template engine for HTML generation
 - **Markdown 3.5.1**: Markdown to HTML conversion
 - **PyYAML 6.0.1**: YAML configuration parsing
+- **EbookLib 0.18**: EPUB generation and manipulation
 
 ### Browser Requirements
 - **Modern JavaScript**: ES6+ features for theme toggle and password protection
@@ -321,16 +366,19 @@ build/
 
 ## Conclusion
 
-The Web Novel Static Generator represents a comprehensive solution for web novel publishing that successfully balances technical sophistication with ease of use. The system demonstrates several key strengths:
+The Web Novel Static Generator represents a streamlined, comprehensive solution for web novel publishing that successfully balances technical sophistication with ease of use. The system demonstrates several key strengths:
 
-1. **Comprehensive Feature Set**: Covers all aspects of web novel publishing from content management to community features
+1. **Focused Feature Set**: Covers all essential aspects of web novel publishing with EPUB downloads for offline reading
 2. **Security-First Design**: Implements robust content protection without compromising user experience
-3. **SEO Excellence**: Provides complete search engine optimization and social media integration
-4. **Developer-Friendly**: Clean codebase with clear separation of concerns
-5. **Deployment Simplicity**: Zero-configuration deployment via GitHub Actions
+3. **Reader Experience**: Advanced reading progress tracking and offline reading capabilities
+4. **SEO Excellence**: Provides complete search engine optimization and social media integration
+5. **Developer-Friendly**: Clean, maintainable codebase with clear separation of concerns
+6. **Deployment Simplicity**: Zero-configuration deployment via GitHub Actions
 
-The architecture demonstrates mature understanding of static site generation principles while addressing the specific needs of serialized content publishers. The multi-language support, content protection features, and community integration make it particularly suitable for translation groups and independent authors seeking professional-quality web presence.
+Recent improvements have streamlined the system by focusing on EPUB generation for offline reading while maintaining all core functionality. Better reader experience through high-quality EPUB files compatible with all major e-readers.
 
-**Technical Quality**: The codebase shows high attention to detail, comprehensive error handling, and thoughtful feature integration. The template system is well-structured, and the configuration hierarchy provides appropriate flexibility without complexity.
+The architecture demonstrates mature understanding of static site generation principles while addressing the specific needs of serialized content publishers. The multi-language support, content protection features, reading progress tracking, and community integration make it particularly suitable for translation groups and independent authors seeking professional-quality web presence.
 
-**Production Readiness**: The system appears ready for production use with proper security measures, SEO optimization, and automated deployment processes in place.
+**Technical Quality**: The codebase shows high attention to detail, comprehensive error handling, and thoughtful feature integration. The template system is well-structured, the configuration hierarchy provides appropriate flexibility without complexity, and the EPUB generation system produces standards-compliant files.
+
+**Production Readiness**: The system is production-ready with proper security measures, SEO optimization, automated deployment processes, and modern reader-focused features including progress tracking and offline reading support.

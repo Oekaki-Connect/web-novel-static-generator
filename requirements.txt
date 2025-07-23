@@ -1,4 +1,11 @@
+# Core template engine
 jinja2==3.1.2
+
+# Markdown processing for content
 markdown==3.5.1
+
+# YAML configuration files
 pyyaml==6.0.1
 
+# EPUB generation
+ebooklib==0.18

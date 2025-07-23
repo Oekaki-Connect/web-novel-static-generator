@@ -6,6 +6,7 @@ A Python-based static website generator specifically designed for web novels, wi
 
 - **Multi-Novel Support**: Host multiple novels from the same repository
 - **Translation System**: Full multi-language support with language switching
+- **EPUB Downloads**: Generate high-quality EPUB files for offline reading
 - **Front Page**: Clean landing page listing all available novels
 - **Table of Contents**: Organized by story arcs with manual chapter sorting
 - **Chapter Pages**: Individual pages for each chapter with navigation
@@ -29,6 +30,7 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Comments System**: Integrated Utterances comments with theme switching
 - **robots.txt Generation**: Automatic SEO indexing control
 - **Sitemap Generation**: XML sitemaps for search engine optimization
+- **Reading Progress Tracking**: Track visited and completed chapters with localStorage
 
 ## Project Structure
 
@@ -107,6 +109,10 @@ comments:
 rss:
   enabled: true
   max_items: 20
+
+# EPUB generation configuration
+epub:
+  generate_enabled: true
 ```
 
 ### 3. Configure Your Novel
@@ -158,6 +164,11 @@ seo:
 # Comments configuration for this story
 comments:
   enabled: true  # Enable comments on TOC and chapters
+
+# Downloads configuration  
+downloads:
+  epub_enabled: true     # Enable EPUB downloads for this story
+  include_arcs: true     # Generate individual arc downloads
 
 # Custom footer for this story (optional)
 footer:
@@ -586,6 +597,36 @@ tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
 - Clean tag styling with dark mode support
 - Helps readers understand story themes at a glance
 
+### EPUB Downloads
+
+Generate high-quality EPUB files for offline reading:
+
+**Features:**
+- Full story EPUB downloads
+- Individual arc EPUB downloads  
+- Multi-language support (separate EPUBs per language)
+- Embedded images with proper centering
+- Cover art integration for stories and arcs
+- Clean chapter pagination and formatting
+- Compatible with all major e-readers
+
+**Configuration:**
+```yaml
+# In site_config.yaml
+epub:
+  generate_enabled: true
+
+# In story config.yaml  
+downloads:
+  epub_enabled: true
+  include_arcs: true
+```
+
+**Generated Files:**
+- `/static/epub/story-name.epub` - Full story download
+- `/static/epub/story-name_jp.epub` - Japanese version (if available)
+- `/static/epub/story-name-arc-1-title.epub` - Individual arc downloads
+
 ### Chapter Navigation Enhancements
 
 **Chapter Dropdown:** Quick navigation dropdown on chapter pages
@@ -605,6 +646,18 @@ tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
 - Mobile: stacked layout
 - Only shows if `published` date is set in chapter front matter
 
+### Reading Progress Tracking
+
+Automatically track reader progress with localStorage:
+
+**Features:**
+- Mark chapters as visited when opened
+- Mark chapters as completed when scrolled to bottom
+- Visual indicators on table of contents (○ for visited, ✓ for completed)
+- "Continue Reading" section showing last completed chapter
+- Persists across browser sessions
+- Per-story tracking (multiple novels supported)
+
 ### Enhanced Navigation Structure
 
 **URL Structure with Breadcrumbs:**
@@ -622,9 +675,10 @@ Home (/)
 
 ## Dependencies
 
-- `jinja2`: Template engine
+- `jinja2`: Template engine for HTML generation
 - `markdown`: Markdown to HTML conversion
-- `pyyaml`: YAML parsing (if using YAML front matter)
+- `pyyaml`: YAML configuration file parsing
+- `ebooklib`: EPUB generation and manipulation
 
 ## License
 
