@@ -60,6 +60,69 @@
                 window.location.href = select.value;
             }
         }
+        
+        // Reading settings functionality
+        let currentTextSize = 100;
+        let currentLineSpacing = 1.6;
+        
+        function loadReadingSettings() {
+            const savedTextSize = localStorage.getItem('readingTextSize');
+            const savedLineSpacing = localStorage.getItem('readingLineSpacing');
+            
+            if (savedTextSize) {
+                currentTextSize = parseInt(savedTextSize);
+                applyTextSize();
+            }
+            
+            if (savedLineSpacing) {
+                currentLineSpacing = parseFloat(savedLineSpacing);
+                applyLineSpacing();
+            }
+            
+            updateDisplays();
+        }
+        
+        function adjustTextSize(delta) {
+            currentTextSize = Math.max(70, Math.min(200, currentTextSize + (delta * 10)));
+            applyTextSize();
+            localStorage.setItem('readingTextSize', currentTextSize);
+            updateDisplays();
+        }
+        
+        function adjustLineSpacing(delta) {
+            currentLineSpacing = Math.max(1.0, Math.min(3.0, currentLineSpacing + delta));
+            applyLineSpacing();
+            localStorage.setItem('readingLineSpacing', currentLineSpacing);
+            updateDisplays();
+        }
+        
+        function applyTextSize() {
+            // Set CSS custom property on the root document for text size
+            document.documentElement.style.setProperty('--reading-font-size', (currentTextSize / 100) + 'rem');
+        }
+        
+        function applyLineSpacing() {
+            // Set CSS custom property on the root document for line spacing
+            document.documentElement.style.setProperty('--reading-line-height', currentLineSpacing);
+        }
+        
+        function updateDisplays() {
+            document.getElementById('text-size-display').textContent = currentTextSize + '%';
+            document.getElementById('line-spacing-display').textContent = currentLineSpacing.toFixed(1);
+        }
+        
+        function resetReadingSettings() {
+            currentTextSize = 100;
+            currentLineSpacing = 1.6;
+            applyTextSize();
+            applyLineSpacing();
+            localStorage.removeItem('readingTextSize');
+            localStorage.removeItem('readingLineSpacing');
+            updateDisplays();
+        }
+        
+        // Load settings when page loads
+        document.addEventListener('DOMContentLoaded', loadReadingSettings);
     </script>
     
     {% if is_password_protected %}
@@ -182,6 +245,31 @@
                     </optgroup>
                 {% endfor %}
             </select>
+        </div>
+        
+        <div class="reading-config">
+            <details>
+                <summary>Reading Settings</summary>
+                <div class="reading-controls">
+                    <div class="control-group">
+                        <label for="text-size">Text Size:</label>
+                        <div class="button-group">
+                            <button onclick="adjustTextSize(-1)">A-</button>
+                            <span id="text-size-display">100%</span>
+                            <button onclick="adjustTextSize(1)">A+</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="line-spacing">Line Spacing:</label>
+                        <div class="button-group">
+                            <button onclick="adjustLineSpacing(-0.1)">-</button>
+                            <span id="line-spacing-display">1.6</span>
+                            <button onclick="adjustLineSpacing(0.1)">+</button>
+                        </div>
+                    </div>
+                    <button onclick="resetReadingSettings()" class="reset-button">Reset to Default</button>
+                </div>
+            </details>
         </div>
         {% if available_languages and available_languages|length > 1 %}
         <div class="language-switcher">

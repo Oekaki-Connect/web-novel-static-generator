@@ -8,6 +8,7 @@ from pathlib import Path
 import hashlib
 import base64
 import json
+import uuid
 
 BUILD_DIR = "./build"
 CONTENT_DIR = "./content"
@@ -473,6 +474,48 @@ def build_seo_meta(site_config, novel_config, chapter_metadata, page_type):
     
     return seo_meta
 
+def process_cover_art(novel_slug, novel_config):
+    """Process cover art images by copying them to static/images with UUID filenames"""
+    processed_images = {}
+    
+    # Ensure static/images directory exists
+    images_dir = os.path.join(BUILD_DIR, "static", "images")
+    os.makedirs(images_dir, exist_ok=True)
+    
+    # Process story cover art
+    if novel_config.get('front_page', {}).get('cover_art'):
+        source_path = os.path.join(CONTENT_DIR, novel_slug, novel_config['front_page']['cover_art'])
+        if os.path.exists(source_path):
+            # Generate UUID for unique filename
+            file_extension = os.path.splitext(source_path)[1]
+            unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+            dest_path = os.path.join(images_dir, unique_filename)
+            
+            # Copy the image
+            shutil.copy2(source_path, dest_path)
+            
+            # Store the processed path
+            processed_images['story_cover'] = f"static/images/{unique_filename}"
+    
+    # Process arc cover art
+    if novel_config.get('arcs'):
+        for i, arc in enumerate(novel_config['arcs']):
+            if arc.get('cover_art'):
+                source_path = os.path.join(CONTENT_DIR, novel_slug, arc['cover_art'])
+                if os.path.exists(source_path):
+                    # Generate UUID for unique filename
+                    file_extension = os.path.splitext(source_path)[1]
+                    unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+                    dest_path = os.path.join(images_dir, unique_filename)
+                    
+                    # Copy the image
+                    shutil.copy2(source_path, dest_path)
+                    
+                    # Store the processed path
+                    processed_images[f'arc_{i}_cover'] = f"static/images/{unique_filename}"
+    
+    return processed_images
+
 def load_novel_config(novel_slug):
     """Load configuration for a specific novel"""
     config_file = os.path.join(CONTENT_DIR, novel_slug, "config.yaml")
@@ -878,8 +921,8 @@ def process_chapter_images(novel_slug, chapter_id, language, markdown_content):
 # Add the slugify_tag function as a Jinja2 filter
 env.filters['slugify_tag'] = slugify_tag
 
-def load_novels_data():
-    """Load all novels from the content directory"""
+def load_all_novels_data():
+    """Load all novels from the content directory (for processing)"""
     novels = []
     
     # Scan content directory for novel folders
@@ -911,24 +954,18 @@ def load_novels_data():
                                     ]
                                 },
                                 {
-                                    "title": "Arc 2: The Quest",
+                                    "title": "Arc 2: The Quest", 
                                     "chapters": [
                                         {"id": "chapter-3", "title": "Chapter 3: Ancient Ruins"},
                                         {"id": "chapter-4", "title": "Chapter 4: The Guardian"},
                                     ]
-                                },
-                                {
-                                    "title": "Arc 3: The Trials",
-                                    "chapters": [
-                                        {"id": "chapter-5", "title": "Chapter 5: The Test"},
-                                        {"id": "chapter-6", "title": "Chapter 6: Allies in Darkness"},
-                                    ]
-                                },
+                                }
                             ]
                         }
                         novels.append(novel_data)
     
     return novels
+
 
 def convert_markdown_to_html(md_content):
     # Convert Markdown to HTML. This will also handle image paths.
@@ -953,20 +990,50 @@ def build_site():
     # Load site configuration
     site_config = load_site_config()
 
-    novels_data = load_novels_data()
+    # Load all novels for processing
+    all_novels_data = load_all_novels_data()
+    
+    # Process cover art for all novels first
+    for novel in all_novels_data:
+        novel_slug = novel['slug']
+        novel_config = load_novel_config(novel_slug)
+        
+        # Process cover art images and get processed paths
+        processed_images = process_cover_art(novel_slug, novel_config)
+        
+        # Update novel data with processed image paths
+        if processed_images.get('story_cover'):
+            if 'front_page' not in novel:
+                novel['front_page'] = {}
+            novel['front_page']['cover_art'] = processed_images['story_cover']
+        
+        # Update arc data with processed image paths
+        if novel_config.get('arcs') and novel.get('arcs'):
+            for i, arc in enumerate(novel_config['arcs']):
+                if i < len(novel['arcs']):  # Safety check
+                    arc_cover_key = f'arc_{i}_cover'
+                    if processed_images.get(arc_cover_key):
+                        novel['arcs'][i]['cover_art'] = processed_images[arc_cover_key]
+    
+    # Filter novels for front page display
+    front_page_novels_data = []
+    for novel_data in all_novels_data:
+        show_on_front_page = novel_data.get('front_page', {}).get('show_on_front_page', True)
+        if show_on_front_page:
+            front_page_novels_data.append(novel_data)
 
-    # Generate robots.txt
-    robots_txt_content = generate_robots_txt(site_config, novels_data)
+    # Generate robots.txt (using all novels)
+    robots_txt_content = generate_robots_txt(site_config, all_novels_data)
     with open(os.path.join(BUILD_DIR, "robots.txt"), "w", encoding='utf-8') as f:
         f.write(robots_txt_content)
 
-    # Generate sitemap.xml
-    sitemap_xml_content = generate_sitemap_xml(site_config, novels_data)
+    # Generate sitemap.xml (using all novels)
+    sitemap_xml_content = generate_sitemap_xml(site_config, all_novels_data)
     with open(os.path.join(BUILD_DIR, "sitemap.xml"), "w", encoding='utf-8') as f:
         f.write(sitemap_xml_content)
 
-    # Generate site-wide RSS feed
-    site_rss_content = generate_rss_feed(site_config, novels_data)
+    # Generate site-wide RSS feed (using all novels)
+    site_rss_content = generate_rss_feed(site_config, all_novels_data)
     with open(os.path.join(BUILD_DIR, "rss.xml"), "w", encoding='utf-8') as f:
         f.write(site_rss_content)
 
@@ -978,10 +1045,10 @@ def build_site():
     # Build footer data for front page
     footer_data = build_footer_content(site_config, page_type='site')
 
-    # Render front page with all novels
+    # Render front page with novels that should be displayed
     with open(os.path.join(BUILD_DIR, "index.html"), "w", encoding='utf-8') as f:
         f.write(render_template("index.html", 
-                               novels=novels_data,
+                               novels=front_page_novels_data,
                                site_name=site_config.get('site_name', 'Web Novel Collection'),
                                social_title=social_meta['title'],
                                social_description=social_meta['description'],
@@ -993,8 +1060,8 @@ def build_site():
                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
                                footer_data=footer_data))
 
-    # Process each novel
-    for novel in novels_data:
+    # Process each novel (including hidden ones)
+    for novel in all_novels_data:
         novel_slug = novel['slug']
         novel_config = load_novel_config(novel_slug)
         available_languages = get_available_languages(novel_slug)
@@ -1005,7 +1072,7 @@ def build_site():
         os.makedirs(novel_dir, exist_ok=True)
 
         # Generate story-specific RSS feed
-        story_rss_content = generate_rss_feed(site_config, novels_data, novel_config, novel_slug)
+        story_rss_content = generate_rss_feed(site_config, all_novels_data, novel_config, novel_slug)
         with open(os.path.join(novel_dir, "rss.xml"), "w", encoding='utf-8') as f:
             f.write(story_rss_content)
 

@@ -47,6 +47,11 @@
             <span class="breadcrumb-separator">></span>
             <span class="current-page">{{ novel.title }}</span>
         </nav>
+        {% if novel.front_page and novel.front_page.cover_art %}
+        <div class="story-cover">
+            <img src="../../../{{ novel.front_page.cover_art }}" alt="{{ novel.title }} Cover" class="story-cover-image">
+        </div>
+        {% endif %}
         <h1>{{ novel.title }}</h1>
         {% if novel.status %}
         <div class="story-status">
@@ -90,17 +95,24 @@
     <main>
         {% for arc in novel.arcs %}
         <section class="arc">
-            <h3>{{ arc.title }}</h3>
-            <ul>
-                {% for chapter in arc.chapters %}
-                <li>
-                    <a href="../{{ chapter.id }}/">{{ chapter.title }}</a>
-                    {% if chapter.published %}
-                    <span class="chapter-date">{{ chapter.published }}</span>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
+            {% if arc.cover_art %}
+            <div class="arc-cover">
+                <img src="../../../{{ arc.cover_art }}" alt="{{ arc.title }} Cover" class="arc-cover-image">
+            </div>
+            {% endif %}
+            <div class="arc-content">
+                <h3>{{ arc.title }}</h3>
+                <ul>
+                    {% for chapter in arc.chapters %}
+                    <li>
+                        <a href="../{{ chapter.id }}/">{{ chapter.title }}</a>
+                        {% if chapter.published %}
+                        <span class="chapter-date">{{ chapter.published }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
         </section>
         {% endfor %}
         

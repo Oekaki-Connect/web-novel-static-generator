@@ -48,9 +48,22 @@
         {% if novels %}
             {% for novel in novels %}
             <section class="novel-card">
-                <h2><a href="{{ novel.slug }}/en/toc/">{{ novel.title }}</a></h2>
-                <p>{{ novel.description }}</p>
-                <p><a href="{{ novel.slug }}/en/toc/">Read Now</a></p>
+                {% if novel.front_page and novel.front_page.cover_art %}
+                <div class="novel-cover">
+                    <img src="{{ novel.front_page.cover_art }}" alt="{{ novel.title }} Cover" class="cover-image">
+                </div>
+                {% endif %}
+                <div class="novel-info">
+                    <h2><a href="{{ novel.slug }}/en/toc/">{{ novel.title }}</a></h2>
+                    {% if novel.status %}
+                    <div class="novel-status">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value status-{{ novel.status }}">{{ novel.status|title }}</span>
+                    </div>
+                    {% endif %}
+                    <p>{{ novel.description }}</p>
+                    <p><a href="{{ novel.slug }}/en/toc/">Read Now</a></p>
+                </div>
             </section>
             {% endfor %}
         {% else %}

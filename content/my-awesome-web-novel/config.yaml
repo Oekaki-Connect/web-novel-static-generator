@@ -8,6 +8,11 @@ status: "ongoing"  # "ongoing" or "complete"
 # Story genre/theme tags
 tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
 
+# Front page display settings
+front_page:
+  show_on_front_page: true  # Set to false to hide this story from the front page
+  cover_art: "chapters/my-awesome-web-novel-cover.jpg"  # Path to cover art image relative to story folder
+
 # Length display configuration
 length_display:
   # Default unit for story length display on TOC pages
@@ -94,12 +99,14 @@ footer:
 # Story structure
 arcs:
   - title: "Arc 1: The Beginning"
+    cover_art: "chapters/arc-1-cover.jpg"  # Optional cover art for this arc
     chapters:
       - id: "chapter-1"
         title: "Chapter 1: The Prophecy"
       - id: "chapter-2"
         title: "Chapter 2: A New Journey"
   - title: "Arc 2: The Quest"
+    cover_art: "chapters/arc-2-cover.jpg"  # Optional cover art for this arc
     chapters:
       - id: "chapter-3"
         title: "Chapter 3: Ancient Ruins"
