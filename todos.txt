@@ -1,9 +1,5 @@
 * author pages (authors have a username which links to their author page like /authors/haiku/ and then that page can have their name/bio/links, if front matter author/translator links to a valid author username with a page then link to it, otherwise don't make the name clickable) author information should be in an authors.yaml file
-* story tags (for genres, themes) (not clickable for now)
-* chapter dropdown for stories when on a chapter page
 * on the toc include option for the cover art for arcs to embed their images
-* total story character count on its toc page
 * reading configs for line spacing, text size
 * tracking of read pages in local storage (scroll close enough to end to mark chapter as completed reading)
-* make sure hidden content does not show up on rrs/sitemap
 * pdf/epub download options for stories on their toc, have a flag for running the generate.py to skip making these, have a story setting to skip making these / including links to them on the toc, store them in static/pdf static/epub, could use ebooklib or WeasyPrint/fpdf2, when making these there should be some special considerations such as the cover page of the story (if there is a story cover art use that, if there is an arc cover art use that), generate them for the whole story as well as for each arc as stand alone downloads, this one may require more planning to really do right (for example, making sure all images are embedded and fit well too)

@@ -156,7 +156,7 @@ nav a:hover {
 
 /* Chapter navigation styling */
 .chapter-nav {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .chapter-nav a {
@@ -173,6 +173,47 @@ nav a:hover {
 .chapter-nav a:hover {
     color: var(--color-primary-hover);
     text-decoration: none;
+}
+
+/* Chapter dropdown styling */
+.chapter-dropdown {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.chapter-dropdown label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--color-secondary);
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.chapter-dropdown select {
+    padding: 0.5rem;
+    border: 1px solid var(--color-secondary);
+    border-radius: 4px;
+    background-color: var(--color-base);
+    color: var(--color-contrast);
+    font-family: var(--font-body);
+    font-size: 14px;
+    min-width: 250px;
+    max-width: 90%;
+}
+
+.chapter-dropdown select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.chapter-dropdown optgroup {
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+.chapter-dropdown option {
+    padding: 0.25rem;
+    color: var(--color-contrast);
 }
 
 /* Remove pipe separators - they look weird on navigation */
@@ -377,6 +418,12 @@ footer p {
         padding: 0.75rem 1rem;
     }
     
+    .chapter-dropdown select {
+        min-width: auto;
+        width: 100%;
+        max-width: 100%;
+    }
+    
     .arc li {
         flex-direction: column;
         align-items: flex-start;
@@ -494,6 +541,46 @@ footer p {
         background-color: #e8f5e8;
         color: #2e7d32;
     }
+}
+
+/* Story statistics styling */
+.story-stats {
+    margin: 1rem 0;
+    text-align: center;
+    font-size: 16px;
+}
+
+.stats-label {
+    color: var(--color-secondary);
+    font-weight: normal;
+}
+
+.stats-value {
+    font-weight: 600;
+    color: var(--color-heading);
+    margin-left: 0.5rem;
+}
+
+/* Story tags styling */
+.story-tags {
+    margin: 1.5rem 0;
+    text-align: center;
+}
+
+.tags-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--color-secondary);
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.story-tag {
+    background-color: var(--color-accent);
+    color: var(--color-heading);
+    border: 1px solid var(--color-secondary);
+    font-size: 0.8rem;
+    margin: 0.25rem;
 }
 
 /* Language switcher styling - Minimal academic style */
@@ -1104,6 +1191,18 @@ footer p {
     border-color: var(--color-primary);
 }
 
+[data-theme="dark"] .chapter-dropdown select {
+    background-color: var(--color-accent);
+    border-color: #555555;
+    color: var(--color-contrast);
+}
+
+[data-theme="dark"] .story-tag {
+    background-color: #555555;
+    color: #e0e0e0;
+    border-color: #666666;
+}
+
 [data-theme="dark"] .translation-notice {
     background-color: #b8860b;
     border-left-color: #daa520;
@@ -1199,6 +1298,18 @@ footer p {
         border-color: #ffffff;
     }
     
+    .chapter-dropdown select {
+        background-color: #3a3a3a;
+        border-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .story-tag {
+        background-color: #555555;
+        color: #e0e0e0;
+        border-color: #666666;
+    }
+    
     .translation-notice {
         background-color: #b8860b;
         border-left-color: #daa520;
@@ -1270,6 +1381,18 @@ footer p {
     
     [data-theme="light"] .password-input-group input:focus {
         border-color: #111111;
+    }
+    
+    [data-theme="light"] .chapter-dropdown select {
+        background-color: #f9f9f9;
+        border-color: #666666;
+        color: #333333;
+    }
+    
+    [data-theme="light"] .story-tag {
+        background-color: #f7f7f7;
+        color: #222222;
+        border-color: #666666;
     }
     
     [data-theme="light"] .translation-notice {

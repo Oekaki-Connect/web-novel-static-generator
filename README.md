@@ -9,6 +9,10 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Front Page**: Clean landing page listing all available novels
 - **Table of Contents**: Organized by story arcs with manual chapter sorting
 - **Chapter Pages**: Individual pages for each chapter with navigation
+- **Chapter Navigation**: Dropdown menu for quick chapter jumping and breadcrumb navigation
+- **Story Statistics**: Total length display with language-specific units (words/characters)
+- **Story Metadata**: Publishing status (ongoing/complete) and genre tags
+- **Publication Dates**: Chapter publication dates displayed on table of contents
 - **Tag System**: Categorize chapters with tags for easy discovery
 - **Chapter Images**: Chapter-specific image support with automatic processing
 - **Front Matter Support**: Rich metadata including author, translator, tags, and commentary
@@ -113,6 +117,23 @@ Create `content/your-novel-name/config.yaml`:
 title: "Your Awesome Novel"
 description: "An epic fantasy adventure"
 primary_language: "en"
+status: "ongoing"  # "ongoing" or "complete"
+
+# Story genre/theme tags
+tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
+
+# Length display configuration
+length_display:
+  # Default unit for story length display on TOC pages
+  default_unit: "words"  # "words" or "characters"
+  
+  # Language-specific overrides for different languages
+  # This is useful because different languages have different conventions:
+  # - Western languages (English, Spanish, French) typically use word count
+  # - East Asian languages (Japanese, Chinese, Korean) typically use character count
+  language_units:
+    en: "words"      # English uses words (typical for Western languages)
+    jp: "characters" # Japanese uses characters (typical for East Asian languages)
 
 # Story arcs and chapters
 arcs:
@@ -513,6 +534,91 @@ The generator automatically detects and processes multiple novels:
 1. Create subdirectories in `content/` for each novel
 2. Add a `config.yaml` file in each novel directory
 3. The front page will list all available novels
+
+## New Features
+
+### Story Publishing Status
+
+Display the current status of your story on the table of contents:
+
+```yaml
+# In your story config.yaml
+status: "ongoing"  # "ongoing" or "complete"
+```
+
+**Features:**
+- Shows "Ongoing" or "Complete" badge on TOC page
+- Color-coded badges (blue for ongoing, green for complete)
+- Automatic dark mode styling
+
+### Story Length Statistics
+
+Display total story length with culturally appropriate units:
+
+```yaml
+# In your story config.yaml
+length_display:
+  default_unit: "words"  # Default for all languages
+  language_units:
+    en: "words"      # English shows word count
+    jp: "characters" # Japanese shows character count
+    zh: "characters" # Chinese shows character count
+    es: "words"      # Spanish shows word count
+```
+
+**Features:**
+- Automatically calculates total length from all visible chapters
+- Excludes hidden and password-protected content
+- Language-specific display (words for Western languages, characters for East Asian)
+- Formatted with comma separators (e.g., "12,345 words")
+
+### Story Genre Tags
+
+Add genre and theme tags to your stories:
+
+```yaml
+# In your story config.yaml
+tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
+```
+
+**Features:**
+- Non-clickable genre tags displayed on TOC page
+- Clean tag styling with dark mode support
+- Helps readers understand story themes at a glance
+
+### Chapter Navigation Enhancements
+
+**Chapter Dropdown:** Quick navigation dropdown on chapter pages
+- Organized by story arcs
+- Shows current chapter as selected
+- Excludes hidden chapters
+- JavaScript-powered navigation
+
+**Breadcrumb Navigation:** Clear page hierarchy navigation
+- Chapter pages: Home > Story > Chapter
+- TOC pages: Home > Story
+- Mobile-friendly responsive design
+
+**Publication Dates:** Chapter publication dates displayed on TOC
+- Shows publication date next to each chapter title
+- Desktop: side-by-side layout
+- Mobile: stacked layout
+- Only shows if `published` date is set in chapter front matter
+
+### Enhanced Navigation Structure
+
+**URL Structure with Breadcrumbs:**
+```
+Home (/) 
+  └── Story (/story/en/toc/)
+      └── Chapter (/story/en/chapter-1/)
+```
+
+**Chapter Page Features:**
+- Jump to Chapter dropdown for quick navigation
+- Previous/Next chapter links
+- Table of Contents link
+- Breadcrumb navigation showing current location
 
 ## Dependencies
 

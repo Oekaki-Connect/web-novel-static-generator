@@ -570,6 +570,76 @@ def get_navigation_chapters(novel_slug, all_chapters, current_chapter_id, lang):
     
     return prev_chapter, next_chapter
 
+def calculate_story_length_stats(novel_slug, lang):
+    """Calculate total character and word count for all visible chapters in a story"""
+    import re
+    
+    total_chars = 0
+    total_words = 0
+    novel_config = load_novel_config(novel_slug)
+    
+    # Get all chapters from the novel config
+    all_chapters = []
+    for arc in novel_config.get("arcs", []):
+        all_chapters.extend(arc.get("chapters", []))
+    
+    for chapter in all_chapters:
+        chapter_id = chapter["id"]
+        try:
+            chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
+            
+            # Skip hidden, password-protected, or non-indexed chapters
+            if (is_chapter_hidden(chapter_metadata) or 
+                ('password' in chapter_metadata and chapter_metadata['password'])):
+                continue
+            
+            # Remove markdown formatting and count characters/words
+            # Remove front matter (everything before the first ---\n)
+            content_lines = chapter_content_md.split('\n')
+            content_start = 0
+            front_matter_count = 0
+            
+            for i, line in enumerate(content_lines):
+                if line.strip() == '---':
+                    front_matter_count += 1
+                    if front_matter_count == 2:
+                        content_start = i + 1
+                        break
+            
+            # Get just the content without front matter
+            content_only = '\n'.join(content_lines[content_start:])
+            
+            # Remove markdown formatting for accurate counting
+            # Remove headers
+            content_only = re.sub(r'^#+\s+', '', content_only, flags=re.MULTILINE)
+            # Remove emphasis/bold
+            content_only = re.sub(r'\*+([^*]+)\*+', r'\1', content_only)
+            content_only = re.sub(r'_+([^_]+)_+', r'\1', content_only)
+            # Remove links
+            content_only = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', content_only)
+            # Remove images
+            content_only = re.sub(r'!\[([^\]]*)\]\([^)]+\)', '', content_only)
+            # Remove extra whitespace but preserve word boundaries
+            content_only = re.sub(r'\s+', ' ', content_only).strip()
+            
+            # Count characters (excluding spaces)
+            char_count = len(re.sub(r'\s', '', content_only))
+            total_chars += char_count
+            
+            # Count words (split by whitespace)
+            if content_only.strip():
+                word_count = len(content_only.split())
+                total_words += word_count
+            
+        except:
+            # Skip chapters that can't be loaded
+            continue
+    
+    return {
+        'characters': total_chars,
+        'words': total_words
+    }
+
 def filter_hidden_chapters_from_novel(novel, novel_slug, lang):
     """Create a copy of novel data with hidden chapters filtered out for TOC display"""
     filtered_novel = novel.copy()
@@ -963,11 +1033,31 @@ def build_site():
             # Filter out hidden chapters for TOC display
             filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
             
+            # Calculate story length statistics
+            story_length_stats = calculate_story_length_stats(novel_slug, lang)
+            
+            # Determine which unit to display based on configuration
+            length_config = novel_config.get('length_display', {})
+            language_units = length_config.get('language_units', {})
+            default_unit = length_config.get('default_unit', 'words')
+            
+            # Check for language-specific override, fall back to default
+            display_unit = language_units.get(lang, default_unit)
+            
+            if display_unit == 'characters':
+                story_length_count = story_length_stats['characters']
+                story_length_unit = 'characters'
+            else:
+                story_length_count = story_length_stats['words']
+                story_length_unit = 'words'
+            
             with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
                 f.write(render_template("toc.html", 
                                        novel=filtered_novel, 
                                        current_language=lang, 
                                        available_languages=available_languages,
+                                       story_length_count=story_length_count,
+                                       story_length_unit=story_length_unit,
                                        site_name=site_config.get('site_name', 'Web Novel Collection'),
                                        social_title=toc_social_meta['title'],
                                        social_description=toc_social_meta['description'], 
@@ -1078,8 +1168,10 @@ def build_site():
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
                     with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
+                        # Filter out hidden chapters for chapter dropdown
+                        filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
                         f.write(render_template("chapter.html", 
-                                                novel=novel,
+                                                novel=filtered_novel,
                                                 chapter=chapter,
                                                 chapter_title=display_title,
                                                 chapter_content=chapter_content_html,
@@ -1191,8 +1283,10 @@ def build_site():
                     chapter_dir = os.path.join(lang_dir, chapter_id)
                     os.makedirs(chapter_dir, exist_ok=True)
                     with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
+                        # Filter out hidden chapters for chapter dropdown
+                        filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
                         f.write(render_template("chapter.html", 
-                                                novel=novel,
+                                                novel=filtered_novel,
                                                 chapter=chapter,
                                                 chapter_title=display_title,
                                                 chapter_content=chapter_content_html,

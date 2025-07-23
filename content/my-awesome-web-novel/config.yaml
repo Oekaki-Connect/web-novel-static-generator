@@ -5,6 +5,22 @@ slug: "my-awesome-web-novel"
 primary_language: "en"
 status: "ongoing"  # "ongoing" or "complete"
 
+# Story genre/theme tags
+tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
+
+# Length display configuration
+length_display:
+  # Default unit for story length display on TOC pages
+  default_unit: "words"  # "words" or "characters"
+  
+  # Language-specific overrides for different languages
+  # This is useful because different languages have different conventions:
+  # - Western languages (English, Spanish, French) typically use word count
+  # - East Asian languages (Japanese, Chinese, Korean) typically use character count
+  language_units:
+    en: "words"      # English uses words (typical for Western languages)
+    jp: "characters" # Japanese uses characters (typical for East Asian languages)
+
 # Display settings - these can be overridden in individual chapter front matter
 display:
   # Show tags on chapter pages by default (can be overridden with 'show_tags: false' in chapter front matter)

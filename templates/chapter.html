@@ -52,6 +52,16 @@
     <!-- Theme Toggle Script -->
     <script src="../../../static/theme-toggle.js"></script>
     
+    <!-- Chapter Navigation Script -->
+    <script>
+        function jumpToChapter() {
+            const select = document.getElementById('chapter-select');
+            if (select.value) {
+                window.location.href = select.value;
+            }
+        }
+    </script>
+    
     {% if is_password_protected %}
     <script>
         // Password decryption functionality
@@ -157,6 +167,22 @@
             <a href="../{{ next_chapter.id }}/">Next Chapter</a>
             {% endif %}
         </nav>
+        
+        <div class="chapter-dropdown">
+            <label for="chapter-select">Jump to Chapter:</label>
+            <select id="chapter-select" onchange="jumpToChapter()">
+                <option value="">Select a chapter...</option>
+                {% for arc in novel.arcs %}
+                    <optgroup label="{{ arc.title }}">
+                        {% for ch in arc.chapters %}
+                            <option value="../{{ ch.id }}/" {% if ch.id == chapter.id %}selected{% endif %}>
+                                {{ ch.title }}
+                            </option>
+                        {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
         {% if available_languages and available_languages|length > 1 %}
         <div class="language-switcher">
             <h3>Languages:</h3>

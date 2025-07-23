@@ -54,6 +54,22 @@
             <span class="status-value status-{{ novel.status }}">{{ novel.status|title }}</span>
         </div>
         {% endif %}
+        {% if story_length_count %}
+        <div class="story-stats">
+            <span class="stats-label">Total Length:</span>
+            <span class="stats-value">{{ "{:,}".format(story_length_count) }} {{ story_length_unit }}</span>
+        </div>
+        {% endif %}
+        {% if novel.tags %}
+        <div class="story-tags">
+            <span class="tags-label">Genres:</span>
+            <div class="tags">
+                {% for tag in novel.tags %}
+                <span class="tag story-tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         {% if available_languages and available_languages|length > 1 %}
         <div class="language-switcher">
             <h3>Languages:</h3>
