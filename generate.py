@@ -10,6 +10,8 @@ import base64
 import json
 import datetime
 import argparse
+from urllib.parse import urljoin, urlparse
+from bs4 import BeautifulSoup
 # Lazy import for optional dependencies
 EBOOKLIB_AVAILABLE = False
 
@@ -2821,13 +2823,224 @@ def build_site(include_drafts=False):
 
     print("Site built.")
 
+def check_broken_links():
+    """Check for broken internal links in the generated site"""
+    print("\n" + "="*50)
+    print("BROKEN LINK CHECK")
+    print("="*50)
+    
+    build_dir = Path(BUILD_DIR)
+    if not build_dir.exists():
+        print("[ERROR] Build directory not found. Please generate the site first.")
+        return
+    
+    broken_links = []
+    total_files_checked = 0
+    
+    # Find all HTML files in build directory
+    html_files = list(build_dir.rglob("*.html"))
+    
+    print(f"[INFO] Checking {len(html_files)} HTML files for broken links...")
+    
+    for html_file in html_files:
+        total_files_checked += 1
+        relative_path = html_file.relative_to(build_dir)
+        
+        try:
+            with open(html_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            soup = BeautifulSoup(content, 'html.parser')
+            file_dir = html_file.parent
+            
+            # Check internal links (<a href="">)
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if is_internal_link(href):
+                    target_path = resolve_link_path(file_dir, href, build_dir)
+                    if target_path and not target_path.exists():
+                        try:
+                            target_rel = str(target_path.relative_to(build_dir))
+                        except ValueError:
+                            target_rel = str(target_path)
+                        broken_links.append({
+                            'type': 'Internal Link',
+                            'url': href,
+                            'source_file': str(relative_path),
+                            'target_path': target_rel
+                        })
+            
+            # Check images (<img src="">)
+            for img in soup.find_all('img', src=True):
+                src = img['src']
+                if is_internal_link(src):
+                    target_path = resolve_link_path(file_dir, src, build_dir)
+                    if target_path and not target_path.exists():
+                        try:
+                            target_rel = str(target_path.relative_to(build_dir))
+                        except ValueError:
+                            target_rel = str(target_path)
+                        broken_links.append({
+                            'type': 'Image',
+                            'url': src,
+                            'source_file': str(relative_path),
+                            'target_path': target_rel
+                        })
+            
+            # Check social embed images (og:image, twitter:image)
+            for meta in soup.find_all('meta'):
+                if meta.get('property') == 'og:image' or meta.get('name') == 'twitter:image':
+                    content_attr = meta.get('content', '')
+                    if content_attr and is_internal_link(content_attr):
+                        target_path = resolve_link_path(file_dir, content_attr, build_dir)
+                        if target_path and not target_path.exists():
+                            try:
+                                target_rel = str(target_path.relative_to(build_dir))
+                            except ValueError:
+                                target_rel = str(target_path)
+                            broken_links.append({
+                                'type': 'Social Embed Image',
+                                'url': content_attr,
+                                'source_file': str(relative_path),
+                                'target_path': target_rel
+                            })
+            
+            # Check CSS files
+            for link_tag in soup.find_all('link', href=True):
+                if 'stylesheet' in link_tag.get('rel', []):
+                    href = link_tag['href']
+                    if is_internal_link(href):
+                        target_path = resolve_link_path(file_dir, href, build_dir)
+                        if target_path and not target_path.exists():
+                            try:
+                                target_rel = str(target_path.relative_to(build_dir))
+                            except ValueError:
+                                target_rel = str(target_path)
+                            broken_links.append({
+                                'type': 'CSS File',
+                                'url': href,
+                                'source_file': str(relative_path),
+                                'target_path': target_rel
+                            })
+            
+            # Check JavaScript files
+            for script in soup.find_all('script', src=True):
+                src = script['src']
+                if is_internal_link(src):
+                    target_path = resolve_link_path(file_dir, src, build_dir)
+                    if target_path and not target_path.exists():
+                        try:
+                            target_rel = str(target_path.relative_to(build_dir))
+                        except ValueError:
+                            target_rel = str(target_path)
+                        broken_links.append({
+                            'type': 'JavaScript File',
+                            'url': src,
+                            'source_file': str(relative_path),
+                            'target_path': target_rel
+                        })
+                        
+        except Exception as e:
+            try:
+                print(f"[WARNING] Error parsing {relative_path}: {e}")
+            except UnicodeEncodeError:
+                print(f"[WARNING] Error parsing {relative_path}: <encoding error>")
+    
+    # Report results
+    print(f"\n[RESULTS]")
+    print(f"   Files checked: {total_files_checked}")
+    print(f"   Broken links found: {len(broken_links)}")
+    
+    if broken_links:
+        print(f"\n[ERROR] BROKEN LINKS DETECTED:")
+        print("-" * 50)
+        
+        # Group by type
+        by_type = {}
+        for link in broken_links:
+            link_type = link['type']
+            if link_type not in by_type:
+                by_type[link_type] = []
+            by_type[link_type].append(link)
+        
+        for link_type, links in by_type.items():
+            print(f"\n[{link_type.upper()}] ({len(links)} broken):")
+            for link in links[:10]:  # Show first 10 of each type
+                print(f"   [X] {link['url']}")
+                print(f"       Source: {link['source_file']}")
+                print(f"       Target: {link['target_path']}")
+                print()
+            
+            if len(links) > 10:
+                print(f"   ... and {len(links) - 10} more {link_type.lower()} links")
+                print()
+        
+        print("\n[FAILED] Link check FAILED - broken links detected!")
+        return False
+    else:
+        print("\n[SUCCESS] All links are working correctly!")
+        print("[PASSED] Link check PASSED!")
+        return True
+
+def is_internal_link(url):
+    """Check if a URL is an internal link (not external or data/mailto/etc)"""
+    if not url:
+        return False
+    
+    # Skip external URLs, data URLs, mailto, etc.
+    if url.startswith(('http://', 'https://', 'mailto:', 'tel:', 'data:', '//', '#')):
+        return False
+    
+    # Skip anchor-only links
+    if url.startswith('#'):
+        return False
+        
+    return True
+
+def resolve_link_path(current_file_dir, link_url, build_dir):
+    """Resolve a relative or absolute link to a file path in the build directory"""
+    try:
+        # Handle absolute paths from site root
+        if link_url.startswith('/'):
+            target_path = build_dir / link_url.lstrip('/')
+        else:
+            # Handle relative paths
+            target_path = (current_file_dir / link_url).resolve()
+        
+        # Remove query strings and fragments
+        url_parts = str(target_path).split('?')[0].split('#')[0]
+        target_path = Path(url_parts)
+        
+        # If path doesn't exist, try with index.html appended (for directory links)
+        if not target_path.exists() and target_path.is_dir():
+            index_path = target_path / 'index.html'
+            if index_path.exists():
+                return index_path
+        
+        # If path ends with /, try with index.html
+        if str(link_url).endswith('/'):
+            index_path = target_path / 'index.html'
+            if index_path.exists():
+                return index_path
+        
+        return target_path
+        
+    except Exception:
+        return None
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Static site generator for web novels')
     parser.add_argument('--include-drafts', action='store_true', 
                         help='Include draft chapters in the generated site')
+    parser.add_argument('--check-links', action='store_true',
+                        help='Check for broken internal links after site generation')
     args = parser.parse_args()
     
     # Pass the include_drafts flag to build_site
     build_site(include_drafts=args.include_drafts)
+    
+    # Check for broken links if requested
+    if args.check_links:
+        check_broken_links()
 
 
