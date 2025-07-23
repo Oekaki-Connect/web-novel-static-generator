@@ -2863,6 +2863,9 @@ def check_broken_links():
         print("[ERROR] Build directory not found. Please generate the site first.")
         return
     
+    # Load site config for URL validation
+    site_config = load_site_config()
+    
     broken_links = []
     total_files_checked = 0
     
@@ -2920,19 +2923,26 @@ def check_broken_links():
             for meta in soup.find_all('meta'):
                 if meta.get('property') == 'og:image' or meta.get('name') == 'twitter:image':
                     content_attr = meta.get('content', '')
+                    target_path = None
+                    
                     if content_attr and is_internal_link(content_attr):
+                        # Handle relative/absolute internal links
                         target_path = resolve_link_path(file_dir, content_attr, build_dir)
-                        if target_path and not target_path.exists():
-                            try:
-                                target_rel = str(target_path.relative_to(build_dir))
-                            except ValueError:
-                                target_rel = str(target_path)
-                            broken_links.append({
-                                'type': 'Social Embed Image',
-                                'url': content_attr,
-                                'source_file': str(relative_path),
-                                'target_path': target_rel
-                            })
+                    elif content_attr and is_local_site_url(content_attr, site_config):
+                        # Handle site URLs (https://site.com/path/to/file.jpg)
+                        target_path = convert_site_url_to_local_path(content_attr, site_config, build_dir)
+                    
+                    if target_path and not target_path.exists():
+                        try:
+                            target_rel = str(target_path.relative_to(build_dir))
+                        except ValueError:
+                            target_rel = str(target_path)
+                        broken_links.append({
+                            'type': 'Social Embed Image',
+                            'url': content_attr,
+                            'source_file': str(relative_path),
+                            'target_path': target_rel
+                        })
             
             # Check CSS files
             for link_tag in soup.find_all('link', href=True):
@@ -2992,6 +3002,39 @@ def check_broken_links():
                 by_type[link_type] = []
             by_type[link_type].append(link)
         
+        # Generate markdown report
+        report_path = os.path.join(os.path.dirname(BUILD_DIR), "broken_links_report.md")
+        with open(report_path, 'w', encoding='utf-8') as report_file:
+            report_file.write("# Broken Links Report\n\n")
+            report_file.write(f"**Generated:** {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            report_file.write(f"**Files Checked:** {total_files_checked}\n")
+            report_file.write(f"**Broken Links Found:** {len(broken_links)}\n\n")
+            
+            report_file.write("## Summary by Type\n\n")
+            report_file.write("| Link Type | Count |\n")
+            report_file.write("|-----------|-------|\n")
+            for link_type, links in by_type.items():
+                report_file.write(f"| {link_type} | {len(links)} |\n")
+            report_file.write("\n")
+            
+            report_file.write("## Detailed Report\n\n")
+            
+            for link_type, links in by_type.items():
+                report_file.write(f"### {link_type} ({len(links)} broken)\n\n")
+                report_file.write("| URL | Source File | Target Path |\n")
+                report_file.write("|-----|-------------|-------------|\n")
+                
+                for link in links:
+                    # Escape pipe characters in URLs
+                    url = link['url'].replace('|', '\\|')
+                    source = link['source_file'].replace('\\', '/')
+                    target = link['target_path'].replace('\\', '/')
+                    report_file.write(f"| `{url}` | `{source}` | `{target}` |\n")
+                
+                report_file.write("\n")
+        
+        print(f"\n[INFO] Detailed report written to: {report_path}")
+        
         for link_type, links in by_type.items():
             print(f"\n[{link_type.upper()}] ({len(links)} broken):")
             for link in links[:10]:  # Show first 10 of each type
@@ -3009,6 +3052,13 @@ def check_broken_links():
     else:
         print("\n[SUCCESS] All links are working correctly!")
         print("[PASSED] Link check PASSED!")
+        
+        # Remove any existing report file if all links are good
+        report_path = os.path.join(os.path.dirname(BUILD_DIR), "broken_links_report.md")
+        if os.path.exists(report_path):
+            os.remove(report_path)
+            print(f"[INFO] Removed old broken links report: {report_path}")
+        
         return True
 
 def is_internal_link(url):
@@ -3025,6 +3075,27 @@ def is_internal_link(url):
         return False
         
     return True
+
+def is_local_site_url(url, site_config):
+    """Check if a URL belongs to the local site domain"""
+    if not url or not site_config:
+        return False
+    
+    site_url = site_config.get('site_url', '').rstrip('/')
+    if not site_url:
+        return False
+    
+    return url.startswith(site_url + '/')
+
+def convert_site_url_to_local_path(url, site_config, build_dir):
+    """Convert a site URL to a local file path"""
+    site_url = site_config.get('site_url', '').rstrip('/')
+    if not url.startswith(site_url + '/'):
+        return None
+    
+    # Remove site URL prefix to get relative path
+    relative_path = url[len(site_url) + 1:]
+    return Path(build_dir) / relative_path
 
 def resolve_link_path(current_file_dir, link_url, build_dir):
     """Resolve a relative or absolute link to a file path in the build directory"""

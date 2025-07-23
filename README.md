@@ -704,6 +704,69 @@ Home (/)
 - Table of Contents link
 - Breadcrumb navigation showing current location
 
+### Broken Link Checker
+
+Automatically detect and report broken internal links in your generated site:
+
+**Usage:**
+```bash
+python generate.py --check-links
+```
+
+**Features:**
+- Validates all internal links in HTML files
+- Checks images embedded in content
+- Validates social media preview images (og:image, twitter:image)
+- Detects missing CSS and JavaScript files
+- Generates detailed markdown report for broken links
+- Shows progress and summary in console output
+
+**What Gets Checked:**
+- Internal page links (`<a href="">`)
+- Embedded images (`<img src="">`)
+- Social media images (even when using full URLs like `https://your-site.com/...`)
+- CSS stylesheets (`<link rel="stylesheet">`)
+- JavaScript files (`<script src="">`)
+
+**Report Generation:**
+- Creates `broken_links_report.md` when broken links are found
+- Includes timestamp, summary statistics, and detailed tables
+- Groups broken links by type for easy review
+- Shows source file, broken URL, and expected target path
+- Automatically removes report when all links are fixed
+
+**Example Output:**
+```
+==================================================
+BROKEN LINK CHECK
+==================================================
+[INFO] Checking 47 HTML files for broken links...
+
+[RESULTS]
+   Files checked: 47
+   Broken links found: 60
+
+[ERROR] BROKEN LINKS DETECTED:
+--------------------------------------------------
+[INFO] Detailed report written to: .\broken_links_report.md
+
+[SOCIAL EMBED IMAGE] (60 broken):
+   [X] https://oekaki-connect.github.io/web-novel/static/images/site-default-social.jpg
+       Source: index.html
+       Target: static\images\site-default-social.jpg
+   
+   ... and 50 more social embed image links
+
+[FAILED] Link check FAILED - broken links detected!
+```
+
+**Common Issues Detected:**
+- Missing social media preview images
+- Incorrect relative paths in chapter pages
+- Tag pages linking to non-existent cross-language tags
+- Draft chapters being referenced but not generated
+- Images referenced but not copied to build directory
+
 ## Dependencies
 
 - `jinja2`: Template engine for HTML generation
