@@ -1043,6 +1043,56 @@ footer p {
     text-decoration: none;
 }
 
+/* Reading progress indicators */
+.read-completed {
+    color: #28a745;
+    font-weight: bold;
+    text-decoration: none !important;
+}
+
+.read-visited {
+    color: #6c757d;
+    text-decoration: none !important;
+}
+
+/* Latest chapter read section */
+.latest-chapter-read {
+    background-color: var(--color-light);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.5em;
+    margin: 2em 0;
+    text-align: center;
+}
+
+.latest-chapter-read h3 {
+    margin-top: 0;
+    margin-bottom: 1em;
+    color: var(--color-heading);
+    font-size: 1.2em;
+}
+
+.latest-chapter-read p {
+    margin: 0.5em 0;
+    color: var(--color-contrast);
+}
+
+.latest-chapter-read a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.latest-chapter-read a:hover {
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
+.completion-date {
+    font-size: 0.9em;
+    color: var(--color-secondary);
+}
+
 .authors-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));

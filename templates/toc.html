@@ -39,6 +39,58 @@
     
     <!-- Theme Toggle Script -->
     <script src="../../../static/theme-toggle.js"></script>
+    
+    <!-- Reading Progress Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const novelSlug = '{{ novel.slug }}';
+            displayReadingProgress(novelSlug);
+            displayLatestChapterRead(novelSlug);
+        });
+        
+        function displayReadingProgress(novelSlug) {
+            const visitedKey = `visited_${novelSlug}`;
+            const visitedChapters = JSON.parse(localStorage.getItem(visitedKey) || '{}');
+            
+            // Add read indicators to chapter links
+            const chapterLinks = document.querySelectorAll('.arc ul li a');
+            chapterLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                const chapterId = href.split('/').filter(Boolean).pop();
+                
+                if (visitedChapters[chapterId]) {
+                    const indicator = document.createElement('span');
+                    indicator.className = visitedChapters[chapterId].completed ? 'read-completed' : 'read-visited';
+                    indicator.textContent = visitedChapters[chapterId].completed ? ' ✓' : ' ○';
+                    
+                    // Insert indicator inside the link at the end
+                    link.appendChild(indicator);
+                }
+            });
+        }
+        
+        function displayLatestChapterRead(novelSlug) {
+            const latestKey = `latest_${novelSlug}`;
+            const latestChapter = JSON.parse(localStorage.getItem(latestKey) || 'null');
+            
+            if (latestChapter) {
+                const tocNav = document.querySelector('.toc-nav');
+                if (tocNav) {
+                    const latestDiv = document.createElement('div');
+                    latestDiv.className = 'latest-chapter-read';
+                    
+                    const latestDate = new Date(latestChapter.completedAt).toLocaleDateString();
+                    latestDiv.innerHTML = `
+                        <h3>Continue Reading</h3>
+                        <p>Last completed: <a href="../${latestChapter.chapterId}/">${latestChapter.title}</a></p>
+                        <p class="completion-date">Finished on ${latestDate}</p>
+                    `;
+                    
+                    tocNav.parentNode.insertBefore(latestDiv, tocNav.nextSibling);
+                }
+            }
+        }
+    </script>
 </head>
 <body>
     <header>

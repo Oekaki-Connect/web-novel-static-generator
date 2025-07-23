@@ -123,6 +123,80 @@
         
         // Load settings when page loads
         document.addEventListener('DOMContentLoaded', loadReadingSettings);
+        
+        // Reading progress tracking
+        function initReadingProgress() {
+            const novelSlug = '{{ novel.slug }}';
+            const chapterId = '{{ chapter.id }}';
+            const chapterTitle = '{{ chapter_title }}';
+            
+            // Mark this chapter as visited
+            markChapterVisited(novelSlug, chapterId, chapterTitle);
+            
+            // Set up scroll tracking for completion
+            setupScrollTracking(novelSlug, chapterId);
+        }
+        
+        function markChapterVisited(novelSlug, chapterId, chapterTitle) {
+            const visitedKey = `visited_${novelSlug}`;
+            let visitedChapters = JSON.parse(localStorage.getItem(visitedKey) || '{}');
+            
+            visitedChapters[chapterId] = {
+                title: chapterTitle,
+                visitedAt: new Date().toISOString(),
+                completed: visitedChapters[chapterId]?.completed || false
+            };
+            
+            localStorage.setItem(visitedKey, JSON.stringify(visitedChapters));
+        }
+        
+        function markChapterCompleted(novelSlug, chapterId) {
+            const visitedKey = `visited_${novelSlug}`;
+            let visitedChapters = JSON.parse(localStorage.getItem(visitedKey) || '{}');
+            
+            if (visitedChapters[chapterId]) {
+                visitedChapters[chapterId].completed = true;
+                visitedChapters[chapterId].completedAt = new Date().toISOString();
+                localStorage.setItem(visitedKey, JSON.stringify(visitedChapters));
+                
+                // Update latest chapter read
+                const latestKey = `latest_${novelSlug}`;
+                localStorage.setItem(latestKey, JSON.stringify({
+                    chapterId: chapterId,
+                    title: visitedChapters[chapterId].title,
+                    completedAt: visitedChapters[chapterId].completedAt
+                }));
+            }
+        }
+        
+        function setupScrollTracking(novelSlug, chapterId) {
+            let hasScrolledToEnd = false;
+            
+            function checkScrollProgress() {
+                if (hasScrolledToEnd) return;
+                
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                
+                // Consider chapter "completed" when user scrolls to within 100px of the bottom
+                const scrolledToEnd = (scrollTop + windowHeight) >= (documentHeight - 100);
+                
+                if (scrolledToEnd) {
+                    hasScrolledToEnd = true;
+                    markChapterCompleted(novelSlug, chapterId);
+                }
+            }
+            
+            window.addEventListener('scroll', checkScrollProgress);
+            window.addEventListener('resize', checkScrollProgress);
+            
+            // Also check on load in case content is short
+            setTimeout(checkScrollProgress, 1000);
+        }
+        
+        // Initialize reading progress tracking
+        document.addEventListener('DOMContentLoaded', initReadingProgress);
     </script>
     
     {% if is_password_protected %}
