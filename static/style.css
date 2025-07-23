@@ -2248,12 +2248,14 @@ footer p {
     
     .arc-download-group {
         flex-direction: column;
-        align-items: flex-start;
-        gap: 0.25rem;
+        align-items: center;
+        gap: 0.5rem;
     }
     
     .arc-download-title {
         margin-bottom: 0.25rem;
+        text-align: center;
+        width: 100%;
     }
     
     .download-links {
@@ -2268,6 +2270,15 @@ footer p {
         margin-right: auto;
         display: block;
     }
+    
+    /* Arc download buttons should be more compact */
+    .arc-epub-link,
+    .arc-pdf-link {
+        width: auto;
+        max-width: 150px;
+        margin: 0;
+        display: inline-block;
+    }
 }
 
 /* Extra narrow viewports (2:3 aspect ratio phones) */
@@ -2276,6 +2287,13 @@ footer p {
         max-width: 250px;
         padding: 0.6rem 1.2rem;
         font-size: 0.95rem;
+    }
+    
+    .arc-epub-link,
+    .arc-pdf-link {
+        max-width: 120px;
+        padding: 0.4rem 0.75rem;
+        font-size: 0.85rem;
     }
 }
 
