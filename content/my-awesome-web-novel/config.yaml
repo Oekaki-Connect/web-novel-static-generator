@@ -75,8 +75,7 @@ seo:
 
 # Downloads configuration
 downloads:
-  # Enable PDF/EPUB downloads for this story
-  pdf_enabled: true
+  # Enable EPUB downloads for this story
   epub_enabled: true
   
   # Generate individual arc downloads
