@@ -1537,11 +1537,16 @@ def extract_local_images(markdown_content):
     for alt_text, image_path, title in markdown_matches:
         # Only process if it looks like a local file (no http/https, no leading /)
         if not image_path.startswith(('http://', 'https://', '/')):
+            # Construct the title part separately to avoid f-string issues
+            title_part = ""
+            if title:
+                title_part = f' "{title}"'
+            
             local_images.append({
                 'alt': alt_text,
                 'original_path': image_path,
                 'title': title or '',
-                'full_match': f'![{alt_text}]({image_path}{"" if not title else " \"" + title + "\""})',
+                'full_match': f'![{alt_text}]({image_path}{title_part})',
                 'type': 'markdown'
             })
     
