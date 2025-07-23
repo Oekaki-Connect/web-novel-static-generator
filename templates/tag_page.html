@@ -23,7 +23,11 @@
                 {% if lang == current_language %}
                     <span class="current-language">{{ lang|upper }}</span>
                 {% else %}
-                    <a href="../../../{{ lang }}/tags/{{ tag_slug }}/">{{ lang|upper }}</a>
+                    {% if cross_lang_tags and cross_lang_tags.get(lang) %}
+                        <a href="../../../{{ lang }}/tags/{{ cross_lang_tags[lang] }}/">{{ lang|upper }}</a>
+                    {% else %}
+                        <span class="language-unavailable">{{ lang|upper }}</span>
+                    {% endif %}
                 {% endif %}
             {% endfor %}
         </div>

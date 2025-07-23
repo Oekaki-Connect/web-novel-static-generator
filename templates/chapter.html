@@ -396,7 +396,7 @@
                 <strong>Tags:</strong>
                 <div class="tags">
                     {% for tag in chapter_metadata.tags %}
-                    <a href="tags/{{ tag|slugify_tag }}/" class="tag">{{ tag }}</a>
+                    <a href="../tags/{{ tag|slugify_tag }}/" class="tag">{{ tag }}</a>
                     {% endfor %}
                 </div>
             </div>
@@ -416,7 +416,7 @@
         <div class="translation-notice">
             <p><strong>Translation Notice:</strong> This chapter is not yet available in {{ requested_language|upper }}. 
             You are viewing the {{ primary_language|upper }} version. 
-            <a href="../{{ primary_language }}/{{ chapter.id }}.html">Continue reading in {{ primary_language|upper }}</a> or help contribute a translation!</p>
+            <a href="../../{{ primary_language }}/{{ chapter.id }}/">Continue reading in {{ primary_language|upper }}</a> or help contribute a translation!</p>
         </div>
         {% endif %}
         

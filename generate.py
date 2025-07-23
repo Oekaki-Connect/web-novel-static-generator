@@ -1496,8 +1496,17 @@ def load_novel_config(novel_slug):
             return yaml.safe_load(f)
     return {}
 
-def should_show_tags(novel_config, chapter_front_matter):
+def should_show_tags(novel_config, chapter_front_matter, translation_missing=False):
     """Determine if tags should be shown based on config and front matter"""
+    # Don't show tags for hidden chapters since their tag pages don't exist
+    if is_chapter_hidden(chapter_front_matter):
+        return False
+    
+    # Don't show tags for translation-missing chapters since the tag pages 
+    # may not exist in the target language
+    if translation_missing:
+        return False
+    
     # Check front matter override first
     if 'show_tags' in chapter_front_matter:
         return chapter_front_matter['show_tags']
@@ -2044,7 +2053,8 @@ def generate_static_pages(site_config):
             page_dir = os.path.join(BUILD_DIR, page_slug, lang)
             os.makedirs(page_dir, exist_ok=True)
             
-            # Calculate breadcrumb depth
+            # Calculate breadcrumb depth - need to account for nested directory structure
+            # From resources/translation-guide/en/ we need to go up 3 levels to reach root
             breadcrumb_depth = page_slug.count('/') + 2  # +2 for lang and page itself
             
             # Build breadcrumbs
@@ -2054,9 +2064,11 @@ def generate_static_pages(site_config):
                 url_parts = []
                 for i, part in enumerate(parts[:-1]):
                     url_parts.append(part)
+                    # Need to go up the full breadcrumb_depth, then navigate to the parent page
+                    parent_url = '../' * breadcrumb_depth + '/'.join(url_parts) + f'/{lang}/'
                     breadcrumbs.append({
                         'title': part.title(),
-                        'url': '../' * (breadcrumb_depth - i - 1) + '/'.join(url_parts) + f'/{lang}/'
+                        'url': parent_url
                     })
             breadcrumbs.append({'title': page_metadata.get('title', page_slug)})
             
@@ -2573,7 +2585,7 @@ def build_site(include_drafts=False):
                     display_title = chapter_metadata.get('title', chapter_title)
                     
                     # Determine what to display based on config and front matter
-                    show_tags = should_show_tags(novel_config, chapter_metadata)
+                    show_tags = should_show_tags(novel_config, chapter_metadata, translation_missing=False)
                     show_metadata = should_show_metadata(novel_config, chapter_metadata)
                     show_translation_notes = should_show_translation_notes(novel_config, chapter_metadata)
                     
@@ -2630,6 +2642,12 @@ def build_site(include_drafts=False):
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                    
+                    # Skip draft chapters unless include_drafts is True (same check as above)
+                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                        print(f"      Skipping draft chapter: {chapter_id} - {chapter_title}")
+                        continue
+                    
                     # Process chapter images and update markdown (using primary language)
                     chapter_content_md = process_chapter_images(novel_slug, chapter_id, primary_lang, chapter_content_md)
                     
@@ -2689,7 +2707,7 @@ def build_site(include_drafts=False):
                     display_title = chapter_metadata.get('title', chapter_title)
                     
                     # Determine what to display based on config and front matter
-                    show_tags = should_show_tags(novel_config, chapter_metadata)
+                    show_tags = should_show_tags(novel_config, chapter_metadata, translation_missing=True)
                     show_metadata = should_show_metadata(novel_config, chapter_metadata)
                     show_translation_notes = should_show_translation_notes(novel_config, chapter_metadata)
                     
@@ -2774,6 +2792,16 @@ def build_site(include_drafts=False):
                     tag_page_dir = os.path.join(tags_dir, tag_slug)
                     os.makedirs(tag_page_dir, exist_ok=True)
                     
+                    # Build cross-language tag mapping for this tag
+                    cross_lang_tags = {}
+                    for other_lang in available_languages:
+                        if other_lang != lang:
+                            other_tags_data = collect_tags_for_novel(novel_slug, other_lang)
+                            # For now, just check if any tags exist in other language
+                            # (proper cross-language tag mapping would require more complex logic)
+                            if other_tags_data:
+                                cross_lang_tags[other_lang] = None  # Don't show cross-language links for now
+                    
                     with open(os.path.join(tag_page_dir, "index.html"), "w", encoding='utf-8') as f:
                         f.write(render_template("tag_page.html",
                                                 novel=novel,
@@ -2781,7 +2809,8 @@ def build_site(include_drafts=False):
                                                 tag_slug=tag_slug,
                                                 chapters=chapters,
                                                 current_language=lang,
-                                                available_languages=available_languages))
+                                                available_languages=available_languages,
+                                                cross_lang_tags=cross_lang_tags))
 
     # Generate EPUB downloads after all HTML is built
     print("Generating EPUB downloads...")
@@ -3011,17 +3040,23 @@ def resolve_link_path(current_file_dir, link_url, build_dir):
         url_parts = str(target_path).split('?')[0].split('#')[0]
         target_path = Path(url_parts)
         
-        # If path doesn't exist, try with index.html appended (for directory links)
-        if not target_path.exists() and target_path.is_dir():
-            index_path = target_path / 'index.html'
-            if index_path.exists():
-                return index_path
-        
-        # If path ends with /, try with index.html
+        # If path doesn't exist but ends with /, try with index.html first
         if str(link_url).endswith('/'):
             index_path = target_path / 'index.html'
             if index_path.exists():
                 return index_path
+        
+        # If path doesn't exist as-is, try with index.html appended (for directory links)
+        if not target_path.exists():
+            if target_path.is_dir():
+                index_path = target_path / 'index.html'
+                if index_path.exists():
+                    return index_path
+            else:
+                # Try treating as directory and adding index.html
+                index_path = target_path / 'index.html'
+                if index_path.exists():
+                    return index_path
         
         return target_path
         
