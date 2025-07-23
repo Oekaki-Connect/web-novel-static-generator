@@ -1,3 +1,5 @@
-* tracking of read pages in local storage (scroll close enough to end to mark chapter as completed reading on a story's toc next to the chapter name)
-* list latest chapter read (if present in local storage) after reading a chapter on a story's toc
-* pdf/epub download options for stories on their toc, have a flag for running the generate.py to skip making these, have a story setting to skip making these / including links to them on the toc, store them in static/pdf static/epub, could use ebooklib or WeasyPrint/fpdf2, when making these there should be some special considerations such as the cover page of the story (if there is a story cover art use that, if there is an arc cover art use that), generate them for the whole story as well as for each arc as stand alone downloads, this one may require more planning to really do right (for example, making sure all images are embedded and fit well too)
+- **Modular Template Extensions**: Allow custom template overrides per novel via additional directories. Benefit: Easier customization for multi-novel sites. Implementation: Enhance template loading in `generate.py` to check novel-specific folders.
+
+- **Error Handling and Validation**: Add build-time validation for config/front matter (e.g., required fields, duplicate IDs). Benefit: Prevents broken builds. Implementation: YAML schema checks in `generate.py`.
+
+- **Improved Accessibility**: Add ARIA labels to navigation, ensure keyboard-focusable elements, and enforce alt text for all images (with build-time warnings for missing ones). Benefit: Complies with WCAG standards, widening audience. Implementation: Update templates with ARIA attributes; add checks in `generate.py` for image alt text.

@@ -8,7 +8,6 @@ from pathlib import Path
 import hashlib
 import base64
 import json
-import uuid
 import datetime
 # Lazy import for optional dependencies
 EBOOKLIB_AVAILABLE = False
@@ -467,6 +466,15 @@ def build_social_meta(site_config, novel_config, chapter_metadata, page_type, ti
     
     return social_meta
 
+def generate_image_hash(file_path, length=8):
+    """Generate a partial hash of an image file for consistent naming"""
+    hasher = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        # Read in chunks to handle large files efficiently
+        for chunk in iter(lambda: f.read(4096), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()[:length]
+
 def build_seo_meta(site_config, novel_config, chapter_metadata, page_type):
     """Build SEO metadata for a page"""
     seo_meta = {}
@@ -490,7 +498,7 @@ def build_seo_meta(site_config, novel_config, chapter_metadata, page_type):
     return seo_meta
 
 def process_cover_art(novel_slug, novel_config):
-    """Process cover art images by copying them to static/images with UUID filenames"""
+    """Process cover art images by copying them to static/images with hash-based filenames"""
     processed_images = {}
     
     # Ensure static/images directory exists
@@ -501,10 +509,11 @@ def process_cover_art(novel_slug, novel_config):
     if novel_config.get('front_page', {}).get('cover_art'):
         source_path = os.path.join(CONTENT_DIR, novel_slug, novel_config['front_page']['cover_art'])
         if os.path.exists(source_path):
-            # Generate UUID for unique filename with original name
+            # Generate hash-based filename with original name
             original_filename = os.path.basename(source_path)
             file_name, file_extension = os.path.splitext(original_filename)
-            unique_filename = f"{uuid.uuid4().hex}-{file_name}{file_extension}"
+            file_hash = generate_image_hash(source_path)
+            unique_filename = f"{file_hash}-{file_name}{file_extension}"
             dest_path = os.path.join(images_dir, unique_filename)
             
             # Copy the image
@@ -519,10 +528,11 @@ def process_cover_art(novel_slug, novel_config):
             if arc.get('cover_art'):
                 source_path = os.path.join(CONTENT_DIR, novel_slug, arc['cover_art'])
                 if os.path.exists(source_path):
-                    # Generate UUID for unique filename with original name
+                    # Generate hash-based filename with original name
                     original_filename = os.path.basename(source_path)
                     file_name, file_extension = os.path.splitext(original_filename)
-                    unique_filename = f"{uuid.uuid4().hex}-{file_name}{file_extension}"
+                    file_hash = generate_image_hash(source_path)
+                    unique_filename = f"{file_hash}-{file_name}{file_extension}"
                     dest_path = os.path.join(images_dir, unique_filename)
                     
                     # Copy the image
