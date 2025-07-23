@@ -968,6 +968,221 @@ footer p {
     }
 }
 
+/* Author pages styling */
+.author-header {
+    margin-bottom: 3em;
+    text-align: center;
+}
+
+.author-avatar {
+    margin: 2em 0;
+    display: flex;
+    justify-content: center;
+}
+
+.avatar-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--color-border);
+    background-color: var(--color-light);
+}
+
+.avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: #888888;
+    border: 3px solid var(--color-border);
+}
+
+.author-info {
+    width: 100%;
+}
+
+.author-bio {
+    color: var(--color-contrast);
+    line-height: 1.6;
+    margin: 1em auto 1.5em auto;
+    font-style: italic;
+    max-width: 600px;
+}
+
+.author-links {
+    display: flex;
+    gap: 1em;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.author-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    padding: 0.5em 1em;
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+}
+
+.author-link:hover {
+    background-color: var(--color-primary);
+    color: var(--color-base);
+}
+
+.authors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2em;
+    margin-top: 2em;
+}
+
+.author-card {
+    display: flex;
+    gap: 1.5em;
+    align-items: flex-start;
+    padding: 1.5em;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background-color: var(--color-base);
+}
+
+.author-card .author-avatar {
+    flex-shrink: 0;
+}
+
+.author-card .avatar-image {
+    width: 80px;
+    height: 80px;
+}
+
+.author-card .avatar-placeholder {
+    width: 80px;
+    height: 80px;
+}
+
+.author-card .author-info {
+    flex: 1;
+}
+
+.author-card h2 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-size: 1.2em;
+}
+
+.author-card h2 a {
+    color: var(--color-heading);
+    text-decoration: none;
+}
+
+.author-card h2 a:hover {
+    color: var(--color-primary);
+}
+
+.author-card .author-bio {
+    margin: 0.5em 0 1em 0;
+    font-size: 0.9em;
+}
+
+.author-card .author-links {
+    gap: 0.5em;
+}
+
+.author-card .author-link {
+    font-size: 0.8em;
+    padding: 0.3em 0.6em;
+}
+
+/* Author contributions styling */
+.author-stories, .author-chapters {
+    margin-bottom: 4em;
+}
+
+.chapter-limit-note {
+    color: var(--color-secondary);
+    font-style: italic;
+    margin-bottom: 1.5em;
+    font-size: 0.9em;
+}
+
+.story-item, .chapter-item {
+    margin-bottom: 2em;
+    padding-bottom: 1.5em;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.story-item:last-child, .chapter-item:last-child {
+    border-bottom: none;
+    margin-bottom: 2em;
+    padding-bottom: 1em;
+}
+
+.story-item h3, .chapter-item h4 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+}
+
+.story-item h3 a, .chapter-item h4 a {
+    color: var(--color-heading);
+    text-decoration: none;
+}
+
+.story-item h3 a:hover, .chapter-item h4 a:hover {
+    color: var(--color-primary);
+}
+
+.story-role, .chapter-meta {
+    color: var(--color-secondary);
+    font-size: 0.9em;
+    margin-bottom: 0.5em;
+}
+
+.chapter-meta {
+    display: flex;
+    gap: 1em;
+    flex-wrap: wrap;
+}
+
+.story-description {
+    color: var(--color-contrast);
+    line-height: 1.6;
+    margin-top: 0.5em;
+}
+
+.no-content {
+    text-align: center;
+    color: var(--color-secondary);
+    margin: 3em 0;
+}
+
+/* Mobile responsiveness for author pages */
+@media (max-width: 600px) {
+    .author-header {
+        margin-bottom: 2em;
+    }
+    
+    .authors-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5em;
+    }
+    
+    .author-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .author-links {
+        justify-content: center;
+    }
+    
+    .chapter-meta {
+        flex-direction: column;
+        gap: 0.2em;
+    }
+}
+
 .novel-card h2 {
     font-family: var(--font-heading);
     font-size: 24px;

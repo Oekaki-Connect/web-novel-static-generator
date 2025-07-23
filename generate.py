@@ -518,6 +518,87 @@ def process_cover_art(novel_slug, novel_config):
     
     return processed_images
 
+def load_authors_config():
+    """Load authors configuration from authors.yaml"""
+    authors_file = "authors.yaml"
+    if os.path.exists(authors_file):
+        with open(authors_file, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            return config.get('authors', {})
+    return {}
+
+def find_author_username(author_name, authors_config):
+    """Find the username for an author by their display name"""
+    for username, author_info in authors_config.items():
+        if author_info.get('name') == author_name:
+            return username
+    return None
+
+def collect_author_contributions(all_novels_data):
+    """Collect all stories and chapters that each author contributed to"""
+    author_contributions = {}
+    
+    for novel in all_novels_data:
+        novel_slug = novel['slug']
+        novel_title = novel.get('title', novel_slug)
+        novel_config = load_novel_config(novel_slug)
+        
+        # Check story-level author
+        story_author = novel_config.get('author', {}).get('name')
+        if story_author:
+            if story_author not in author_contributions:
+                author_contributions[story_author] = {'stories': [], 'chapters': []}
+            author_contributions[story_author]['stories'].append({
+                'slug': novel_slug,
+                'title': novel_title,
+                'description': novel.get('description'),
+                'role': 'Author'
+            })
+        
+        # Check each chapter for author/translator contributions (use primary language only to avoid duplicates)
+        primary_lang = novel_config.get('primary_language', 'en')
+        for arc in novel.get('arcs', []):
+            for chapter in arc.get('chapters', []):
+                chapter_id = chapter['id']
+                chapter_title = chapter['title']
+                
+                # Load chapter content to get front matter (use primary language only)
+                try:
+                    chapter_content, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                    
+                    # Check chapter author
+                    if chapter_metadata.get('author'):
+                        author_name = chapter_metadata['author']
+                        if author_name not in author_contributions:
+                            author_contributions[author_name] = {'stories': [], 'chapters': []}
+                        author_contributions[author_name]['chapters'].append({
+                            'novel_slug': novel_slug,
+                            'novel_title': novel_title,
+                            'chapter_id': chapter_id,
+                            'title': chapter_title,
+                            'role': 'Author',
+                            'published': chapter_metadata.get('published')
+                        })
+                    
+                    # Check chapter translator
+                    if chapter_metadata.get('translator'):
+                        translator_name = chapter_metadata['translator']
+                        if translator_name not in author_contributions:
+                            author_contributions[translator_name] = {'stories': [], 'chapters': []}
+                        author_contributions[translator_name]['chapters'].append({
+                            'novel_slug': novel_slug,
+                            'novel_title': novel_title,
+                            'chapter_id': chapter_id,
+                            'title': chapter_title,
+                            'role': 'Translator',
+                            'published': chapter_metadata.get('published')
+                        })
+                except:
+                    # Skip chapters that can't be loaded
+                    continue
+    
+    return author_contributions
+
 def load_novel_config(novel_slug):
     """Load configuration for a specific novel"""
     config_file = os.path.join(CONTENT_DIR, novel_slug, "config.yaml")
@@ -923,6 +1004,13 @@ def process_chapter_images(novel_slug, chapter_id, language, markdown_content):
 # Add the slugify_tag function as a Jinja2 filter
 env.filters['slugify_tag'] = slugify_tag
 
+# Add the find_author_username function as a Jinja2 filter
+def find_author_username_filter(author_name, authors_config):
+    """Jinja2 filter to find author username by name"""
+    return find_author_username(author_name, authors_config)
+
+env.filters['find_author_username'] = find_author_username_filter
+
 def load_all_novels_data():
     """Load all novels from the content directory (for processing)"""
     novels = []
@@ -1061,6 +1149,76 @@ def build_site():
                                allow_indexing=seo_meta.get('allow_indexing', True),
                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
                                footer_data=footer_data))
+
+    # Generate author pages
+    authors_config = load_authors_config()
+    author_contributions = collect_author_contributions(all_novels_data)
+    
+    if authors_config:
+        # Create authors directory
+        authors_dir = os.path.join(BUILD_DIR, "authors")
+        os.makedirs(authors_dir, exist_ok=True)
+        
+        # Build social metadata for authors index
+        authors_url = f"{site_config.get('site_url', '').rstrip('/')}/authors/"
+        authors_social_meta = build_social_meta(site_config, {}, {}, 'authors', "Authors", authors_url)
+        authors_seo_meta = build_seo_meta(site_config, {}, {}, 'authors')
+        
+        # Render authors index page
+        with open(os.path.join(authors_dir, "index.html"), "w", encoding='utf-8') as f:
+            f.write(render_template("authors.html",
+                                   authors=authors_config,
+                                   site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                   social_title=authors_social_meta['title'],
+                                   social_description=authors_social_meta['description'],
+                                   social_image=authors_social_meta['image'],
+                                   social_url=authors_social_meta['url'],
+                                   seo_meta_description=authors_seo_meta.get('meta_description'),
+                                   seo_keywords=authors_social_meta.get('keywords'),
+                                   allow_indexing=authors_seo_meta.get('allow_indexing', True),
+                                   twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                   footer_data=footer_data))
+        
+        # Generate individual author pages
+        for username, author_info in authors_config.items():
+            author_dir = os.path.join(authors_dir, username)
+            os.makedirs(author_dir, exist_ok=True)
+            
+            # Get contributions for this author (match by name)
+            author_name = author_info.get('name', username)
+            contributions = author_contributions.get(author_name, {'stories': [], 'chapters': []})
+            
+            # Sort chapters by publication date (most recent first)
+            if contributions['chapters']:
+                contributions['chapters'].sort(key=lambda x: x.get('published', '1900-01-01'), reverse=True)
+                
+                # Limit chapters based on site configuration
+                max_chapters = site_config.get('author_pages', {}).get('max_recent_chapters', 20)
+                if max_chapters > 0:
+                    contributions['chapters'] = contributions['chapters'][:max_chapters]
+            
+            # Build social metadata for author
+            author_url = f"{site_config.get('site_url', '').rstrip('/')}/authors/{username}/"
+            author_social_meta = build_social_meta(site_config, {}, {}, 'author', f"{author_name} - Author", author_url)
+            author_seo_meta = build_seo_meta(site_config, {}, {}, 'author')
+            
+            # Render author page
+            with open(os.path.join(author_dir, "index.html"), "w", encoding='utf-8') as f:
+                f.write(render_template("author.html",
+                                       author=author_info,
+                                       stories=contributions['stories'],
+                                       chapters=contributions['chapters'],
+                                       max_chapters=max_chapters,
+                                       site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                       social_title=author_social_meta['title'],
+                                       social_description=author_social_meta['description'],
+                                       social_image=author_social_meta['image'],
+                                       social_url=author_social_meta['url'],
+                                       seo_meta_description=author_seo_meta.get('meta_description'),
+                                       seo_keywords=author_social_meta.get('keywords'),
+                                       allow_indexing=author_seo_meta.get('allow_indexing', True),
+                                       twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                       footer_data=footer_data))
 
     # Process each novel (including hidden ones)
     for novel in all_novels_data:
@@ -1256,6 +1414,7 @@ def build_site():
                                                 encrypted_content=encrypted_content,
                                                 password_hash=password_hash,
                                                 password_hint=password_hint,
+                                                authors_config=authors_config,
                                                 site_name=site_config.get('site_name', 'Web Novel Collection'),
                                                 social_title=chapter_social_meta['title'],
                                                 social_description=chapter_social_meta['description'],
@@ -1374,6 +1533,7 @@ def build_site():
                                                 encrypted_content=encrypted_content,
                                                 password_hash=password_hash,
                                                 password_hint=password_hint,
+                                                authors_config=authors_config,
                                                 site_name=site_config.get('site_name', 'Web Novel Collection'),
                                                 social_title=chapter_social_meta['title'],
                                                 social_description=chapter_social_meta['description'],

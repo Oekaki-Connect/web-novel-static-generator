@@ -45,6 +45,12 @@ rss:
   # Per-story feeds (generated automatically for each story)
   story_feeds_enabled: true
 
+# Author pages configuration
+author_pages:
+  # Maximum number of recent chapters to show on author pages
+  # Set to 0 for unlimited chapters
+  max_recent_chapters: 20
+
 # Comments system (utterances)
 comments:
   # Enable comments site-wide

@@ -1,0 +1,31 @@
+# Authors configuration file
+# Each author should have a unique username that can be referenced in chapter front matter
+
+authors:
+  original-author:
+    name: "Original Author"
+    bio: "The original creator of My Awesome Web Novel, a talented storyteller with a passion for fantasy and adventure."
+    links:
+      - text: "Website"
+        url: "https://example.com/original-author"
+      - text: "Twitter"
+        url: "https://twitter.com/originalauthor"
+    avatar: "static/images/authors/original-author.png"  # Optional
+    
+  haiku:
+    name: "Haiku Translator"
+    bio: "An experienced translator specializing in Japanese to English web novel translations. Known for maintaining the original tone and cultural nuances."
+    links:
+      - text: "Translation Blog"
+        url: "https://example.com/haiku-translations"
+      - text: "Ko-fi"
+        url: "https://ko-fi.com/haiku"
+    avatar: "static/images/authors/haiku.png"  # Optional
+    
+  editor-sama:
+    name: "Editor Sama"
+    bio: "Professional editor with over 10 years of experience in web novel editing and proofreading."
+    links:
+      - text: "LinkedIn"
+        url: "https://linkedin.com/in/editor-sama"
+    # No avatar specified - will use default

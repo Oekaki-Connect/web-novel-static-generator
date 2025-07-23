@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authors - {{ site_name }}</title>
+    <link rel="stylesheet" href="../static/style.css">
+    
+    <!-- SEO Meta Tags -->
+    {% if seo_meta_description %}
+    <meta name="description" content="{{ seo_meta_description }}">
+    {% endif %}
+    {% if seo_keywords %}
+    <meta name="keywords" content="{{ seo_keywords }}">
+    {% endif %}
+    {% if not allow_indexing %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{ social_title }}">
+    <meta property="og:description" content="{{ social_description }}">
+    <meta property="og:image" content="{{ social_image }}">
+    <meta property="og:url" content="{{ social_url }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ site_name }}">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ social_title }}">
+    <meta name="twitter:description" content="{{ social_description }}">
+    <meta name="twitter:image" content="{{ social_image }}">
+    {% if twitter_handle %}
+    <meta name="twitter:site" content="@{{ twitter_handle }}">
+    {% endif %}
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ social_url }}">
+    
+    <!-- Theme Toggle Script -->
+    <script src="../static/theme-toggle.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="breadcrumbs">
+            <a href="../">Home</a>
+            <span class="breadcrumb-separator">></span>
+            <span class="current-page">Authors</span>
+        </nav>
+        <h1>Authors</h1>
+    </header>
+    <main>
+        {% if authors %}
+        <div class="authors-grid">
+            {% for username, author in authors.items() %}
+            <div class="author-card">
+                <div class="author-avatar">
+                    {% if author.avatar %}
+                    <img src="../{{ author.avatar }}" alt="{{ author.name }}" class="avatar-image">
+                    {% else %}
+                    <div class="avatar-placeholder"></div>
+                    {% endif %}
+                </div>
+                <div class="author-info">
+                    <h2><a href="{{ username }}/">{{ author.name }}</a></h2>
+                    {% if author.bio %}
+                    <p class="author-bio">{{ author.bio }}</p>
+                    {% endif %}
+                    {% if author.links %}
+                    <div class="author-links">
+                        {% for link in author.links %}
+                        <a href="{{ link.url }}" target="_blank" class="author-link">{{ link.text }}</a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p>No authors found.</p>
+        {% endif %}
+    </main>
+    <footer>
+        <p>{{ footer_data.copyright }}</p>
+        {% if footer_data.links %}
+        <nav class="footer-links">
+            {% for link in footer_data.links %}
+            <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
+            {% endfor %}
+        </nav>
+        {% endif %}
+        {% if footer_data.additional_text %}
+        <p class="footer-additional">{{ footer_data.additional_text }}</p>
+        {% endif %}
+    </footer>
+</body>
+</html>

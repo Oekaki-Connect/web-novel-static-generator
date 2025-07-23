@@ -289,13 +289,25 @@
         <div class="chapter-metadata">
             {% if chapter_metadata.author %}
             <div class="metadata-item">
-                <strong>Author:</strong> {{ chapter_metadata.author }}
+                <strong>Author:</strong> 
+                {% set author_username = chapter_metadata.author | find_author_username(authors_config) %}
+                {% if author_username %}
+                <a href="../../../authors/{{ author_username }}/" class="author-link">{{ chapter_metadata.author }}</a>
+                {% else %}
+                {{ chapter_metadata.author }}
+                {% endif %}
             </div>
             {% endif %}
             
             {% if chapter_metadata.translator %}
             <div class="metadata-item">
-                <strong>Translator:</strong> {{ chapter_metadata.translator }}
+                <strong>Translator:</strong> 
+                {% set translator_username = chapter_metadata.translator | find_author_username(authors_config) %}
+                {% if translator_username %}
+                <a href="../../../authors/{{ translator_username }}/" class="author-link">{{ chapter_metadata.translator }}</a>
+                {% else %}
+                {{ chapter_metadata.translator }}
+                {% endif %}
             </div>
             {% endif %}
             

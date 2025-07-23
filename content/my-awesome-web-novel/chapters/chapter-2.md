@@ -1,6 +1,7 @@
 ---
 title: "Chapter 2: A New Journey Begins"
 author: "Original Author"
+translator: "Haiku Translator"
 published: "2025-01-16"
 tags: ["adventure", "travel", "beginning", "character-development"]
 translation_notes: "The concept of 'journey' here implies both physical and spiritual transformation."
