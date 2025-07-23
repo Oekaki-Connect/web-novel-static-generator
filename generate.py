@@ -9,6 +9,31 @@ import hashlib
 import base64
 import json
 import uuid
+import datetime
+# Lazy import for optional dependencies
+WEASYPRINT_AVAILABLE = False
+EBOOKLIB_AVAILABLE = False
+
+def _check_weasyprint():
+    global WEASYPRINT_AVAILABLE
+    try:
+        import weasyprint
+        WEASYPRINT_AVAILABLE = True
+        return True
+    except (ImportError, OSError) as e:
+        WEASYPRINT_AVAILABLE = False
+        return False
+
+def _check_ebooklib():
+    global EBOOKLIB_AVAILABLE
+    try:
+        import ebooklib
+        from ebooklib import epub
+        EBOOKLIB_AVAILABLE = True
+        return True
+    except ImportError:
+        EBOOKLIB_AVAILABLE = False
+        return False
 
 BUILD_DIR = "./build"
 CONTENT_DIR = "./content"
@@ -598,6 +623,850 @@ def collect_author_contributions(all_novels_data):
                     continue
     
     return author_contributions
+
+def get_non_hidden_chapters(novel_config, novel_slug, language='en'):
+    """Get list of chapters that are not hidden or password protected"""
+    visible_chapters = []
+    
+    for arc in novel_config.get('arcs', []):
+        arc_chapters = []
+        for chapter in arc.get('chapters', []):
+            chapter_id = chapter['id']
+            
+            # Load chapter content to check if it's hidden or password protected
+            try:
+                chapter_content, chapter_metadata = load_chapter_content(novel_slug, chapter_id, language)
+                
+                # Skip hidden chapters
+                if chapter_metadata.get('hidden', False):
+                    continue
+                
+                # Skip password protected chapters
+                if chapter_metadata.get('password'):
+                    continue
+                
+                arc_chapters.append({
+                    'id': chapter_id,
+                    'title': chapter['title'],
+                    'content': chapter_content,
+                    'metadata': chapter_metadata
+                })
+            except:
+                # Skip chapters that can't be loaded
+                continue
+        
+        if arc_chapters:  # Only include arcs with visible chapters
+            visible_chapters.append({
+                'title': arc['title'],
+                'cover_art': arc.get('cover_art'),
+                'chapters': arc_chapters
+            })
+    
+    return visible_chapters
+
+def generate_pdf_content(novel_config, chapters_data, title, is_arc=False):
+    """Generate HTML content for PDF generation"""
+    
+    # Check if cover art should be included
+    cover_art_path = None
+    if is_arc and chapters_data:
+        # For arcs, check if the arc has cover art
+        cover_art_path = chapters_data[0].get('cover_art')
+    else:
+        # For full story, check for story cover art
+        cover_art_path = novel_config.get('front_page', {}).get('cover_art')
+    
+    # Convert relative path to absolute for PDF generation
+    cover_art_html = ""
+    if cover_art_path:
+        # Build absolute path to the cover image
+        cover_image_absolute = os.path.join(BUILD_DIR, cover_art_path)
+        if os.path.exists(cover_image_absolute):
+            cover_art_html = f'<div class="cover-image"><img src="file:///{cover_image_absolute}" alt="Cover Art" /></div>'
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{title}</title>
+        <style>
+            @page {{
+                margin: 2cm;
+                size: A4;
+            }}
+            body {{
+                font-family: Georgia, serif;
+                line-height: 1.6;
+                color: #333;
+            }}
+            .cover-page {{
+                text-align: center;
+                page-break-after: always;
+                padding-top: 3cm;
+            }}
+            .cover-image {{
+                margin-bottom: 2em;
+            }}
+            .cover-image img {{
+                max-width: 300px;
+                max-height: 400px;
+                object-fit: contain;
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            }}
+            .cover-title {{
+                font-size: 2.5em;
+                font-weight: bold;
+                margin-bottom: 1em;
+            }}
+            .cover-author {{
+                font-size: 1.2em;
+                margin-bottom: 2em;
+            }}
+            .cover-description {{
+                font-size: 1em;
+                margin-bottom: 2em;
+                max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+                text-align: justify;
+            }}
+            .toc {{
+                page-break-after: always;
+            }}
+            .toc h2 {{
+                border-bottom: 2px solid #333;
+                padding-bottom: 0.5em;
+            }}
+            .toc ul {{
+                list-style: none;
+                padding: 0;
+            }}
+            .toc li {{
+                margin: 0.5em 0;
+                padding: 0.3em 0;
+                border-bottom: 1px dotted #ccc;
+            }}
+            .chapter {{
+                page-break-before: always;
+                margin-bottom: 2em;
+            }}
+            .chapter h1 {{
+                font-size: 1.8em;
+                border-bottom: 2px solid #333;
+                padding-bottom: 0.5em;
+                margin-bottom: 1em;
+            }}
+            .chapter-content {{
+                text-align: justify;
+            }}
+            .chapter-content h1, .chapter-content h2, .chapter-content h3 {{
+                margin-top: 1.5em;
+                margin-bottom: 0.5em;
+            }}
+            .chapter-content p {{
+                margin-bottom: 1em;
+            }}
+        </style>
+    </head>
+    <body>
+        <!-- Cover Page -->
+        <div class="cover-page">
+            {cover_art_html}
+            <div class="cover-title">{title}</div>
+            <div class="cover-author">{novel_config.get('author', {}).get('name', 'Unknown Author')}</div>
+            <div class="cover-description">{novel_config.get('description', '')}</div>
+        </div>
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+            <h2>Table of Contents</h2>
+            <ul>
+    """
+    
+    # Add TOC entries
+    for arc in chapters_data:
+        if not is_arc:  # For full story, show arc titles
+            html_content += f'<li><strong>{arc["title"]}</strong></li>'
+        for chapter in arc['chapters']:
+            html_content += f'<li>{chapter["title"]}</li>'
+    
+    html_content += """
+            </ul>
+        </div>
+        
+        <!-- Chapters -->
+    """
+    
+    # Add chapter content
+    for arc in chapters_data:
+        if not is_arc and len(chapters_data) > 1:  # Add arc title for multi-arc stories
+            html_content += f'<div class="chapter"><h1>{arc["title"]}</h1></div>'
+        
+        for chapter in arc['chapters']:
+            chapter_html = markdown.markdown(chapter['content'])
+            html_content += f"""
+            <div class="chapter">
+                <h1>{chapter['title']}</h1>
+                <div class="chapter-content">
+                    {chapter_html}
+                </div>
+            </div>
+            """
+    
+    html_content += """
+    </body>
+    </html>
+    """
+    
+    return html_content
+
+def generate_story_pdf(novel_slug, novel_config, site_config):
+    """Generate PDF for entire story"""
+    if not _check_weasyprint():
+        return False
+    
+    # Check if PDF generation is enabled
+    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+        return False
+    if not site_config.get('pdf_epub', {}).get('pdf_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('pdf_enabled', True):
+        return False
+    
+    try:
+        # Get non-hidden chapters
+        chapters_data = get_non_hidden_chapters(novel_config, novel_slug)
+        if not chapters_data:
+            return False
+        
+        # Generate HTML content
+        story_title = novel_config.get('title', novel_slug)
+        html_content = generate_pdf_content(novel_config, chapters_data, story_title)
+        
+        # Ensure output directory exists
+        pdf_dir = os.path.join(BUILD_DIR, "static", "pdf")
+        os.makedirs(pdf_dir, exist_ok=True)
+        
+        # Generate PDF
+        import weasyprint
+        pdf_path = os.path.join(pdf_dir, f"{novel_slug}.pdf")
+        weasyprint.HTML(string=html_content).write_pdf(pdf_path)
+        
+        return True
+    except Exception as e:
+        print(f"Error generating PDF for {novel_slug}: {e}")
+        return False
+
+def generate_arc_pdf(novel_slug, novel_config, site_config, arc_index):
+    """Generate PDF for a specific arc"""
+    if not _check_weasyprint():
+        return False
+    
+    # Check if PDF generation is enabled
+    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+        return False
+    if not site_config.get('pdf_epub', {}).get('pdf_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('pdf_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('include_arcs', True):
+        return False
+    
+    try:
+        # Get all chapters and filter for this arc
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+        if not all_chapters or arc_index >= len(all_chapters):
+            return False
+        
+        # Get the specific arc
+        arc_data = [all_chapters[arc_index]]
+        if not arc_data[0]['chapters']:
+            return False
+        
+        # Generate HTML content
+        arc_title = arc_data[0]['title']
+        story_title = novel_config.get('title', novel_slug)
+        pdf_title = f"{story_title} - {arc_title}"
+        html_content = generate_pdf_content(novel_config, arc_data, pdf_title, is_arc=True)
+        
+        # Ensure output directory exists
+        pdf_dir = os.path.join(BUILD_DIR, "static", "pdf")
+        os.makedirs(pdf_dir, exist_ok=True)
+        
+        # Generate PDF with arc-specific filename
+        import weasyprint
+        arc_slug = arc_title.lower().replace(' ', '-').replace(':', '').replace(',', '')
+        pdf_path = os.path.join(pdf_dir, f"{novel_slug}-{arc_slug}.pdf")
+        weasyprint.HTML(string=html_content).write_pdf(pdf_path)
+        
+        return True
+    except Exception as e:
+        print(f"Error generating PDF for {novel_slug} arc {arc_index}: {e}")
+        return False
+
+def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None):
+    """Generate EPUB for entire story"""
+    if not _check_ebooklib():
+        return False
+    
+    # Check if EPUB generation is enabled
+    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+        return False
+    if not site_config.get('pdf_epub', {}).get('epub_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('epub_enabled', True):
+        return False
+    
+    try:
+        # Get non-hidden chapters
+        chapters_data = get_non_hidden_chapters(novel_config, novel_slug)
+        if not chapters_data:
+            return False
+        
+        # Create EPUB book
+        import ebooklib
+        from ebooklib import epub
+        book = epub.EpubBook()
+        
+        # Set metadata
+        story_title = novel_config.get('title', novel_slug)
+        book.set_identifier(f'web-novel-{novel_slug}')
+        book.set_title(story_title)
+        book.set_language('en')
+        
+        author_name = novel_config.get('author', {}).get('name', 'Unknown Author')
+        book.add_author(author_name)
+        
+        description = novel_config.get('description', '')
+        if description:
+            book.add_metadata('DC', 'description', description)
+        
+        # Track added images to avoid duplicates
+        added_images = {}
+        
+        # Add cover image if available - use processed image paths if available
+        cover_art_path = None
+        if novel_data and novel_data.get('front_page', {}).get('cover_art'):
+            cover_art_path = novel_data['front_page']['cover_art']
+        elif novel_config.get('front_page', {}).get('cover_art'):
+            cover_art_path = novel_config['front_page']['cover_art']
+            
+        if cover_art_path:
+            cover_image_absolute = os.path.join(BUILD_DIR, cover_art_path)
+            if os.path.exists(cover_image_absolute):
+                # Determine image type
+                image_ext = os.path.splitext(cover_art_path)[1].lower()
+                image_type = 'image/jpeg' if image_ext in ['.jpg', '.jpeg'] else 'image/png'
+                
+                # Read and add cover image
+                with open(cover_image_absolute, 'rb') as img_file:
+                    cover_image = img_file.read()
+                
+                # Create proper cover filename with extension
+                cover_filename = f"cover{image_ext}"
+                book.set_cover(cover_filename, cover_image)
+                added_images[cover_art_path] = cover_filename
+        
+        # Create and add CSS file for styling
+        css_content = """
+        body { font-family: Georgia, serif; line-height: 1.6; }
+        h1 { border-bottom: 2px solid #333; padding-bottom: 0.5em; }
+        p { margin-bottom: 1em; text-align: justify; }
+        img { max-width: 100%; height: auto; display: block; margin: 1.5em auto; text-align: center; }
+        p img { margin: 1.5em auto; }
+        """
+        
+        css_item = epub.EpubItem(
+            uid="style_default",
+            file_name="style/default.css",
+            media_type="text/css",
+            content=css_content
+        )
+        book.add_item(css_item)
+        
+        # Add chapters to EPUB
+        spine = ['nav']
+        toc = []
+        
+        for arc_index, arc in enumerate(chapters_data):
+            arc_chapters = []
+            
+            for chapter_index, chapter in enumerate(arc['chapters']):
+                # Create EPUB chapter
+                chapter_id = f"chapter_{arc_index}_{chapter_index}"
+                chapter_file = f"chapter_{arc_index}_{chapter_index}.xhtml"
+                
+                # Try to load processed HTML content first, fall back to markdown
+                chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+                if not chapter_html:
+                    # Fallback to markdown processing
+                    chapter_html = markdown.markdown(chapter['content'])
+                
+                # Process images in chapter content
+                chapter_html = process_epub_images(chapter_html, novel_slug, book, added_images)
+                
+                # Create EPUB chapter content
+                epub_chapter = epub.EpubHtml(
+                    title=chapter['title'],
+                    file_name=chapter_file,
+                    lang='en'
+                )
+                
+                epub_chapter.content = f"""
+                <html xmlns="http://www.w3.org/1999/xhtml">
+                <head>
+                    <title>{chapter['title']}</title>
+                    <link rel="stylesheet" type="text/css" href="../style/default.css"/>
+                </head>
+                <body>
+                    <h1>{chapter['title']}</h1>
+                    {chapter_html}
+                </body>
+                </html>
+                """
+                
+                # Link the CSS file to this chapter
+                epub_chapter.add_item(css_item)
+                book.add_item(epub_chapter)
+                spine.append(epub_chapter)
+                arc_chapters.append(epub_chapter)
+            
+            # Add arc to TOC if multiple arcs
+            if len(chapters_data) > 1:
+                toc.append((epub.Section(arc['title']), arc_chapters))
+            else:
+                toc.extend(arc_chapters)
+        
+        # Set TOC and spine
+        book.toc = toc
+        book.spine = spine
+        
+        # Add default navigation files
+        book.add_item(epub.EpubNcx())
+        book.add_item(epub.EpubNav())
+        
+        # Ensure output directory exists
+        epub_dir = os.path.join(BUILD_DIR, "static", "epub")
+        os.makedirs(epub_dir, exist_ok=True)
+        
+        # Write EPUB file
+        epub_path = os.path.join(epub_dir, f"{novel_slug}.epub")
+        epub.write_epub(epub_path, book, {})
+        
+        return True
+    except Exception as e:
+        print(f"Error generating EPUB for {novel_slug}: {e}")
+        return False
+
+def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_data=None):
+    """Generate EPUB for a specific arc"""
+    if not _check_ebooklib():
+        return False
+    
+    # Check if EPUB generation is enabled
+    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+        return False
+    if not site_config.get('pdf_epub', {}).get('epub_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('epub_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('include_arcs', True):
+        return False
+    
+    try:
+        # Get all chapters and filter for this arc
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+        if not all_chapters or arc_index >= len(all_chapters):
+            return False
+        
+        # Get the specific arc
+        arc_data = all_chapters[arc_index]
+        if not arc_data['chapters']:
+            return False
+        
+        # Create EPUB book
+        import ebooklib
+        from ebooklib import epub
+        book = epub.EpubBook()
+        
+        # Set metadata
+        arc_title = arc_data['title']
+        story_title = novel_config.get('title', novel_slug)
+        epub_title = f"{story_title} - {arc_title}"
+        
+        book.set_identifier(f'web-novel-{novel_slug}-arc-{arc_index}')
+        book.set_title(epub_title)
+        book.set_language('en')
+        
+        author_name = novel_config.get('author', {}).get('name', 'Unknown Author')
+        book.add_author(author_name)
+        
+        description = novel_config.get('description', '')
+        if description:
+            book.add_metadata('DC', 'description', f"{description} - {arc_title}")
+        
+        # Track added images to avoid duplicates
+        added_images = {}
+        
+        # Add cover image - prefer arc cover, fall back to story cover
+        cover_art_path = None
+        # Try to get arc cover from processed data first
+        if novel_data and novel_data.get('arcs') and arc_index < len(novel_data['arcs']):
+            cover_art_path = novel_data['arcs'][arc_index].get('cover_art')
+        
+        # Fall back to story cover if no arc cover
+        if not cover_art_path:
+            if novel_data and novel_data.get('front_page', {}).get('cover_art'):
+                cover_art_path = novel_data['front_page']['cover_art']
+            elif novel_config.get('front_page', {}).get('cover_art'):
+                cover_art_path = novel_config['front_page']['cover_art']
+                
+        if cover_art_path:
+            cover_image_absolute = os.path.join(BUILD_DIR, cover_art_path)
+            if os.path.exists(cover_image_absolute):
+                # Determine image type
+                image_ext = os.path.splitext(cover_art_path)[1].lower()
+                image_type = 'image/jpeg' if image_ext in ['.jpg', '.jpeg'] else 'image/png'
+                
+                # Read and add cover image
+                with open(cover_image_absolute, 'rb') as img_file:
+                    cover_image = img_file.read()
+                
+                # Create proper cover filename with extension
+                cover_filename = f"cover{image_ext}"
+                book.set_cover(cover_filename, cover_image)
+                added_images[cover_art_path] = cover_filename
+        
+        # Create and add CSS file for styling
+        css_content = """
+        body { font-family: Georgia, serif; line-height: 1.6; }
+        h1 { border-bottom: 2px solid #333; padding-bottom: 0.5em; }
+        p { margin-bottom: 1em; text-align: justify; }
+        img { max-width: 100%; height: auto; display: block; margin: 1.5em auto; text-align: center; }
+        p img { margin: 1.5em auto; }
+        """
+        
+        css_item = epub.EpubItem(
+            uid="style_default",
+            file_name="style/default.css",
+            media_type="text/css",
+            content=css_content
+        )
+        book.add_item(css_item)
+        
+        # Add chapters to EPUB
+        spine = ['nav']
+        toc = []
+        
+        for chapter_index, chapter in enumerate(arc_data['chapters']):
+            # Create EPUB chapter
+            chapter_id = f"chapter_{chapter_index}"
+            chapter_file = f"chapter_{chapter_index}.xhtml"
+            
+            # Try to load processed HTML content first, fall back to markdown
+            chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+            if not chapter_html:
+                # Fallback to markdown processing
+                chapter_html = markdown.markdown(chapter['content'])
+            
+            # Process images in chapter content
+            chapter_html = process_epub_images(chapter_html, novel_slug, book, added_images)
+            
+            # Create EPUB chapter content
+            epub_chapter = epub.EpubHtml(
+                title=chapter['title'],
+                file_name=chapter_file,
+                lang='en'
+            )
+            
+            epub_chapter.content = f"""
+            <html xmlns="http://www.w3.org/1999/xhtml">
+            <head>
+                <title>{chapter['title']}</title>
+                <link rel="stylesheet" type="text/css" href="../style/default.css"/>
+            </head>
+            <body>
+                <h1>{chapter['title']}</h1>
+                {chapter_html}
+            </body>
+            </html>
+            """
+            
+            # Link the CSS file to this chapter
+            epub_chapter.add_item(css_item)
+            book.add_item(epub_chapter)
+            spine.append(epub_chapter)
+            toc.append(epub_chapter)
+        
+        # Set TOC and spine
+        book.toc = toc
+        book.spine = spine
+        
+        # Add default navigation files
+        book.add_item(epub.EpubNcx())
+        book.add_item(epub.EpubNav())
+        
+        # Ensure output directory exists
+        epub_dir = os.path.join(BUILD_DIR, "static", "epub")
+        os.makedirs(epub_dir, exist_ok=True)
+        
+        # Generate EPUB with arc-specific filename
+        arc_slug = arc_title.lower().replace(' ', '-').replace(':', '').replace(',', '')
+        epub_path = os.path.join(epub_dir, f"{novel_slug}-{arc_slug}.epub")
+        epub.write_epub(epub_path, book, {})
+        
+        return True
+    except Exception as e:
+        print(f"Error generating EPUB for {novel_slug} arc {arc_index}: {e}")
+        return False
+
+def load_processed_chapter_content(novel_slug, chapter_id, language='en'):
+    """Load processed chapter content from the built HTML files"""
+    chapter_path = os.path.join(BUILD_DIR, novel_slug, language, chapter_id, 'index.html')
+    if not os.path.exists(chapter_path):
+        return None
+    
+    try:
+        with open(chapter_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # Extract just the chapter content between the chapter-content div
+        import re
+        # Look for the inner content wrapper
+        content_match = re.search(r'<div id="chapter-content-wrapper"[^>]*>(.*?)</div>', html_content, re.DOTALL)
+        if content_match:
+            inner_content = content_match.group(1).strip()
+            # Remove the duplicate h1 title if present (it's already in the EPUB structure)
+            inner_content = re.sub(r'<h1[^>]*>.*?</h1>', '', inner_content, count=1)
+            return inner_content.strip()
+        
+        # Fallback: try the outer chapter-content div
+        content_match = re.search(r'<div class="chapter-content">(.*?)</div>', html_content, re.DOTALL)
+        if content_match:
+            return content_match.group(1).strip()
+        
+        # Fallback: try to extract content between main tags
+        main_match = re.search(r'<main[^>]*>(.*?)</main>', html_content, re.DOTALL)
+        if main_match:
+            content = main_match.group(1)
+            # Remove navigation and other non-content elements, keep just the chapter text
+            content = re.sub(r'<nav[^>]*>.*?</nav>', '', content, flags=re.DOTALL)
+            content = re.sub(r'<div class="chapter-nav[^"]*">.*?</div>', '', content, flags=re.DOTALL)
+            content = re.sub(r'<div class="comments-section">.*?</div>', '', content, flags=re.DOTALL)
+            return content.strip()
+        
+        return None
+    except Exception as e:
+        print(f"Error loading processed chapter content for {chapter_id}: {e}")
+        return None
+
+def process_epub_images(content_html, novel_slug, book, added_images):
+    """Process images in chapter content and add them to EPUB"""
+    import re
+    
+    # Import EPUB library
+    try:
+        import ebooklib
+        from ebooklib import epub
+    except ImportError:
+        print("ebooklib not available for image processing")
+        return content_html
+    
+    # Find all image references in the HTML
+    img_pattern = r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>'
+    
+    def replace_image(match):
+        img_tag = match.group(0)
+        src = match.group(1)
+        
+        # Skip external images
+        if src.startswith(('http://', 'https://', '//')):
+            return img_tag
+        
+        # Convert relative path to absolute
+        if src.startswith('../'):
+            # Remove leading ../../../ and reconstruct path
+            clean_src = src.replace('../', '')  
+            image_absolute = os.path.join(BUILD_DIR, clean_src)
+        else:
+            image_absolute = os.path.join(BUILD_DIR, src)
+        
+        if not os.path.exists(image_absolute):
+            return img_tag  # Keep original if image not found
+        
+        # Check if image already added
+        if src in added_images:
+            epub_filename = added_images[src]
+        else:
+            # Add image to EPUB
+            try:
+                with open(image_absolute, 'rb') as img_file:
+                    image_data = img_file.read()
+                
+                # Generate EPUB-friendly filename
+                image_name = os.path.basename(src)
+                image_ext = os.path.splitext(image_name)[1].lower()
+                image_type = 'image/jpeg' if image_ext in ['.jpg', '.jpeg'] else 'image/png'
+                
+                # Create unique filename for EPUB
+                epub_filename = f"images/{len(added_images)}_{image_name}"
+                
+                # Create EPUB image item
+                epub_image = epub.EpubImage(
+                    uid=f"img_{len(added_images)}",
+                    file_name=epub_filename,
+                    media_type=image_type,
+                    content=image_data
+                )
+                
+                book.add_item(epub_image)
+                added_images[src] = epub_filename
+                
+            except Exception as e:
+                print(f"Error adding image {src} to EPUB: {e}")
+                return img_tag
+        
+        # Replace src with EPUB path (no ../ prefix needed for EPUB internal files)
+        new_img_tag = img_tag.replace(f'src="{src}"', f'src="{epub_filename}"')
+        new_img_tag = new_img_tag.replace(f"src='{src}'", f"src='{epub_filename}'")
+        
+        return new_img_tag
+    
+    # Process all images in the content
+    processed_content = re.sub(img_pattern, replace_image, content_html)
+    return processed_content
+
+def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang):
+    """Update TOC page with download links after files are generated"""
+    # Read the existing TOC file
+    novel_dir = os.path.join(BUILD_DIR, novel_slug)
+    lang_dir = os.path.join(novel_dir, lang)
+    toc_dir = os.path.join(lang_dir, "toc")
+    toc_file = os.path.join(toc_dir, "index.html")
+    
+    if not os.path.exists(toc_file):
+        return
+    
+    # Generate download links data
+    download_links = generate_download_links(novel_slug, novel_config, site_config)
+    
+    # Prepare all the same data that was used for original TOC generation
+    available_languages = novel_config.get('languages', {}).get('available', ['en'])
+    
+    # Build social metadata for TOC
+    toc_url = f"{site_config.get('site_url', '').rstrip('/')}/{novel_slug}/{lang}/toc/"
+    toc_social_meta = build_social_meta(site_config, novel_config, {}, 'toc', f"{novel.get('title', '')} - Table of Contents", toc_url)
+    toc_seo_meta = build_seo_meta(site_config, novel_config, {}, 'toc')
+    
+    # Build footer data for TOC
+    footer_data = build_footer_content(site_config, novel_config, 'toc')
+    
+    # Build comments configuration for TOC
+    toc_comments_enabled = should_enable_comments(site_config, novel_config, {}, 'toc')
+    comments_config = build_comments_config(site_config)
+    
+    # Filter out hidden chapters for TOC display
+    filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
+    
+    # Calculate story length statistics
+    story_length_stats = calculate_story_length_stats(novel_slug, lang)
+    
+    # Determine which unit to display based on configuration
+    length_config = novel_config.get('length_display', {})
+    language_units = length_config.get('language_units', {})
+    default_unit = length_config.get('default_unit', 'words')
+    
+    # Check for language-specific override, fall back to default
+    display_unit = language_units.get(lang, default_unit)
+    
+    if display_unit == 'characters':
+        story_length_count = story_length_stats['characters']
+        story_length_unit = 'characters'
+    else:
+        story_length_count = story_length_stats['words']
+        story_length_unit = 'words'
+    
+    # Re-generate the TOC page with download links
+    with open(toc_file, "w", encoding='utf-8') as f:
+        f.write(render_template("toc.html", 
+                               novel=filtered_novel, 
+                               current_language=lang, 
+                               available_languages=available_languages,
+                               story_length_count=story_length_count,
+                               story_length_unit=story_length_unit,
+                               site_name=site_config.get('site_name', 'Web Novel Collection'),
+                               social_title=toc_social_meta['title'],
+                               social_description=toc_social_meta['description'], 
+                               social_image=toc_social_meta['image'],
+                               social_url=toc_social_meta['url'],
+                               seo_meta_description=toc_seo_meta.get('meta_description'),
+                               seo_keywords=toc_social_meta.get('keywords'),
+                               allow_indexing=toc_seo_meta.get('allow_indexing', True),
+                               twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                               footer_data=footer_data,
+                               download_links=download_links,
+                               comments_enabled=toc_comments_enabled,
+                               comments_repo=comments_config['repo'],
+                               comments_issue_term=comments_config['issue_term'],
+                               comments_label=comments_config['label'],
+                               comments_theme=comments_config['theme']))
+
+def generate_download_links(novel_slug, novel_config, site_config):
+    """Generate download links data for TOC template"""
+    download_links = {}
+    
+    # Check if downloads are enabled
+    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+        return None
+    if not novel_config.get('downloads', {}).get('pdf_enabled', True) and not novel_config.get('downloads', {}).get('epub_enabled', True):
+        return None
+    
+    # Full story downloads
+    if site_config.get('pdf_epub', {}).get('pdf_enabled', True) and novel_config.get('downloads', {}).get('pdf_enabled', True):
+        pdf_path = f"../../../static/pdf/{novel_slug}.pdf"
+        if os.path.exists(os.path.join(BUILD_DIR, "static", "pdf", f"{novel_slug}.pdf")):
+            download_links['story_pdf'] = pdf_path
+    
+    if site_config.get('pdf_epub', {}).get('epub_enabled', True) and novel_config.get('downloads', {}).get('epub_enabled', True):
+        epub_path = f"../../../static/epub/{novel_slug}.epub"
+        if os.path.exists(os.path.join(BUILD_DIR, "static", "epub", f"{novel_slug}.epub")):
+            download_links['story_epub'] = epub_path
+    
+    # Arc-specific downloads
+    if novel_config.get('downloads', {}).get('include_arcs', True):
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+        arc_downloads = []
+        
+        for arc_index, arc in enumerate(all_chapters):
+            if not arc['chapters']:  # Skip empty arcs
+                continue
+                
+            arc_download = {'title': arc['title']}
+            arc_title_slug = arc['title'].lower().replace(' ', '-').replace(':', '').replace(',', '')
+            
+            # Check for arc PDF
+            if site_config.get('pdf_epub', {}).get('pdf_enabled', True) and novel_config.get('downloads', {}).get('pdf_enabled', True):
+                arc_pdf_path = f"../../../static/pdf/{novel_slug}-{arc_title_slug}.pdf"
+                if os.path.exists(os.path.join(BUILD_DIR, "static", "pdf", f"{novel_slug}-{arc_title_slug}.pdf")):
+                    arc_download['pdf'] = arc_pdf_path
+            
+            # Check for arc EPUB
+            if site_config.get('pdf_epub', {}).get('epub_enabled', True) and novel_config.get('downloads', {}).get('epub_enabled', True):
+                arc_epub_path = f"../../../static/epub/{novel_slug}-{arc_title_slug}.epub"
+                if os.path.exists(os.path.join(BUILD_DIR, "static", "epub", f"{novel_slug}-{arc_title_slug}.epub")):
+                    arc_download['epub'] = arc_epub_path
+            
+            # Only add arc if it has at least one download
+            if 'pdf' in arc_download or 'epub' in arc_download:
+                arc_downloads.append(arc_download)
+        
+        if arc_downloads:
+            download_links['arcs'] = arc_downloads
+    
+    # Return None if no downloads available
+    return download_links if download_links else None
 
 def load_novel_config(novel_slug):
     """Load configuration for a specific novel"""
@@ -1278,6 +2147,9 @@ def build_site():
                 story_length_count = story_length_stats['words']
                 story_length_unit = 'words'
             
+            # Generate download links for this story
+            download_links = generate_download_links(novel_slug, novel_config, site_config)
+            
             with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
                 f.write(render_template("toc.html", 
                                        novel=filtered_novel, 
@@ -1295,6 +2167,7 @@ def build_site():
                                        allow_indexing=toc_seo_meta.get('allow_indexing', True),
                                        twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
                                        footer_data=footer_data,
+                                       download_links=download_links,
                                        comments_enabled=toc_comments_enabled,
                                        comments_repo=comments_config['repo'],
                                        comments_issue_term=comments_config['issue_term'],
@@ -1585,6 +2458,41 @@ def build_site():
                                                 chapters=chapters,
                                                 current_language=lang,
                                                 available_languages=available_languages))
+
+    # Generate PDF/EPUB downloads after all HTML is built
+    print("Generating PDF/EPUB downloads...")
+    for novel in all_novels_data:
+        novel_slug = novel['slug']
+        novel_config = load_novel_config(novel_slug)
+        
+        print(f"  Generating downloads for {novel_slug}...")
+        
+        # Generate full story PDF and EPUB
+        if generate_story_pdf(novel_slug, novel_config, site_config):
+            print(f"    Generated PDF for {novel_slug}")
+        if generate_story_epub(novel_slug, novel_config, site_config, novel):
+            print(f"    Generated EPUB for {novel_slug}")
+        
+        # Generate arc-specific PDFs and EPUBs if enabled
+        if novel_config.get('downloads', {}).get('include_arcs', True):
+            all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+            for arc_index, arc in enumerate(all_chapters):
+                if arc['chapters']:  # Only generate if arc has chapters
+                    if generate_arc_pdf(novel_slug, novel_config, site_config, arc_index):
+                        print(f"    Generated PDF for {novel_slug} - {arc['title']}")
+                    if generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel):
+                        print(f"    Generated EPUB for {novel_slug} - {arc['title']}")
+    
+    # Update TOC pages with download links after downloads are generated
+    print("Updating TOC pages with download links...")
+    for novel in all_novels_data:
+        novel_slug = novel['slug']
+        novel_config = load_novel_config(novel_slug)
+        available_languages = novel_config.get('languages', {}).get('available', ['en'])
+        
+        # Update TOC for each language
+        for lang in available_languages:
+            update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang)
 
     print("Site built.")
 

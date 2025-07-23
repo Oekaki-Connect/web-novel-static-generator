@@ -2104,3 +2104,140 @@ footer p {
     }
 }
 
+/* Downloads section */
+.downloads-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background-color: var(--color-background-light);
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+}
+
+.downloads-section h3 {
+    margin-bottom: 1rem;
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-accent);
+    padding-bottom: 0.5rem;
+}
+
+.download-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.download-link {
+    display: inline-block;
+    padding: 0.75rem 1rem;
+    background-color: var(--color-accent);
+    color: var(--color-background);
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 2px solid var(--color-accent);
+    width: fit-content;
+}
+
+.download-link:hover {
+    background-color: var(--color-background);
+    color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-link {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.pdf-link:hover {
+    background-color: var(--color-background);
+    color: #e74c3c;
+}
+
+.epub-link {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.epub-link:hover {
+    background-color: var(--color-background);
+    color: #3498db;
+}
+
+.arc-downloads {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.arc-downloads h4 {
+    margin-bottom: 0.75rem;
+    color: var(--color-text);
+    font-size: 1rem;
+}
+
+.arc-download-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.arc-download-title {
+    font-weight: 500;
+    color: var(--color-text);
+    min-width: fit-content;
+}
+
+.arc-pdf-link,
+.arc-epub-link {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.875rem;
+    min-width: auto;
+}
+
+.arc-pdf-link {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.arc-pdf-link:hover {
+    background-color: var(--color-background);
+    color: #e74c3c;
+}
+
+.arc-epub-link {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.arc-epub-link:hover {
+    background-color: var(--color-background);
+    color: #3498db;
+}
+
+@media (max-width: 768px) {
+    .downloads-section {
+        margin: 1rem 0;
+        padding: 1rem;
+    }
+    
+    .arc-download-group {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .arc-download-title {
+        margin-bottom: 0.25rem;
+    }
+    
+    .download-link {
+        width: 100%;
+        text-align: center;
+    }
+}
+

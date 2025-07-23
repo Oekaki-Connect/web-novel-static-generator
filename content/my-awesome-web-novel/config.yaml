@@ -73,6 +73,15 @@ seo:
   # Custom meta description
   meta_description: "An epic fantasy web novel about ancient prophecies and magical adventures in the land of Eldoria."
 
+# Downloads configuration
+downloads:
+  # Enable PDF/EPUB downloads for this story
+  pdf_enabled: true
+  epub_enabled: true
+  
+  # Generate individual arc downloads
+  include_arcs: true
+
 # Comments settings  
 comments:
   # Enable comments for this story (overrides site default)

@@ -168,6 +168,40 @@
         </section>
         {% endfor %}
         
+        {% if download_links %}
+        <section class="downloads-section">
+            <h3>Downloads</h3>
+            <div class="download-links">
+                {% if download_links.story_pdf %}
+                <a href="{{ download_links.story_pdf }}" class="download-link pdf-link" download>
+                    📄 Download Full Story (PDF)
+                </a>
+                {% endif %}
+                {% if download_links.story_epub %}
+                <a href="{{ download_links.story_epub }}" class="download-link epub-link" download>
+                    📚 Download Full Story (EPUB)
+                </a>
+                {% endif %}
+                {% if download_links.arcs %}
+                <div class="arc-downloads">
+                    <h4>Download by Arc:</h4>
+                    {% for arc in download_links.arcs %}
+                    <div class="arc-download-group">
+                        <span class="arc-download-title">{{ arc.title }}:</span>
+                        {% if arc.pdf %}
+                        <a href="{{ arc.pdf }}" class="download-link arc-pdf-link" download>PDF</a>
+                        {% endif %}
+                        {% if arc.epub %}
+                        <a href="{{ arc.epub }}" class="download-link arc-epub-link" download>EPUB</a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        {% endif %}
+        
         {% if comments_enabled %}
         <div class="comments-section">
             <h3>Comments</h3>

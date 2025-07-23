@@ -51,6 +51,15 @@ author_pages:
   # Set to 0 for unlimited chapters
   max_recent_chapters: 20
 
+# PDF/EPUB generation configuration
+pdf_epub:
+  # Global flag to enable/disable PDF/EPUB generation
+  generate_enabled: true
+  
+  # Enable/disable specific formats
+  pdf_enabled: true
+  epub_enabled: true
+
 # Comments system (utterances)
 comments:
   # Enable comments site-wide
