@@ -49,7 +49,7 @@
         </nav>
         {% if novel.front_page and novel.front_page.cover_art %}
         <div class="story-cover">
-            <img src="../../../{{ novel.front_page.cover_art }}" alt="{{ novel.title }} Cover" class="story-cover-image">
+            <img src="../../../{{ novel.front_page.cover_art }}" alt="{{ novel.title }} Cover" class="story-cover-image clickable-image" onclick="openImageModal(this)">
         </div>
         {% endif %}
         <h1>{{ novel.title }}</h1>
@@ -97,7 +97,7 @@
         <section class="arc">
             {% if arc.cover_art %}
             <div class="arc-cover">
-                <img src="../../../{{ arc.cover_art }}" alt="{{ arc.title }} Cover" class="arc-cover-image">
+                <img src="../../../{{ arc.cover_art }}" alt="{{ arc.title }} Cover" class="arc-cover-image clickable-image" onclick="openImageModal(this)">
             </div>
             {% endif %}
             <div class="arc-content">
@@ -143,6 +143,48 @@
         <p class="footer-additional">{{ footer_data.additional_text }}</p>
         {% endif %}
     </footer>
+    
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <div class="modal-content">
+            <img id="modalImage" class="modal-image" alt="Full size image">
+        </div>
+    </div>
+
+    <script>
+        function openImageModal(imgElement) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            
+            modal.style.display = 'flex';
+            modalImg.src = imgElement.src;
+            modalImg.alt = imgElement.alt;
+            
+            // Reset any inline styles that might interfere with CSS
+            modalImg.style.width = 'auto';
+            modalImg.style.height = 'auto';
+            modalImg.style.maxWidth = '100%';
+            modalImg.style.maxHeight = '100%';
+            
+            // Prevent body scrolling when modal is open
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = 'none';
+            
+            // Restore body scrolling
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when pressing Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeImageModal();
+            }
+        });
+    </script>
 </body>
 </html>
 

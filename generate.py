@@ -486,9 +486,10 @@ def process_cover_art(novel_slug, novel_config):
     if novel_config.get('front_page', {}).get('cover_art'):
         source_path = os.path.join(CONTENT_DIR, novel_slug, novel_config['front_page']['cover_art'])
         if os.path.exists(source_path):
-            # Generate UUID for unique filename
-            file_extension = os.path.splitext(source_path)[1]
-            unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+            # Generate UUID for unique filename with original name
+            original_filename = os.path.basename(source_path)
+            file_name, file_extension = os.path.splitext(original_filename)
+            unique_filename = f"{uuid.uuid4().hex}-{file_name}{file_extension}"
             dest_path = os.path.join(images_dir, unique_filename)
             
             # Copy the image
@@ -503,9 +504,10 @@ def process_cover_art(novel_slug, novel_config):
             if arc.get('cover_art'):
                 source_path = os.path.join(CONTENT_DIR, novel_slug, arc['cover_art'])
                 if os.path.exists(source_path):
-                    # Generate UUID for unique filename
-                    file_extension = os.path.splitext(source_path)[1]
-                    unique_filename = f"{uuid.uuid4().hex}{file_extension}"
+                    # Generate UUID for unique filename with original name
+                    original_filename = os.path.basename(source_path)
+                    file_name, file_extension = os.path.splitext(original_filename)
+                    unique_filename = f"{uuid.uuid4().hex}-{file_name}{file_extension}"
                     dest_path = os.path.join(images_dir, unique_filename)
                     
                     # Copy the image
