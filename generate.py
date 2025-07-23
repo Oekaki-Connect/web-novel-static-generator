@@ -1541,7 +1541,7 @@ def extract_local_images(markdown_content):
                 'alt': alt_text,
                 'original_path': image_path,
                 'title': title or '',
-                'full_match': f'![{alt_text}]({image_path}{"" if not title else f" \"{title}\""})',
+                'full_match': f'![{alt_text}]({image_path}{"" if not title else " \"" + title + "\""})',
                 'type': 'markdown'
             })
     
