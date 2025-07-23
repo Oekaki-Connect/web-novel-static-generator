@@ -1107,7 +1107,7 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
         return
     
     # Generate download links data
-    download_links = generate_download_links(novel_slug, novel_config, site_config)
+    download_links = generate_download_links(novel_slug, novel_config, site_config, lang)
     
     # Prepare all the same data that was used for original TOC generation
     available_languages = novel_config.get('languages', {}).get('available', ['en'])
@@ -1170,21 +1170,24 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
                                comments_label=comments_config['label'],
                                comments_theme=comments_config['theme']))
 
-def generate_download_links(novel_slug, novel_config, site_config):
+def generate_download_links(novel_slug, novel_config, site_config, language='en'):
     """Generate download links data for TOC template"""
     download_links = {}
     
     # Check if downloads are enabled
-    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+    if not site_config.get('epub', {}).get('generate_enabled', True):
         return None
     if not novel_config.get('downloads', {}).get('epub_enabled', True):
         return None
     
-    # Full story downloads
+    # Generate language-specific filename suffix
+    lang_suffix = f"_{language}" if language != 'en' else ""
     
-    if site_config.get('pdf_epub', {}).get('epub_enabled', True) and novel_config.get('downloads', {}).get('epub_enabled', True):
-        epub_path = f"../../../static/epub/{novel_slug}.epub"
-        if os.path.exists(os.path.join(BUILD_DIR, "static", "epub", f"{novel_slug}.epub")):
+    # Full story downloads
+    if site_config.get('epub', {}).get('generate_enabled', True) and novel_config.get('downloads', {}).get('epub_enabled', True):
+        epub_filename = f"{novel_slug}{lang_suffix}.epub"
+        epub_path = f"../../../static/epub/{epub_filename}"
+        if os.path.exists(os.path.join(BUILD_DIR, "static", "epub", epub_filename)):
             download_links['story_epub'] = epub_path
     
     # Arc-specific downloads
@@ -1201,9 +1204,10 @@ def generate_download_links(novel_slug, novel_config, site_config):
             
             
             # Check for arc EPUB
-            if site_config.get('pdf_epub', {}).get('epub_enabled', True) and novel_config.get('downloads', {}).get('epub_enabled', True):
-                arc_epub_path = f"../../../static/epub/{novel_slug}-{arc_title_slug}.epub"
-                if os.path.exists(os.path.join(BUILD_DIR, "static", "epub", f"{novel_slug}-{arc_title_slug}.epub")):
+            if site_config.get('epub', {}).get('generate_enabled', True) and novel_config.get('downloads', {}).get('epub_enabled', True):
+                arc_epub_filename = f"{novel_slug}-{arc_title_slug}{lang_suffix}.epub"
+                arc_epub_path = f"../../../static/epub/{arc_epub_filename}"
+                if os.path.exists(os.path.join(BUILD_DIR, "static", "epub", arc_epub_filename)):
                     arc_download['epub'] = arc_epub_path
             
             # Only add arc if it has at least one download
@@ -1918,7 +1922,7 @@ def build_site():
                 story_length_unit = 'words'
             
             # Generate download links for this story
-            download_links = generate_download_links(novel_slug, novel_config, site_config)
+            download_links = generate_download_links(novel_slug, novel_config, site_config, lang)
             
             with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
                 f.write(render_template("toc.html", 

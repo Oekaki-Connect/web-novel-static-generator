@@ -1868,6 +1868,16 @@ footer p {
     color: #e0e0e0;
 }
 
+[data-theme="dark"] .download-link {
+    background-color: #555555;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .download-link:hover {
+    background-color: #666666;
+    color: #e0e0e0;
+}
+
 @media (prefers-color-scheme: dark) {
     .chapter-metadata {
         background-color: #3a3a3a;
@@ -2080,6 +2090,16 @@ footer p {
         color: #e0e0e0;
     }
     
+    .download-link {
+        background-color: #555555;
+        color: #e0e0e0;
+    }
+    
+    .download-link:hover {
+        background-color: #666666;
+        color: #e0e0e0;
+    }
+    
     /* Override auto dark mode if user has manually set light mode */
     [data-theme="light"] .tag {
         background-color: #111111;
@@ -2099,6 +2119,16 @@ footer p {
     }
     
     [data-theme="light"] .tags-link:hover {
+        background-color: #333333;
+        color: white;
+    }
+    
+    [data-theme="light"] .download-link {
+        background-color: #111111;
+        color: white;
+    }
+    
+    [data-theme="light"] .download-link:hover {
         background-color: #333333;
         color: white;
     }
@@ -2128,22 +2158,21 @@ footer p {
 
 .download-link {
     display: inline-block;
-    padding: 0.75rem 1rem;
-    background-color: var(--color-accent);
-    color: var(--color-background);
+    padding: 0.75rem 1.5rem;
+    background-color: var(--color-primary);
+    color: white;
     text-decoration: none;
     border-radius: 6px;
     font-weight: 500;
     transition: all 0.3s ease;
-    border: 2px solid var(--color-accent);
-    width: fit-content;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .download-link:hover {
-    background-color: var(--color-background);
-    color: var(--color-accent);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: var(--color-primary-hover);
+    color: white;
+    text-decoration: none;
 }
 
 .pdf-link {
