@@ -19,6 +19,15 @@
         document.documentElement.setAttribute(THEME_ATTR, theme);
         localStorage.setItem(THEME_KEY, theme);
         updateToggleButton(theme);
+        
+        // Reinitialize utterances with new theme
+        const utterancesContainers = document.querySelectorAll('#utterances-container');
+        utterancesContainers.forEach(container => {
+            container.innerHTML = '';
+        });
+        initializeUtterances();
+        
+        // Also try to update existing iframes
         updateUtterancesTheme(theme);
     }
     
@@ -60,36 +69,33 @@
     }
     
     function initializeUtterances() {
-        // Look for comments sections that need Utterances initialization
-        const commentsSections = document.querySelectorAll('.comments-section');
-        commentsSections.forEach(section => {
-            const existingScript = section.querySelector('script[src*="utteranc.es"]');
-            const existingIframe = section.querySelector('iframe[src*="utteranc.es"]');
+        // Look for utterances containers that need initialization
+        const utterancesContainers = document.querySelectorAll('#utterances-container');
+        utterancesContainers.forEach(container => {
+            const existingIframe = container.querySelector('iframe[src*="utteranc.es"]');
             
-            // Only initialize if script exists but iframe doesn't (meaning script didn't execute)
-            if (existingScript && !existingIframe) {
-                // Get script attributes
-                const repo = existingScript.getAttribute('repo');
-                const issueTerm = existingScript.getAttribute('issue-term');
-                const label = existingScript.getAttribute('label');
+            // Only initialize if iframe doesn't exist yet
+            if (!existingIframe) {
+                // Get container data attributes
+                const repo = container.getAttribute('data-repo');
+                const issueTerm = container.getAttribute('data-issue-term');
+                const label = container.getAttribute('data-label');
                 const currentTheme = getCurrentTheme();
                 const theme = currentTheme === 'dark' ? 'github-dark' : 'github-light';
                 
-                // Remove the non-working script
-                existingScript.remove();
+                // Create and configure utterances script
+                const script = document.createElement('script');
+                script.src = 'https://utteranc.es/client.js';
+                script.setAttribute('repo', repo);
+                script.setAttribute('issue-term', issueTerm);
+                script.setAttribute('label', label);
+                script.setAttribute('theme', theme);
+                script.setAttribute('crossorigin', 'anonymous');
+                script.async = true;
                 
-                // Create and configure new script
-                const newScript = document.createElement('script');
-                newScript.src = 'https://utteranc.es/client.js';
-                newScript.setAttribute('repo', repo);
-                newScript.setAttribute('issue-term', issueTerm);
-                newScript.setAttribute('label', label);
-                newScript.setAttribute('theme', theme);
-                newScript.setAttribute('crossorigin', 'anonymous');
-                newScript.async = true;
-                
-                // Append to the comments section
-                section.appendChild(newScript);
+                // Clear container and append script
+                container.innerHTML = '';
+                container.appendChild(script);
             }
         });
     }
@@ -156,6 +162,9 @@
         const toggleButton = createToggleButton();
         updateToggleButton(initialTheme);
         
+        // Initialize Utterances with correct theme
+        initializeUtterances();
+        
         // Update Utterances theme after a short delay to ensure iframe is loaded
         setTimeout(() => updateUtterancesTheme(initialTheme), 1000);
         
@@ -166,6 +175,14 @@
                 const newTheme = e.matches ? 'dark' : 'light';
                 document.documentElement.setAttribute(THEME_ATTR, newTheme);
                 updateToggleButton(newTheme);
+                
+                // Reinitialize utterances with new theme
+                const utterancesContainers = document.querySelectorAll('#utterances-container');
+                utterancesContainers.forEach(container => {
+                    container.innerHTML = '';
+                });
+                initializeUtterances();
+                
                 updateUtterancesTheme(newTheme);
             }
         });
