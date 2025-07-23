@@ -3609,7 +3609,383 @@ def print_stats_summary(stats):
         for novel in stats['novels']:
             print(f"   {novel['title']}: {novel['total_chapters']} chapters, {novel['total_words']:,} words")
 
-def start_development_server(port=8000):
+def determine_rebuild_scope(changed_file_path):
+    """Determine what needs to be rebuilt based on the changed file"""
+    changed_file_path = os.path.normpath(changed_file_path).replace('\\', '/')
+    
+    # Site config changes require full rebuild
+    if changed_file_path.endswith('site_config.yaml') or changed_file_path.endswith('site_config.yml'):
+        return {'type': 'full', 'reason': 'Site config changed'}
+    
+    # Template changes require full rebuild
+    if 'templates/' in changed_file_path and changed_file_path.endswith('.html'):
+        return {'type': 'full', 'reason': 'Template changed'}
+    
+    # Static file changes (CSS, JS, images)
+    if 'static/' in changed_file_path:
+        return {'type': 'static', 'file': changed_file_path, 'reason': 'Static asset changed'}
+    
+    # Novel config changes
+    if 'content/' in changed_file_path and changed_file_path.endswith('config.yaml'):
+        # Extract novel slug from path
+        parts = changed_file_path.split('/')
+        if len(parts) >= 2 and parts[0] == 'content':
+            novel_slug = parts[1]
+            return {'type': 'novel_config', 'novel': novel_slug, 'reason': 'Novel config changed'}
+    
+    # Chapter markdown changes
+    if 'content/' in changed_file_path and changed_file_path.endswith('.md'):
+        # Extract novel slug and chapter info
+        parts = changed_file_path.split('/')
+        if len(parts) >= 4 and parts[0] == 'content' and parts[2] == 'chapters':
+            novel_slug = parts[1]
+            
+            # Check if it's a translation (e.g., content/novel/chapters/jp/chapter-1.md)
+            if len(parts) == 5:
+                language = parts[3]
+                chapter_file = parts[4]
+            else:
+                language = 'en'
+                chapter_file = parts[3]
+            
+            chapter_id = chapter_file[:-3] if chapter_file.endswith('.md') else chapter_file
+            return {
+                'type': 'chapter', 
+                'novel': novel_slug, 
+                'chapter': chapter_id, 
+                'language': language,
+                'reason': f'Chapter {chapter_id} changed'
+            }
+    
+    # Static page changes
+    if 'pages/' in changed_file_path and changed_file_path.endswith('.md'):
+        # Extract page info
+        parts = changed_file_path.split('/')
+        if len(parts) >= 2 and parts[0] == 'pages':
+            
+            # Check if it's a translation (e.g., pages/jp/about.md)
+            if len(parts) == 3 and len(parts[1]) == 2:  # Language code
+                language = parts[1]
+                page_file = parts[2]
+            else:
+                language = 'en'
+                page_file = parts[1] if len(parts) == 2 else '/'.join(parts[1:])
+            
+            page_slug = page_file[:-3] if page_file.endswith('.md') else page_file
+            return {
+                'type': 'page',
+                'page': page_slug,
+                'language': language,
+                'reason': f'Static page {page_slug} changed'
+            }
+    
+    # Default to full rebuild for unknown changes
+    return {'type': 'full', 'reason': 'Unknown file type changed'}
+
+def incremental_rebuild_static(file_path):
+    """Copy a single static file to build directory"""
+    try:
+        # Normalize the path
+        rel_path = os.path.relpath(file_path, STATIC_DIR)
+        target_path = os.path.normpath(os.path.join(BUILD_DIR, "static", rel_path))
+        
+        # Ensure target directory exists
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        
+        # Copy the file
+        import shutil
+        shutil.copy2(file_path, target_path)
+        print(f"    Updated static file: {rel_path}")
+        return True
+    except Exception as e:
+        print(f"    Error updating static file {file_path}: {e}")
+        return False
+
+def incremental_rebuild_page(page_slug, language='en'):
+    """Rebuild a single static page"""
+    try:
+        site_config = load_site_config()
+        
+        # Load page content
+        if '/' in page_slug:
+            page_content, page_metadata = load_nested_page_content(page_slug, language)
+        else:
+            page_content, page_metadata = load_page_content(page_slug, language)
+        
+        if not page_content:
+            print(f"    Could not load page content for {page_slug}")
+            return False
+        
+        # Skip if page should be skipped
+        if should_skip_page(page_metadata, INCLUDE_DRAFTS):
+            print(f"    Skipping draft/hidden page: {page_slug} ({language})")
+            return True
+        
+        # Create page directory
+        page_dir = os.path.normpath(os.path.join(BUILD_DIR, page_slug, language))
+        os.makedirs(page_dir, exist_ok=True)
+        
+        # Calculate breadcrumb depth
+        breadcrumb_depth = page_slug.count('/') + 2
+        
+        # Build breadcrumbs
+        breadcrumbs = [{'title': 'Home', 'url': '../' * breadcrumb_depth}]
+        if '/' in page_slug:
+            parts = page_slug.split('/')
+            url_parts = []
+            for i, part in enumerate(parts[:-1]):
+                url_parts.append(part)
+                parent_url = '../' * breadcrumb_depth + '/'.join(url_parts) + f'/{language}/'
+                breadcrumbs.append({
+                    'title': part.replace('-', ' ').title(),
+                    'url': parent_url
+                })
+        
+        breadcrumbs.append({'title': page_metadata.get('title', page_slug.split('/')[-1].replace('-', ' ').title()), 'url': ''})
+        
+        # Get available languages for this page
+        available_languages = get_available_page_languages(page_slug)
+        
+        # Render page
+        page_html = render_template("page.html",
+                                   title=page_metadata.get('title', page_slug.replace('-', ' ').title()),
+                                   content=convert_markdown_to_html(page_content),
+                                   metadata=page_metadata,
+                                   current_language=language,
+                                   available_languages=available_languages,
+                                   page_slug=page_slug,
+                                   breadcrumbs=breadcrumbs,
+                                   site_config=site_config)
+        
+        # Write page file
+        with open(os.path.join(page_dir, "index.html"), "w", encoding='utf-8') as f:
+            f.write(page_html)
+        
+        print(f"    Rebuilt page: {page_slug} ({language})")
+        return True
+        
+    except Exception as e:
+        print(f"    Error rebuilding page {page_slug}: {e}")
+        return False
+
+def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
+    """Rebuild a single chapter and update related pages"""
+    try:
+        site_config = load_site_config()
+        
+        # Load novel config
+        novel_config = load_novel_config(novel_slug)
+        if not novel_config:
+            print(f"    Could not load novel config for {novel_slug}")
+            return False
+        
+        # Find the chapter in the novel structure
+        chapter_info = None
+        arc_info = None
+        
+        for arc in novel_config.get('arcs', []):
+            for chapter in arc.get('chapters', []):
+                if chapter['id'] == chapter_id:
+                    chapter_info = chapter
+                    arc_info = arc
+                    break
+            if chapter_info:
+                break
+        
+        if not chapter_info:
+            print(f"    Chapter {chapter_id} not found in novel config")
+            return False
+        
+        # Load chapter content
+        chapter_content, chapter_metadata = load_chapter_content(novel_slug, chapter_id, language)
+        if not chapter_content:
+            print(f"    Could not load chapter content for {chapter_id}")
+            return False
+        
+        # Skip if chapter should be skipped
+        if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
+            print(f"    Skipping draft/hidden chapter: {chapter_id}")
+            return True
+        
+        # Create chapter directory
+        novel_dir = os.path.normpath(os.path.join(BUILD_DIR, novel_slug))
+        lang_dir = os.path.normpath(os.path.join(novel_dir, language))
+        chapter_dir = os.path.normpath(os.path.join(lang_dir, chapter_id))
+        os.makedirs(chapter_dir, exist_ok=True)
+        
+        # Process images for this chapter
+        updated_content = process_chapter_images(novel_slug, chapter_id, language, chapter_content)
+        
+        # Build navigation
+        languages_config = novel_config.get('languages', {'available': ['en']})
+        if isinstance(languages_config, dict):
+            available_languages = languages_config.get('available', ['en'])
+        else:
+            available_languages = languages_config if isinstance(languages_config, list) else ['en']
+        
+        if 'en' not in available_languages:
+            available_languages.append('en')
+        
+        # Get chapter index for navigation
+        all_chapters = []
+        for arc in novel_config.get('arcs', []):
+            for chapter in arc.get('chapters', []):
+                chapter_content_check, chapter_metadata_check = load_chapter_content(novel_slug, chapter['id'], language)
+                if chapter_content_check and not should_skip_chapter(chapter_metadata_check, INCLUDE_DRAFTS):
+                    all_chapters.append(chapter)
+        
+        current_index = next((i for i, ch in enumerate(all_chapters) if ch['id'] == chapter_id), -1)
+        prev_chapter = all_chapters[current_index - 1] if current_index > 0 else None
+        next_chapter = all_chapters[current_index + 1] if current_index < len(all_chapters) - 1 else None
+        
+        # Build comments config
+        comments_config = build_comments_config(site_config)
+        
+        # Load authors config for template
+        authors_config = load_authors_config()
+        
+        # Create novel structure for template (filtered to remove hidden chapters)
+        novel_for_template = {
+            'title': novel_config.get('title', novel_slug),
+            'slug': novel_slug,
+            'arcs': []
+        }
+        
+        # Add only visible arcs and chapters
+        for arc in novel_config.get('arcs', []):
+            visible_chapters = []
+            for chapter in arc.get('chapters', []):
+                chapter_content_check, chapter_metadata_check = load_chapter_content(novel_slug, chapter['id'], language)
+                if (chapter_content_check and 
+                    not should_skip_chapter(chapter_metadata_check, INCLUDE_DRAFTS) and 
+                    not chapter_metadata_check.get('hidden', False)):
+                    visible_chapters.append(chapter)
+            
+            if visible_chapters:  # Only include arc if it has visible chapters
+                arc_for_template = {
+                    'title': arc.get('title', ''),
+                    'chapters': visible_chapters
+                }
+                novel_for_template['arcs'].append(arc_for_template)
+        
+        # Build social meta and other template variables
+        chapter_social_meta = build_social_meta(site_config, novel_config, chapter_metadata, 'chapter', 
+                                               chapter_metadata.get('title', chapter_info['title']), 
+                                               f"{site_config.get('site_url', '').rstrip('/')}/{novel_slug}/{language}/{chapter_id}/")
+        chapter_seo_meta = build_seo_meta(site_config, novel_config, chapter_metadata, 'chapter')
+        footer_data = build_footer_content(site_config, novel_config, 'chapter')
+        
+        # Determine what to show
+        show_tags = bool(chapter_metadata.get('tags'))
+        show_metadata = bool(chapter_metadata.get('author') or chapter_metadata.get('translator') or chapter_metadata.get('published'))
+        show_translation_notes = bool(chapter_metadata.get('translation_notes') or chapter_metadata.get('translator_commentary'))
+        
+        # Handle password protection
+        is_password_protected = bool(chapter_metadata.get('password'))
+        encrypted_content = None
+        password_hash = None
+        if is_password_protected:
+            from hashlib import sha256
+            password = chapter_metadata['password']
+            password_hash = sha256(password.encode()).hexdigest()
+            # Simple XOR encryption for demo (not secure)
+            encrypted_content = ''.join(chr(ord(c) ^ 42) for c in updated_content)
+        
+        # Check comments
+        comments_enabled = should_enable_comments(site_config, novel_config, chapter_metadata, 'chapter')
+        
+        # Render chapter  
+        chapter_html = render_template("chapter.html",
+                                     novel=novel_for_template,
+                                     chapter=chapter_info,
+                                     chapter_title=chapter_metadata.get('title', chapter_info['title']),
+                                     chapter_content=convert_markdown_to_html(updated_content),
+                                     chapter_metadata=chapter_metadata,
+                                     prev_chapter=prev_chapter,
+                                     next_chapter=next_chapter,
+                                     current_language=language,
+                                     available_languages=available_languages,
+                                     show_tags=show_tags,
+                                     show_metadata=show_metadata,
+                                     show_translation_notes=show_translation_notes,
+                                     is_password_protected=is_password_protected,
+                                     encrypted_content=encrypted_content,
+                                     password_hash=password_hash,
+                                     password_hint=chapter_metadata.get('password_hint', ''),
+                                     site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                     social_title=chapter_social_meta['title'],
+                                     social_description=chapter_social_meta['description'],
+                                     social_image=chapter_social_meta['image'],
+                                     social_url=chapter_social_meta['url'],
+                                     seo_meta_description=chapter_seo_meta.get('meta_description'),
+                                     seo_keywords=chapter_social_meta.get('keywords'),
+                                     allow_indexing=chapter_seo_meta.get('allow_indexing', True),
+                                     twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                     footer_data=footer_data,
+                                     comments_enabled=comments_enabled,
+                                     comments_repo=comments_config['repo'],
+                                     comments_issue_term=comments_config['issue_term'],
+                                     comments_label=comments_config['label'],
+                                     comments_theme=comments_config['theme'],
+                                     authors_config=authors_config)
+        
+        # Write chapter file
+        with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
+            f.write(chapter_html)
+        
+        print(f"    Rebuilt chapter: {novel_slug}/{chapter_id} ({language})")
+        
+        # Check if we need to update tag pages (if chapter tags changed)
+        if chapter_metadata.get('tags'):
+            print(f"    Chapter has tags, may need to rebuild tag pages")
+            # For now, we'll leave tag rebuilding as a future enhancement
+        
+        return True
+        
+    except Exception as e:
+        print(f"    Error rebuilding chapter {novel_slug}/{chapter_id}: {e}")
+        return False
+
+def perform_incremental_rebuild(rebuild_info, include_drafts=False):
+    """Perform incremental rebuild based on the rebuild scope"""
+    global INCLUDE_DRAFTS
+    INCLUDE_DRAFTS = include_drafts
+    
+    rebuild_type = rebuild_info['type']
+    
+    if rebuild_type == 'full':
+        print(f"Full rebuild needed: {rebuild_info['reason']}")
+        # Ensure build directory exists
+        os.makedirs(BUILD_DIR, exist_ok=True)
+        # Perform full rebuild
+        build_site(include_drafts=include_drafts, no_epub=True, optimize_images=False)
+        return True
+        
+    elif rebuild_type == 'static':
+        print(f"Incremental rebuild: {rebuild_info['reason']}")
+        return incremental_rebuild_static(rebuild_info['file'])
+        
+    elif rebuild_type == 'page':
+        print(f"Incremental rebuild: {rebuild_info['reason']}")
+        return incremental_rebuild_page(rebuild_info['page'], rebuild_info['language'])
+        
+    elif rebuild_type == 'chapter':
+        print(f"Incremental rebuild: {rebuild_info['reason']}")
+        return incremental_rebuild_chapter(rebuild_info['novel'], rebuild_info['chapter'], rebuild_info['language'])
+        
+    elif rebuild_type == 'novel_config':
+        print(f"Novel rebuild needed: {rebuild_info['reason']}")
+        # For novel config changes, we need to rebuild the entire novel
+        # This is complex, so for now fall back to full rebuild
+        os.makedirs(BUILD_DIR, exist_ok=True)
+        build_site(include_drafts=include_drafts, no_epub=True, optimize_images=False)
+        return True
+        
+    else:
+        print(f"Unknown rebuild type: {rebuild_type}")
+        return False
+
+def start_development_server(port=8000, include_drafts=False):
     """Start development server with live reload"""
     try:
         import asyncio
@@ -3633,6 +4009,7 @@ def start_development_server(port=8000):
             def __init__(self):
                 self.last_rebuild = 0
                 self.rebuild_delay = 1  # Wait 1 second between rebuilds
+                self.include_drafts = include_drafts
             
             def on_modified(self, event):
                 if event.is_directory:
@@ -3643,7 +4020,7 @@ def start_development_server(port=8000):
                     current_time = time.time()
                     if current_time - self.last_rebuild > self.rebuild_delay:
                         self.last_rebuild = current_time
-                        self.rebuild_site()
+                        self.rebuild_site(event.src_path)
             
             def should_rebuild(self, file_path):
                 """Check if file change should trigger rebuild"""
@@ -3665,37 +4042,40 @@ def start_development_server(port=8000):
                 
                 return False
             
-            def rebuild_site(self):
-                """Rebuild site and notify clients"""
+            def rebuild_site(self, changed_file_path):
+                """Rebuild site and notify clients using incremental rebuilds"""
                 try:
-                    print("File change detected, rebuilding...")
+                    print("File change detected, analyzing...")
                     
-                    # Ensure build directory exists
-                    import os
-                    os.makedirs(BUILD_DIR, exist_ok=True)
+                    # Determine what needs to be rebuilt
+                    rebuild_info = determine_rebuild_scope(changed_file_path)
                     
-                    # Build site with same settings as initial build
-                    build_site(include_drafts=getattr(self, 'include_drafts', False), 
-                             no_epub=True,  # Skip EPUB for faster rebuilds
-                             optimize_images=False)  # Skip image optimization for speed
+                    # Perform incremental rebuild
+                    success = perform_incremental_rebuild(rebuild_info, include_drafts=self.include_drafts)
                     
-                    print("Site rebuilt, waiting for filesystem sync...")
-                    
-                    # Trigger browser reload after a delay to ensure files are fully written
-                    if connected_clients:
-                        # Run broadcast in a thread-safe way with delay
-                        def trigger_reload():
-                            try:
-                                import time
-                                time.sleep(1.5)  # Wait for filesystem operations to complete
-                                loop = websocket_loop
-                                asyncio.run_coroutine_threadsafe(broadcast_reload(), loop)
-                                print("Browser refresh triggered")
-                            except:
-                                pass
-                        threading.Thread(target=trigger_reload, daemon=True).start()
+                    if success:
+                        print("Rebuild completed, waiting for filesystem sync...")
+                        
+                        # Trigger browser reload after a delay to ensure files are fully written
+                        if connected_clients:
+                            # Run broadcast in a thread-safe way with delay
+                            def trigger_reload():
+                                try:
+                                    import time
+                                    time.sleep(1.5)  # Wait for filesystem operations to complete
+                                    loop = websocket_loop
+                                    asyncio.run_coroutine_threadsafe(broadcast_reload(), loop)
+                                    print("Browser refresh triggered")
+                                except:
+                                    pass
+                            threading.Thread(target=trigger_reload, daemon=True).start()
+                        else:
+                            print("Rebuild complete")
                     else:
-                        print("Site rebuild complete")
+                        print("Rebuild failed, falling back to full rebuild...")
+                        # Fallback to full rebuild if incremental failed
+                        os.makedirs(BUILD_DIR, exist_ok=True)
+                        build_site(include_drafts=self.include_drafts, no_epub=True, optimize_images=False)
                         
                 except Exception as e:
                     print(f"Error rebuilding site: {e}")
@@ -3850,7 +4230,7 @@ def start_development_server(port=8000):
     except Exception as e:
         print(f"[ERROR] Failed to start development server: {e}")
 
-def watch_and_rebuild():
+def watch_and_rebuild(include_drafts=False):
     """Watch for file changes and rebuild without serving"""
     try:
         import time
@@ -3864,6 +4244,7 @@ def watch_and_rebuild():
             def __init__(self):
                 self.last_rebuild = 0
                 self.rebuild_delay = 1  # Wait 1 second between rebuilds
+                self.include_drafts = include_drafts
             
             def on_modified(self, event):
                 if event.is_directory:
@@ -3874,7 +4255,7 @@ def watch_and_rebuild():
                     current_time = time.time()
                     if current_time - self.last_rebuild > self.rebuild_delay:
                         self.last_rebuild = current_time
-                        self.rebuild_site()
+                        self.rebuild_site(event.src_path)
             
             def should_rebuild(self, file_path):
                 """Check if file change should trigger rebuild"""
@@ -3896,20 +4277,26 @@ def watch_and_rebuild():
                 
                 return False
             
-            def rebuild_site(self):
-                """Rebuild site"""
+            def rebuild_site(self, changed_file_path):
+                """Rebuild site using incremental rebuilds"""
                 try:
-                    print("File change detected, rebuilding...")
+                    print("File change detected, analyzing...")
                     
-                    # Ensure build directory exists
-                    import os
-                    os.makedirs(BUILD_DIR, exist_ok=True)
+                    # Determine what needs to be rebuilt
+                    rebuild_info = determine_rebuild_scope(changed_file_path)
                     
-                    # Build site with same settings as initial build
-                    build_site(include_drafts=getattr(self, 'include_drafts', False), 
-                             no_epub=True,  # Skip EPUB for faster rebuilds
-                             optimize_images=False)  # Skip image optimization for speed
-                    print("Site rebuilt")
+                    # Perform incremental rebuild
+                    success = perform_incremental_rebuild(rebuild_info, include_drafts=self.include_drafts)
+                    
+                    if success:
+                        print("Rebuild complete")
+                    else:
+                        print("Rebuild failed, falling back to full rebuild...")
+                        # Fallback to full rebuild if incremental failed
+                        os.makedirs(BUILD_DIR, exist_ok=True)
+                        build_site(include_drafts=self.include_drafts, no_epub=True, optimize_images=False)
+                        print("Full rebuild complete")
+                        
                 except Exception as e:
                     print(f"Error rebuilding site: {e}")
         
@@ -3980,7 +4367,7 @@ if __name__ == "__main__":
                    no_epub=True,  # Skip EPUB for faster rebuilds
                    optimize_images=False)  # Skip optimization for speed
         # Start watching for changes
-        watch_and_rebuild()
+        watch_and_rebuild(include_drafts=args.include_drafts)
         exit(0)
     
     # Handle --serve flag (build, serve, and watch with live reload)
@@ -3990,7 +4377,7 @@ if __name__ == "__main__":
                    no_epub=True,  # Skip EPUB for faster rebuilds
                    optimize_images=False)  # Skip optimization for speed
         # Start development server
-        start_development_server(args.serve)
+        start_development_server(args.serve, include_drafts=args.include_drafts)
         exit(0)
     
     # Normal build mode
