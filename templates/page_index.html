@@ -59,7 +59,7 @@
                 {% if lang == current_language %}
                     <span class="current-language">{{ lang|upper }}</span>
                 {% else %}
-                    <a href="pages-{{ lang }}.html">{{ lang|upper }}</a>
+                    <a href="{% if lang == 'en' %}pages.html{% else %}pages-{{ lang }}.html{% endif %}">{{ lang|upper }}</a>
                 {% endif %}
                 {% if not loop.last %} | {% endif %}
             {% endfor %}

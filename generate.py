@@ -2181,11 +2181,12 @@ def generate_page_index(site_config):
                 # Get available languages for this page
                 page_languages = get_available_page_languages(page_slug)
                 
-                # Build page URL
+                # Build page URL - use the current language if available, otherwise fallback to English
+                target_lang = lang if lang in page_languages else 'en'
                 if '/' in page_slug:
-                    page_url = f"{page_slug}/{lang}/"
+                    page_url = f"{page_slug}/{target_lang}/"
                 else:
-                    page_url = f"{page_slug}/{lang}/"
+                    page_url = f"{page_slug}/{target_lang}/"
                 
                 page_info = {
                     'title': page_metadata.get('title', page_slug.replace('/', ' - ').title()),
