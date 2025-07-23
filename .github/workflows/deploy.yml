@@ -1,4 +1,4 @@
-name: Deploy Web Novel Site
+name: Build and Deploy to External Repository
 
 on:
   push:
@@ -35,11 +35,14 @@ jobs:
         ls -la build/
         echo "Build directory contents verified"
     
-    - name: Deploy to GitHub Pages
+    - name: Deploy to Oekaki-Connect/web-novel
       uses: peaceiris/actions-gh-pages@v4
       if: github.ref == 'refs/heads/main'
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        personal_token: ${{ secrets.DEPLOY_TOKEN }}
+        external_repository: Oekaki-Connect/web-novel
         publish_dir: ./build
-        destination_dir: .
+        publish_branch: main
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
 
