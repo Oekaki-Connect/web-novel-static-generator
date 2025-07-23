@@ -126,6 +126,8 @@ arcs:
         title: "Chapter 5: The Test"
       - id: "chapter-6"
         title: "Chapter 6: Allies in Darkness"
+      - id: "chapter-6-draft"
+        title: "Chapter 6 Draft: The Secret Meeting"
   - title: "Premium Content"
     chapters:
       - id: "chapter-premium"

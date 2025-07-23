@@ -807,6 +807,16 @@ footer p {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     background-color: var(--color-light);
     border: 1px solid var(--color-border);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.novel-cover a {
+    display: block;
+}
+
+.novel-cover a:hover .cover-image {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .novel-info {
@@ -2246,9 +2256,26 @@ footer p {
         margin-bottom: 0.25rem;
     }
     
+    .download-links {
+        align-items: center;
+    }
+    
     .download-link {
         width: 100%;
+        max-width: 300px;
         text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+        display: block;
+    }
+}
+
+/* Extra narrow viewports (2:3 aspect ratio phones) */
+@media (max-width: 450px) {
+    .download-link {
+        max-width: 250px;
+        padding: 0.6rem 1.2rem;
+        font-size: 0.95rem;
     }
 }
 

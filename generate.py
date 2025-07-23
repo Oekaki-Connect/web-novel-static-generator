@@ -9,8 +9,12 @@ import hashlib
 import base64
 import json
 import datetime
+import argparse
 # Lazy import for optional dependencies
 EBOOKLIB_AVAILABLE = False
+
+# Global flag for including drafts
+INCLUDE_DRAFTS = False
 
 
 def _check_ebooklib():
@@ -113,6 +117,10 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
             try:
                 chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
                 
+                # Skip draft chapters unless include_drafts is True
+                if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                    continue
+                
                 # Skip hidden chapters, password-protected, or non-indexed chapters
                 if (is_chapter_hidden(chapter_metadata) or 
                     ('password' in chapter_metadata and chapter_metadata['password']) or
@@ -167,6 +175,10 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                 chapter_id = chapter["id"]
                 try:
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                    
+                    # Skip draft chapters unless include_drafts is True
+                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                        continue
                     
                     # Skip hidden, password-protected, or non-indexed chapters
                     if (is_chapter_hidden(chapter_metadata) or 
@@ -280,6 +292,10 @@ def generate_sitemap_xml(site_config, novels_data):
                 try:
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
                     
+                    # Skip draft chapters unless include_drafts is True
+                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                        continue
+                    
                     # Skip chapters that don't allow indexing, are password-protected, or are hidden
                     chapter_allow_indexing = chapter_metadata.get('seo', {}).get('allow_indexing')
                     is_password_protected = 'password' in chapter_metadata and chapter_metadata['password']
@@ -376,6 +392,10 @@ def generate_robots_txt(site_config, novels_data):
                     chapter_id = chapter["id"]
                     try:
                         chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
+                        
+                        # Skip draft chapters unless include_drafts is True
+                        if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                            continue
                         
                         # Check chapter-level indexing
                         chapter_allow_indexing = chapter_metadata.get('seo', {}).get('allow_indexing')
@@ -624,8 +644,8 @@ def collect_author_contributions(all_novels_data):
     
     return author_contributions
 
-def get_non_hidden_chapters(novel_config, novel_slug, language='en'):
-    """Get list of chapters that are not hidden or password protected"""
+def get_non_hidden_chapters(novel_config, novel_slug, language='en', include_drafts=False):
+    """Get list of chapters that are not hidden, password protected, or drafts"""
     visible_chapters = []
     
     for arc in novel_config.get('arcs', []):
@@ -633,16 +653,12 @@ def get_non_hidden_chapters(novel_config, novel_slug, language='en'):
         for chapter in arc.get('chapters', []):
             chapter_id = chapter['id']
             
-            # Load chapter content to check if it's hidden or password protected
+            # Load chapter content to check if it's hidden, password protected, or draft
             try:
                 chapter_content, chapter_metadata = load_chapter_content(novel_slug, chapter_id, language)
                 
-                # Skip hidden chapters
-                if chapter_metadata.get('hidden', False):
-                    continue
-                
-                # Skip password protected chapters
-                if chapter_metadata.get('password'):
+                # Skip if chapter should be skipped
+                if should_skip_chapter(chapter_metadata, include_drafts):
                     continue
                 
                 arc_chapters.append({
@@ -680,7 +696,7 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None, 
     
     try:
         # Get non-hidden chapters for the specified language
-        chapters_data = get_non_hidden_chapters(novel_config, novel_slug, language)
+        chapters_data = get_non_hidden_chapters(novel_config, novel_slug, language, INCLUDE_DRAFTS)
         if not chapters_data:
             return False
         
@@ -840,7 +856,7 @@ def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_da
     
     try:
         # Get all chapters and filter for this arc
-        all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, 'en', INCLUDE_DRAFTS)
         if not all_chapters or arc_index >= len(all_chapters):
             return False
         
@@ -1202,7 +1218,7 @@ def generate_download_links(novel_slug, novel_config, site_config, language='en'
     
     # Arc-specific downloads
     if novel_config.get('downloads', {}).get('include_arcs', True):
-        all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, 'en', INCLUDE_DRAFTS)
         arc_downloads = []
         
         for arc_index, arc in enumerate(all_chapters):
@@ -1297,6 +1313,18 @@ def is_chapter_hidden(chapter_metadata):
     """Check if chapter is marked as hidden"""
     return chapter_metadata.get('hidden', False)
 
+def is_chapter_draft(chapter_metadata):
+    """Check if a chapter is marked as a draft"""
+    return chapter_metadata.get('draft', False)
+
+def should_skip_chapter(chapter_metadata, include_drafts=False):
+    """Check if a chapter should be skipped during generation"""
+    if is_chapter_hidden(chapter_metadata):
+        return True
+    if is_chapter_draft(chapter_metadata) and not include_drafts:
+        return True
+    return False
+
 def get_navigation_chapters(novel_slug, all_chapters, current_chapter_id, lang):
     """Get previous and next chapters for navigation, skipping hidden chapters"""
     visible_chapters = []
@@ -1305,7 +1333,7 @@ def get_navigation_chapters(novel_slug, all_chapters, current_chapter_id, lang):
     for chapter in all_chapters:
         try:
             _, chapter_metadata = load_chapter_content(novel_slug, chapter['id'], lang)
-            if not is_chapter_hidden(chapter_metadata):
+            if not should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
                 visible_chapters.append(chapter)
         except:
             # Include chapters that can't be loaded (they might exist in other languages)
@@ -1345,9 +1373,8 @@ def calculate_story_length_stats(novel_slug, lang):
         try:
             chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
             
-            # Skip hidden, password-protected, or non-indexed chapters
-            if (is_chapter_hidden(chapter_metadata) or 
-                ('password' in chapter_metadata and chapter_metadata['password'])):
+            # Skip chapters that should be skipped
+            if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
                 continue
             
             # Remove markdown formatting and count characters/words
@@ -1408,7 +1435,7 @@ def filter_hidden_chapters_from_novel(novel, novel_slug, lang):
         for chapter in arc.get('chapters', []):
             try:
                 _, chapter_metadata = load_chapter_content(novel_slug, chapter['id'], lang)
-                if not is_chapter_hidden(chapter_metadata):
+                if not should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
                     # Add published date to chapter data for TOC display
                     enhanced_chapter = chapter.copy()
                     enhanced_chapter['published'] = chapter_metadata.get('published')
@@ -1722,7 +1749,10 @@ def render_template(template_name, **kwargs):
     template = env.get_template(template_name)
     return template.render(**kwargs)
 
-def build_site():
+def build_site(include_drafts=False):
+    global INCLUDE_DRAFTS
+    INCLUDE_DRAFTS = include_drafts
+    
     print("Building site...")
     if os.path.exists(BUILD_DIR):
         shutil.rmtree(BUILD_DIR)
@@ -1974,6 +2004,12 @@ def build_site():
                 if translation_exists:
                     # Generate normal chapter page
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
+                    
+                    # Skip draft chapters unless include_drafts is True
+                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                        print(f"      Skipping draft chapter: {chapter_id} - {chapter_title}")
+                        continue
+                    
                     # Process chapter images and update markdown
                     chapter_content_md = process_chapter_images(novel_slug, chapter_id, lang, chapter_content_md)
                     
@@ -2264,7 +2300,7 @@ def build_site():
                 
                 # Generate arc-specific EPUBs if enabled
                 if novel_config.get('downloads', {}).get('include_arcs', True):
-                    all_chapters = get_non_hidden_chapters(novel_config, novel_slug, language)
+                    all_chapters = get_non_hidden_chapters(novel_config, novel_slug, language, INCLUDE_DRAFTS)
                     for arc_index, arc in enumerate(all_chapters):
                         if arc['chapters']:  # Only generate if arc has chapters
                             if generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel, language):
@@ -2284,6 +2320,12 @@ def build_site():
     print("Site built.")
 
 if __name__ == "__main__":
-    build_site()
+    parser = argparse.ArgumentParser(description='Static site generator for web novels')
+    parser.add_argument('--include-drafts', action='store_true', 
+                        help='Include draft chapters in the generated site')
+    args = parser.parse_args()
+    
+    # Pass the include_drafts flag to build_site
+    build_site(include_drafts=args.include_drafts)
 
 

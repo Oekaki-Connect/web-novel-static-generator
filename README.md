@@ -24,6 +24,7 @@ A Python-based static website generator specifically designed for web novels, wi
 - **GitHub Integration**: Automated deployment via GitHub Actions
 - **Password Protection**: Secure premium/beta content with client-side encryption
 - **Hidden Chapters**: Chapters accessible only by direct link (not in navigation)
+- **Draft Chapters**: Mark chapters as drafts to exclude from generation
 - **Footer System**: Consistent footers with story-specific customization
 - **Dark Mode Toggle**: System-aware dark/light theme with localStorage persistence
 - **RSS Feeds**: Automatic RSS generation for site and individual stories
@@ -192,6 +193,7 @@ published: "2025-01-15"
 tags: ["adventure", "magic", "prophecy"]
 translation_notes: "Cultural context about specific terms"
 hidden: false          # Set to true to hide from navigation (accessible by direct link only)
+draft: false           # Set to true to exclude from generation (use --include-drafts to include)
 password: "secret123"   # Optional: password protect this chapter
 password_hint: "Available for beta readers and Patreon supporters. Check your email for the password."
 comments: true          # Enable/disable comments for this chapter
@@ -254,7 +256,8 @@ You can also place images in the `static/images/` directory for site-wide use:
 ### 6. Generate the Site
 
 ```bash
-python generate.py
+python generate.py                  # Excludes draft chapters
+python generate.py --include-drafts # Includes draft chapters
 ```
 
 The generated site will be in the `build/` directory.
@@ -353,6 +356,33 @@ This chapter won't appear in navigation but can be accessed directly.
 - Beta reader exclusive chapters
 - Special event content
 - Author notes or behind-the-scenes content
+
+### Draft Chapters
+
+Mark work-in-progress chapters as drafts to exclude them from generation:
+
+```markdown
+---
+title: "Chapter 10: Work in Progress"
+draft: true
+published: "2025-02-01"
+---
+
+This chapter is still being written and won't be included in the generated site.
+```
+
+**Features:**
+- Completely excluded from generation by default
+- Not included in TOC, EPUB downloads, RSS feeds, or sitemaps
+- Use `--include-drafts` flag to include them: `python generate.py --include-drafts`
+- Console output shows skipped drafts: "Skipping draft chapter: chapter-10 - Chapter 10: Work in Progress"
+- Perfect for work-in-progress content or scheduled releases
+
+**Use Cases:**
+- Work-in-progress chapters
+- Scheduled content releases
+- Beta testing new chapters
+- Collaborative editing before publication
 
 ### Comments System
 
@@ -475,6 +505,7 @@ Your chapter content here...
 - `translation_notes`: Cultural/linguistic context
 - `translator_commentary`: Extended commentary displayed at chapter end
 - `hidden`: Hide chapter from navigation (accessible by direct link only)
+- `draft`: Mark chapter as draft (excluded from generation unless --include-drafts is used)
 - `password`: Password protect the chapter content
 - `password_hint`: Hint text shown to users for password-protected content
 - `comments`: Enable/disable comments for this specific chapter
@@ -705,9 +736,4 @@ This generator is provided as-is for creating web novel sites. Customize as need
 
 Feel free to extend this generator with additional features:
 - Search functionality
-- Reading progress tracking
 - Chapter bookmarking
-- User authentication system
-- Advanced analytics
-- Email newsletter integration
-

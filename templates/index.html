@@ -50,7 +50,9 @@
             <section class="novel-card">
                 {% if novel.front_page and novel.front_page.cover_art %}
                 <div class="novel-cover">
-                    <img src="{{ novel.front_page.cover_art }}" alt="{{ novel.title }} Cover" class="cover-image">
+                    <a href="{{ novel.slug }}/en/toc/">
+                        <img src="{{ novel.front_page.cover_art }}" alt="{{ novel.title }} Cover" class="cover-image">
+                    </a>
                 </div>
                 {% endif %}
                 <div class="novel-info">
