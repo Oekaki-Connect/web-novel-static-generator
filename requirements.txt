@@ -9,3 +9,12 @@ pyyaml==6.0.1
 
 # EPUB generation
 ebooklib==0.18
+
+# Image processing for WebP optimization
+Pillow==10.1.0
+
+# File watching for live reload functionality
+watchdog==3.0.0
+
+# WebSocket server for live reload
+websockets==12.0

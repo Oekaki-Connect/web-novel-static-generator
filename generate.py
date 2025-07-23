@@ -30,7 +30,7 @@ def _check_ebooklib():
         EBOOKLIB_AVAILABLE = False
         return False
 
-BUILD_DIR = "./build"
+BUILD_DIR = os.path.abspath("./build")
 CONTENT_DIR = "./content"
 PAGES_DIR = "./pages"
 TEMPLATES_DIR = "./templates"
@@ -584,7 +584,7 @@ def process_cover_art(novel_slug, novel_config):
     processed_images = {}
     
     # Ensure static/images directory exists
-    images_dir = os.path.join(BUILD_DIR, "static", "images")
+    images_dir = os.path.normpath(os.path.join(BUILD_DIR, "static", "images"))
     os.makedirs(images_dir, exist_ok=True)
     
     # Process story cover art
@@ -1065,7 +1065,7 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None, 
         book.add_item(epub.EpubNav())
         
         # Ensure output directory exists
-        epub_dir = os.path.join(BUILD_DIR, "static", "epub")
+        epub_dir = os.path.normpath(os.path.join(BUILD_DIR, "static", "epub"))
         os.makedirs(epub_dir, exist_ok=True)
         
         # Write EPUB file with language suffix if not English
@@ -1230,7 +1230,7 @@ def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_da
         book.add_item(epub.EpubNav())
         
         # Ensure output directory exists
-        epub_dir = os.path.join(BUILD_DIR, "static", "epub")
+        epub_dir = os.path.normpath(os.path.join(BUILD_DIR, "static", "epub"))
         os.makedirs(epub_dir, exist_ok=True)
         
         # Generate EPUB with arc-specific filename and language suffix if not English
@@ -1893,7 +1893,7 @@ def process_chapter_images(novel_slug, chapter_id, language, markdown_content):
         chapter_source_dir = os.path.join(CONTENT_DIR, novel_slug, "chapters", language)
     
     # Create images directory in build
-    build_images_dir = os.path.join(BUILD_DIR, "images", novel_slug, chapter_id)
+    build_images_dir = os.path.normpath(os.path.join(BUILD_DIR, "images", novel_slug, chapter_id))
     os.makedirs(build_images_dir, exist_ok=True)
     
     updated_content = markdown_content
@@ -2006,7 +2006,8 @@ def convert_markdown_to_html(md_content):
 
 def copy_static_assets():
     if os.path.exists(STATIC_DIR):
-        shutil.copytree(STATIC_DIR, os.path.join(BUILD_DIR, "static"), dirs_exist_ok=True)
+        target_static_dir = os.path.normpath(os.path.join(BUILD_DIR, "static"))
+        shutil.copytree(STATIC_DIR, target_static_dir, dirs_exist_ok=True)
 
 def generate_static_pages(site_config):
     """Generate all static pages"""
@@ -2050,7 +2051,7 @@ def generate_static_pages(site_config):
                 continue
             
             # Create page directory
-            page_dir = os.path.join(BUILD_DIR, page_slug, lang)
+            page_dir = os.path.normpath(os.path.join(BUILD_DIR, page_slug, lang))
             os.makedirs(page_dir, exist_ok=True)
             
             # Calculate breadcrumb depth - need to account for nested directory structure
@@ -2262,14 +2263,36 @@ def render_template(template_name, **kwargs):
     template = env.get_template(template_name)
     return template.render(**kwargs)
 
-def build_site(include_drafts=False):
+def build_site(include_drafts=False, no_epub=False, optimize_images=False):
     global INCLUDE_DRAFTS
     INCLUDE_DRAFTS = include_drafts
     
     print("Building site...")
     if os.path.exists(BUILD_DIR):
-        shutil.rmtree(BUILD_DIR)
-    os.makedirs(BUILD_DIR)
+        # On Windows, retry deletion if it fails due to file locks
+        import time
+        for attempt in range(3):
+            try:
+                shutil.rmtree(BUILD_DIR)
+                break
+            except (OSError, PermissionError) as e:
+                if attempt < 2:
+                    print(f"Retrying directory deletion (attempt {attempt + 1})...")
+                    time.sleep(0.5)
+                else:
+                    raise e
+    
+    # Ensure directory is created with retry
+    for attempt in range(3):
+        try:
+            os.makedirs(BUILD_DIR, exist_ok=True)
+            break
+        except (OSError, PermissionError) as e:
+            if attempt < 2:
+                print(f"Retrying directory creation (attempt {attempt + 1})...")
+                time.sleep(0.5)
+            else:
+                raise e
 
     copy_static_assets()
     
@@ -2355,7 +2378,7 @@ def build_site(include_drafts=False):
     
     if authors_config:
         # Create authors directory
-        authors_dir = os.path.join(BUILD_DIR, "authors")
+        authors_dir = os.path.normpath(os.path.join(BUILD_DIR, "authors"))
         os.makedirs(authors_dir, exist_ok=True)
         
         # Build social metadata for authors index
@@ -2380,7 +2403,7 @@ def build_site(include_drafts=False):
         
         # Generate individual author pages
         for username, author_info in authors_config.items():
-            author_dir = os.path.join(authors_dir, username)
+            author_dir = os.path.normpath(os.path.join(authors_dir, username))
             os.makedirs(author_dir, exist_ok=True)
             
             # Get contributions for this author (match by name)
@@ -2427,7 +2450,7 @@ def build_site(include_drafts=False):
         novel['languages'] = available_languages
         
         # Create novel directory
-        novel_dir = os.path.join(BUILD_DIR, novel_slug)
+        novel_dir = os.path.normpath(os.path.join(BUILD_DIR, novel_slug))
         os.makedirs(novel_dir, exist_ok=True)
 
         # Generate story-specific RSS feed
@@ -2437,11 +2460,11 @@ def build_site(include_drafts=False):
 
         # Process each language
         for lang in available_languages:
-            lang_dir = os.path.join(novel_dir, lang)
+            lang_dir = os.path.normpath(os.path.join(novel_dir, lang))
             os.makedirs(lang_dir, exist_ok=True)
 
             # Render table of contents page for this novel/language
-            toc_dir = os.path.join(lang_dir, "toc")
+            toc_dir = os.path.normpath(os.path.join(lang_dir, "toc"))
             os.makedirs(toc_dir, exist_ok=True)
             
             # Build social metadata for TOC
@@ -2601,7 +2624,7 @@ def build_site(include_drafts=False):
                     comments_enabled = should_enable_comments(site_config, novel_config, chapter_metadata, 'chapter')
                     comments_config = build_comments_config(site_config)
                     
-                    chapter_dir = os.path.join(lang_dir, chapter_id)
+                    chapter_dir = os.path.normpath(os.path.join(lang_dir, chapter_id))
                     os.makedirs(chapter_dir, exist_ok=True)
                     with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
                         # Filter out hidden chapters for chapter dropdown
@@ -2723,7 +2746,7 @@ def build_site(include_drafts=False):
                     comments_enabled = should_enable_comments(site_config, novel_config, chapter_metadata, 'chapter')
                     comments_config = build_comments_config(site_config)
                     
-                    chapter_dir = os.path.join(lang_dir, chapter_id)
+                    chapter_dir = os.path.normpath(os.path.join(lang_dir, chapter_id))
                     os.makedirs(chapter_dir, exist_ok=True)
                     with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
                         # Filter out hidden chapters for chapter dropdown
@@ -2771,7 +2794,7 @@ def build_site(include_drafts=False):
             tags_data = collect_tags_for_novel(novel_slug, lang)
             if tags_data:
                 # Create tags directory
-                tags_dir = os.path.join(lang_dir, "tags")
+                tags_dir = os.path.normpath(os.path.join(lang_dir, "tags"))
                 os.makedirs(tags_dir, exist_ok=True)
                 
                 # Create tag slug mapping for templates
@@ -2789,7 +2812,7 @@ def build_site(include_drafts=False):
                 # Generate individual tag pages
                 for tag, chapters in tags_data.items():
                     tag_slug = slugify_tag(tag)
-                    tag_page_dir = os.path.join(tags_dir, tag_slug)
+                    tag_page_dir = os.path.normpath(os.path.join(tags_dir, tag_slug))
                     os.makedirs(tag_page_dir, exist_ok=True)
                     
                     # Build cross-language tag mapping for this tag
@@ -2812,35 +2835,41 @@ def build_site(include_drafts=False):
                                                 available_languages=available_languages,
                                                 cross_lang_tags=cross_lang_tags))
 
-    # Generate EPUB downloads after all HTML is built
-    print("Generating EPUB downloads...")
-    for novel in all_novels_data:
-        novel_slug = novel['slug']
-        novel_config = load_novel_config(novel_slug)
-        available_languages = novel_config.get('languages', {}).get('available', ['en'])
-        
-        print(f"  Generating downloads for {novel_slug}...")
-        
-        # Generate EPUBs for each available language
-        for language in available_languages:
-            # Check if this language has translated chapters
-            if has_translated_chapters(novel_slug, language):
-                language_suffix = f"-{language}" if language != novel_config.get('languages', {}).get('default', 'en') else ""
-                
-                # Generate full story EPUB
-                if generate_story_epub(novel_slug, novel_config, site_config, novel, language):
-                    print(f"    Generated EPUB for {novel_slug}{language_suffix}")
-                
-                # Generate arc-specific EPUBs if enabled
-                if novel_config.get('downloads', {}).get('include_arcs', True):
-                    all_chapters = get_non_hidden_chapters(novel_config, novel_slug, language, INCLUDE_DRAFTS)
-                    for arc_index, arc in enumerate(all_chapters):
-                        if arc['chapters']:  # Only generate if arc has chapters
-                            if generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel, language):
-                                print(f"    Generated EPUB for {novel_slug} - {arc['title']}{language_suffix}")
+    # Generate EPUB downloads after all HTML is built (unless --no-epub)
+    if not no_epub:
+        print("Generating EPUB downloads...")
+        for novel in all_novels_data:
+            novel_slug = novel['slug']
+            novel_config = load_novel_config(novel_slug)
+            available_languages = novel_config.get('languages', {}).get('available', ['en'])
+            
+            print(f"  Generating downloads for {novel_slug}...")
+            
+            # Generate EPUBs for each available language
+            for language in available_languages:
+                # Check if this language has translated chapters
+                if has_translated_chapters(novel_slug, language):
+                    language_suffix = f"-{language}" if language != novel_config.get('languages', {}).get('default', 'en') else ""
+                    
+                    # Generate full story EPUB
+                    if generate_story_epub(novel_slug, novel_config, site_config, novel, language):
+                        print(f"    Generated EPUB for {novel_slug}{language_suffix}")
+                    
+                    # Generate arc-specific EPUBs if enabled
+                    if novel_config.get('downloads', {}).get('include_arcs', True):
+                        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, language, INCLUDE_DRAFTS)
+                        for arc_index, arc in enumerate(all_chapters):
+                            if arc['chapters']:  # Only generate if arc has chapters
+                                if generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel, language):
+                                    print(f"    Generated EPUB for {novel_slug} - {arc['title']}{language_suffix}")
+    else:
+        print("Skipping EPUB generation (--no-epub flag)")
     
-    # Update TOC pages with download links after downloads are generated
-    print("Updating TOC pages with download links...")
+    # Update TOC pages with download links after downloads are generated (if EPUBs were generated)
+    if not no_epub:
+        print("Updating TOC pages with download links...")
+    else:
+        print("Updating TOC pages...")
     for novel in all_novels_data:
         novel_slug = novel['slug']
         novel_config = load_novel_config(novel_slug)
@@ -2849,6 +2878,9 @@ def build_site(include_drafts=False):
         # Update TOC for each language
         for lang in available_languages:
             update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang)
+
+    # Optimize images if enabled or forced
+    optimize_all_images(site_config, optimize_images)
 
     print("Site built.")
 
@@ -3134,16 +3166,841 @@ def resolve_link_path(current_file_dir, link_url, build_dir):
     except Exception:
         return None
 
+def clean_build_directory():
+    """Delete the build directory to ensure a fresh build"""
+    build_dir = Path(BUILD_DIR)
+    if build_dir.exists():
+        print(f"[INFO] Cleaning build directory: {BUILD_DIR}")
+        import shutil
+        shutil.rmtree(build_dir)
+        print(f"[INFO] Build directory cleaned")
+    else:
+        print(f"[INFO] Build directory does not exist, nothing to clean")
+
+def validate_all_configs():
+    """Validate all config files and content without building"""
+    print("Validating configuration files and content...")
+    errors = []
+    warnings = []
+    
+    # Validate site config
+    try:
+        site_config = load_site_config()
+        print("[OK] Site config loaded successfully")
+        
+        # Check required fields
+        if not site_config.get('site_name'):
+            warnings.append("Missing site_name in site_config.yaml")
+        if not site_config.get('site_url'):
+            warnings.append("Missing site_url in site_config.yaml")
+        
+        # Check image optimization requirements
+        img_opt = site_config.get('image_optimization', {})
+        if img_opt.get('enabled', False):
+            try:
+                from PIL import Image
+            except ImportError:
+                errors.append("Image optimization enabled but Pillow library not found. Install with: pip install Pillow")
+        
+        # Check development server dependencies (informational only)
+        try:
+            import watchdog
+            import websockets
+        except ImportError:
+            warnings.append("Development server dependencies not found. Install with: pip install watchdog websockets")
+            
+    except Exception as e:
+        errors.append(f"Error loading site_config.yaml: {e}")
+    
+    # Validate novel configs
+    content_dir = Path(CONTENT_DIR)
+    if not content_dir.exists():
+        errors.append(f"Content directory not found: {CONTENT_DIR}")
+        print_validation_results(errors, warnings)
+        return
+    
+    novel_dirs = [d for d in content_dir.iterdir() if d.is_dir()]
+    print(f"[INFO] Found {len(novel_dirs)} novel directories")
+    
+    for novel_dir in novel_dirs:
+        novel_slug = novel_dir.name
+        config_file = novel_dir / "config.yaml"
+        
+        if not config_file.exists():
+            errors.append(f"Missing config.yaml for novel: {novel_slug}")
+            continue
+            
+        try:
+            novel_config = load_novel_config(novel_slug)
+            print(f"[OK] Novel config loaded: {novel_slug}")
+            
+            # Check required fields
+            if not novel_config.get('title'):
+                errors.append(f"Missing title in {novel_slug}/config.yaml")
+            if not novel_config.get('arcs'):
+                errors.append(f"Missing arcs in {novel_slug}/config.yaml")
+                
+            # Validate chapters exist
+            chapters_dir = novel_dir / "chapters"
+            if not chapters_dir.exists():
+                errors.append(f"Missing chapters directory for novel: {novel_slug}")
+                continue
+                
+            # Check if referenced chapters exist
+            for arc in novel_config.get('arcs', []):
+                for chapter in arc.get('chapters', []):
+                    chapter_id = chapter.get('id')
+                    if chapter_id:
+                        chapter_file = chapters_dir / f"{chapter_id}.md"
+                        if not chapter_file.exists():
+                            errors.append(f"Missing chapter file: {novel_slug}/chapters/{chapter_id}.md")
+                        else:
+                            # Validate chapter front matter
+                            try:
+                                front_matter, content = parse_front_matter(chapter_file.read_text(encoding='utf-8'))
+                                if content.strip() == "":
+                                    warnings.append(f"Empty chapter content: {novel_slug}/chapters/{chapter_id}.md")
+                            except Exception as e:
+                                errors.append(f"Error parsing chapter {novel_slug}/{chapter_id}: {e}")
+                                
+        except Exception as e:
+            errors.append(f"Error loading config for novel {novel_slug}: {e}")
+    
+    print_validation_results(errors, warnings)
+
+def print_validation_results(errors, warnings):
+    """Print validation results and exit with appropriate code"""
+    print("\n" + "="*50)
+    print("VALIDATION RESULTS")
+    print("="*50)
+    
+    if warnings:
+        print(f"\n[WARNINGS] ({len(warnings)} found):")
+        for warning in warnings:
+            print(f"  [!] {warning}")
+    
+    if errors:
+        print(f"\n[ERRORS] ({len(errors)} found):")
+        for error in errors:
+            print(f"  [X] {error}")
+        print("\n[FAILED] Validation failed - please fix errors before building")
+        exit(1)
+    else:
+        print(f"\n[SUCCESS] Validation passed!")
+        if warnings:
+            print(f"Note: {len(warnings)} warnings found (non-critical)")
+        print("[PASSED] All configs and content are valid")
+
+def optimize_images_to_webp(source_dir, target_dir, quality=None):
+    """Convert images to WebP format with optional compression"""
+    try:
+        from PIL import Image
+        import os
+        from pathlib import Path
+        
+        if quality is None:
+            quality = 100  # No compression by default
+        
+        source_path = Path(source_dir)
+        target_path = Path(target_dir)
+        
+        if not source_path.exists():
+            return []
+        
+        # Supported image formats
+        supported_formats = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'}
+        converted_images = []
+        
+        # Find all image files
+        for image_file in source_path.rglob('*'):
+            if image_file.suffix.lower() in supported_formats:
+                try:
+                    # Calculate relative path and target WebP path
+                    rel_path = image_file.relative_to(source_path)
+                    webp_path = target_path / rel_path.with_suffix('.webp')
+                    
+                    # Create target directory if it doesn't exist
+                    webp_path.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    # Convert to WebP
+                    with Image.open(image_file) as img:
+                        # Convert to RGB if necessary (for PNG with transparency)
+                        if img.mode in ('RGBA', 'LA', 'P'):
+                            # Create white background for transparent images
+                            background = Image.new('RGB', img.size, (255, 255, 255))
+                            if img.mode == 'P':
+                                img = img.convert('RGBA')
+                            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                            img = background
+                        elif img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        
+                        # Save as WebP
+                        img.save(webp_path, 'WebP', quality=quality, optimize=True)
+                        
+                        # Also copy original file
+                        original_target = target_path / rel_path
+                        original_target.parent.mkdir(parents=True, exist_ok=True)
+                        if not original_target.exists():
+                            import shutil
+                            shutil.copy2(image_file, original_target)
+                        
+                        converted_images.append({
+                            'original': str(rel_path),
+                            'webp': str(rel_path.with_suffix('.webp')),
+                            'original_size': image_file.stat().st_size,
+                            'webp_size': webp_path.stat().st_size
+                        })
+                        
+                except Exception as e:
+                    print(f"[WARNING] Failed to convert {image_file}: {e}")
+                    
+        return converted_images
+        
+    except ImportError:
+        print("[ERROR] Pillow library not found. Install with: pip install Pillow")
+        return []
+
+def should_optimize_images(site_config, force_optimize=False):
+    """Determine if images should be optimized based on config and flags"""
+    if force_optimize:
+        return True, site_config.get('image_optimization', {}).get('quality', 100)
+    
+    optimization_config = site_config.get('image_optimization', {})
+    enabled = optimization_config.get('enabled', False)
+    quality = optimization_config.get('quality', 100)
+    
+    return enabled, quality
+
+def optimize_all_images(site_config, force_optimize=False):
+    """Optimize all images in the static directory"""
+    should_optimize, quality = should_optimize_images(site_config, force_optimize)
+    
+    if not should_optimize:
+        return
+    
+    print(f"Optimizing images to WebP (quality: {quality}%)...")
+    
+    # Optimize static images
+    static_source = Path("static/images")
+    static_target = Path(BUILD_DIR) / "static/images"
+    
+    if static_source.exists():
+        converted = optimize_images_to_webp(static_source, static_target, quality)
+        if converted:
+            total_original = sum(img['original_size'] for img in converted)
+            total_webp = sum(img['webp_size'] for img in converted)
+            savings = ((total_original - total_webp) / total_original * 100) if total_original > 0 else 0
+            
+            print(f"  Converted {len(converted)} images to WebP")
+            print(f"  Original size: {total_original / 1024:.1f} KB")
+            print(f"  WebP size: {total_webp / 1024:.1f} KB")
+            print(f"  Space saved: {savings:.1f}%")
+        else:
+            print("  No images found to convert")
+
+def generate_stats_report():
+    """Generate detailed statistics report and save to stats_report.md"""
+    print("\n" + "="*50)
+    print("GENERATING STATISTICS REPORT")
+    print("="*50)
+    
+    stats = collect_site_statistics()
+    
+    report_path = os.path.join(os.path.dirname(BUILD_DIR), "stats_report.md")
+    with open(report_path, 'w', encoding='utf-8') as report_file:
+        write_stats_report(report_file, stats)
+    
+    print(f"\n[INFO] Statistics report written to: {report_path}")
+    print_stats_summary(stats)
+
+def collect_site_statistics():
+    """Collect comprehensive statistics about the generated site"""
+    stats = {
+        'generated_at': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'novels': [],
+        'total_chapters': 0,
+        'total_words': 0,
+        'total_characters': 0,
+        'languages': set(),
+        'tags': {},
+        'images': 0,
+        'build_files': 0
+    }
+    
+    # Load site config
+    site_config = load_site_config()
+    
+    # Collect novel statistics
+    content_dir = Path(CONTENT_DIR)
+    if content_dir.exists():
+        novel_dirs = [d for d in content_dir.iterdir() if d.is_dir()]
+        
+        for novel_dir in novel_dirs:
+            novel_slug = novel_dir.name
+            try:
+                novel_config = load_novel_config(novel_slug)
+                novel_stats = collect_novel_statistics(novel_slug, novel_config)
+                stats['novels'].append(novel_stats)
+                
+                # Aggregate totals
+                stats['total_chapters'] += novel_stats['total_chapters']
+                stats['total_words'] += novel_stats['total_words']
+                stats['total_characters'] += novel_stats['total_characters']
+                stats['languages'].update(novel_stats['languages'])
+                
+                # Aggregate tags
+                for tag, count in novel_stats['tags'].items():
+                    stats['tags'][tag] = stats['tags'].get(tag, 0) + count
+                    
+                stats['images'] += novel_stats['images']
+                
+            except Exception as e:
+                print(f"[WARNING] Error collecting stats for {novel_slug}: {e}")
+    
+    # Count build files
+    build_dir = Path(BUILD_DIR)
+    if build_dir.exists():
+        stats['build_files'] = len(list(build_dir.rglob("*.*")))
+    
+    stats['languages'] = sorted(list(stats['languages']))
+    return stats
+
+def collect_novel_statistics(novel_slug, novel_config):
+    """Collect statistics for a single novel"""
+    novel_stats = {
+        'slug': novel_slug,
+        'title': novel_config.get('title', novel_slug),
+        'status': novel_config.get('status', 'unknown'),
+        'total_chapters': 0,
+        'total_words': 0,
+        'total_characters': 0,
+        'languages': set(),
+        'arcs': [],
+        'tags': {},
+        'images': 0,
+        'translation_progress': {}
+    }
+    
+    # Get available languages
+    available_languages = novel_config.get('languages', {}).get('available', ['en'])
+    novel_stats['languages'].update(available_languages)
+    
+    # Process each arc
+    for arc in novel_config.get('arcs', []):
+        arc_stats = {
+            'title': arc.get('title', 'Unnamed Arc'),
+            'chapters': len(arc.get('chapters', [])),
+            'words': 0,
+            'characters': 0
+        }
+        
+        # Process each chapter
+        for chapter in arc.get('chapters', []):
+            chapter_id = chapter.get('id')
+            if chapter_id:
+                novel_stats['total_chapters'] += 1
+                
+                # Get stats for primary language (usually English)
+                primary_lang = novel_config.get('primary_language', 'en')
+                content_md, metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                
+                if content_md:
+                    word_count = len(content_md.split())
+                    char_count = len(content_md)
+                    
+                    arc_stats['words'] += word_count
+                    arc_stats['characters'] += char_count
+                    novel_stats['total_words'] += word_count
+                    novel_stats['total_characters'] += char_count
+                    
+                    # Count tags
+                    chapter_tags = metadata.get('tags', [])
+                    for tag in chapter_tags:
+                        novel_stats['tags'][tag] = novel_stats['tags'].get(tag, 0) + 1
+                    
+                    # Count images in chapter
+                    image_count = len(re.findall(r'!\[.*?\]\(.*?\)', content_md))
+                    novel_stats['images'] += image_count
+                
+                # Check translation progress
+                for lang in available_languages:
+                    if lang != primary_lang:
+                        if chapter_translation_exists(novel_slug, chapter_id, lang):
+                            if lang not in novel_stats['translation_progress']:
+                                novel_stats['translation_progress'][lang] = 0
+                            novel_stats['translation_progress'][lang] += 1
+        
+        novel_stats['arcs'].append(arc_stats)
+    
+    return novel_stats
+
+def write_stats_report(report_file, stats):
+    """Write the statistics report to a markdown file"""
+    report_file.write("# Site Statistics Report\n\n")
+    report_file.write(f"**Generated:** {stats['generated_at']}\n\n")
+    
+    # Overview section
+    report_file.write("## Overview\n\n")
+    report_file.write("| Metric | Value |\n")
+    report_file.write("|--------|-------|\n")
+    report_file.write(f"| Total Novels | {len(stats['novels'])} |\n")
+    report_file.write(f"| Total Chapters | {stats['total_chapters']:,} |\n")
+    report_file.write(f"| Total Words | {stats['total_words']:,} |\n")
+    report_file.write(f"| Total Characters | {stats['total_characters']:,} |\n")
+    report_file.write(f"| Available Languages | {len(stats['languages'])} ({', '.join(stats['languages'])}) |\n")
+    report_file.write(f"| Unique Tags | {len(stats['tags'])} |\n")
+    report_file.write(f"| Images | {stats['images']} |\n")
+    report_file.write(f"| Build Files | {stats['build_files']:,} |\n\n")
+    
+    # Novels section
+    if stats['novels']:
+        report_file.write("## Novels\n\n")
+        for novel in stats['novels']:
+            report_file.write(f"### {novel['title']} (`{novel['slug']}`)\n\n")
+            report_file.write("| Metric | Value |\n")
+            report_file.write("|--------|-------|\n")
+            report_file.write(f"| Status | {novel['status'].title()} |\n")
+            report_file.write(f"| Chapters | {novel['total_chapters']} |\n")
+            report_file.write(f"| Words | {novel['total_words']:,} |\n")
+            report_file.write(f"| Characters | {novel['total_characters']:,} |\n")
+            report_file.write(f"| Languages | {', '.join(sorted(novel['languages']))} |\n")
+            report_file.write(f"| Images | {novel['images']} |\n")
+            
+            # Translation progress
+            if novel['translation_progress']:
+                report_file.write("\n**Translation Progress:**\n")
+                total_chapters = novel['total_chapters']
+                for lang, translated_count in novel['translation_progress'].items():
+                    percentage = (translated_count / total_chapters * 100) if total_chapters > 0 else 0
+                    report_file.write(f"- {lang.upper()}: {translated_count}/{total_chapters} chapters ({percentage:.1f}%)\n")
+            
+            # Arc breakdown
+            if novel['arcs']:
+                report_file.write("\n**Arc Breakdown:**\n")
+                report_file.write("| Arc | Chapters | Words | Characters |\n")
+                report_file.write("|-----|----------|-------|------------|\n")
+                for arc in novel['arcs']:
+                    report_file.write(f"| {arc['title']} | {arc['chapters']} | {arc['words']:,} | {arc['characters']:,} |\n")
+            
+            report_file.write("\n")
+    
+    # Tags section
+    if stats['tags']:
+        report_file.write("## Popular Tags\n\n")
+        sorted_tags = sorted(stats['tags'].items(), key=lambda x: x[1], reverse=True)
+        report_file.write("| Tag | Usage Count |\n")
+        report_file.write("|-----|-------------|\n")
+        for tag, count in sorted_tags[:20]:  # Top 20 tags
+            report_file.write(f"| {tag} | {count} |\n")
+        report_file.write("\n")
+
+def print_stats_summary(stats):
+    """Print a summary of the statistics to console"""
+    print(f"\n[SUMMARY]")
+    print(f"   Novels: {len(stats['novels'])}")
+    print(f"   Chapters: {stats['total_chapters']:,}")
+    print(f"   Words: {stats['total_words']:,}")
+    print(f"   Languages: {len(stats['languages'])}")
+    print(f"   Build files: {stats['build_files']:,}")
+    
+    if stats['novels']:
+        print(f"\n[NOVELS]")
+        for novel in stats['novels']:
+            print(f"   {novel['title']}: {novel['total_chapters']} chapters, {novel['total_words']:,} words")
+
+def start_development_server(port=8000):
+    """Start development server with live reload"""
+    try:
+        import asyncio
+        import websockets
+        import threading
+        import time
+        from http.server import HTTPServer, SimpleHTTPRequestHandler
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+        import os
+        from pathlib import Path
+        
+        print(f"Starting development server with live reload...")
+        
+        # WebSocket clients for live reload
+        connected_clients = set()
+        websocket_loop = None
+        
+        # File change handler
+        class ChangeHandler(FileSystemEventHandler):
+            def __init__(self):
+                self.last_rebuild = 0
+                self.rebuild_delay = 1  # Wait 1 second between rebuilds
+            
+            def on_modified(self, event):
+                if event.is_directory:
+                    return
+                
+                # Only rebuild for relevant file changes
+                if self.should_rebuild(event.src_path):
+                    current_time = time.time()
+                    if current_time - self.last_rebuild > self.rebuild_delay:
+                        self.last_rebuild = current_time
+                        self.rebuild_site()
+            
+            def should_rebuild(self, file_path):
+                """Check if file change should trigger rebuild"""
+                file_path = str(file_path).lower()
+                rebuild_extensions = {'.md', '.yaml', '.yml', '.css', '.js', '.html', '.jpg', '.jpeg', '.png', '.webp'}
+                rebuild_dirs = {'content', 'templates', 'static', 'pages'}
+                
+                # Check file extension
+                for ext in rebuild_extensions:
+                    if file_path.endswith(ext):
+                        break
+                else:
+                    return False
+                
+                # Check if in relevant directory
+                for dir_name in rebuild_dirs:
+                    if f'{os.sep}{dir_name}{os.sep}' in file_path or file_path.startswith(dir_name):
+                        return True
+                
+                return False
+            
+            def rebuild_site(self):
+                """Rebuild site and notify clients"""
+                try:
+                    print("File change detected, rebuilding...")
+                    
+                    # Ensure build directory exists
+                    import os
+                    os.makedirs(BUILD_DIR, exist_ok=True)
+                    
+                    # Build site with same settings as initial build
+                    build_site(include_drafts=getattr(self, 'include_drafts', False), 
+                             no_epub=True,  # Skip EPUB for faster rebuilds
+                             optimize_images=False)  # Skip image optimization for speed
+                    
+                    print("Site rebuilt, waiting for filesystem sync...")
+                    
+                    # Trigger browser reload after a delay to ensure files are fully written
+                    if connected_clients:
+                        # Run broadcast in a thread-safe way with delay
+                        def trigger_reload():
+                            try:
+                                import time
+                                time.sleep(1.5)  # Wait for filesystem operations to complete
+                                loop = websocket_loop
+                                asyncio.run_coroutine_threadsafe(broadcast_reload(), loop)
+                                print("Browser refresh triggered")
+                            except:
+                                pass
+                        threading.Thread(target=trigger_reload, daemon=True).start()
+                    else:
+                        print("Site rebuild complete")
+                        
+                except Exception as e:
+                    print(f"Error rebuilding site: {e}")
+                    # Create a minimal error page if rebuild fails
+                    try:
+                        error_html = f"""
+<!DOCTYPE html>
+<html>
+<head><title>Build Error</title></head>
+<body>
+    <h1>Build Error</h1>
+    <p>Error rebuilding site: {e}</p>
+    <p>Check console for details.</p>
+</body>
+</html>"""
+                        os.makedirs(BUILD_DIR, exist_ok=True)
+                        with open(os.path.join(BUILD_DIR, 'index.html'), 'w') as f:
+                            f.write(error_html)
+                    except:
+                        pass
+        
+        async def broadcast_reload():
+            """Broadcast reload message to all connected clients"""
+            if connected_clients:
+                await asyncio.gather(
+                    *[client.send("reload") for client in connected_clients.copy()],
+                    return_exceptions=True
+                )
+        
+        # WebSocket server for live reload
+        async def websocket_handler(websocket, path):
+            """Handle WebSocket connections for live reload"""
+            connected_clients.add(websocket)
+            print(f"Client connected for live reload (total: {len(connected_clients)})")
+            try:
+                await websocket.wait_closed()
+            except:
+                pass
+            finally:
+                connected_clients.discard(websocket)
+                print(f"Client disconnected (total: {len(connected_clients)})")
+        
+        # Custom HTTP handler that injects live reload script
+        class LiveReloadHandler(SimpleHTTPRequestHandler):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, directory=BUILD_DIR, **kwargs)
+            
+            def end_headers(self):
+                if self.path.endswith('.html') or self.path.endswith('/'):
+                    # Inject live reload script
+                    self.send_header('Content-Type', 'text/html; charset=utf-8')
+                super().end_headers()
+            
+            def do_GET(self):
+                if self.path.endswith('.html') or self.path.endswith('/'):
+                    # Serve HTML with live reload script injected
+                    try:
+                        # Get the file path
+                        if self.path.endswith('/'):
+                            file_path = Path(BUILD_DIR) / self.path.lstrip('/') / 'index.html'
+                        else:
+                            file_path = Path(BUILD_DIR) / self.path.lstrip('/')
+                        
+                        if file_path.exists():
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                            
+                            # Inject live reload script before closing </body> tag
+                            live_reload_script = f"""
+<script>
+(function() {{
+    const ws = new WebSocket('ws://localhost:{port + 1}');
+    ws.onmessage = function(event) {{
+        if (event.data === 'reload') {{
+            window.location.reload();
+        }}
+    }};
+    ws.onclose = function() {{
+        console.log('Live reload disconnected');
+    }};
+    ws.onerror = function() {{
+        console.log('Live reload connection error');
+    }};
+}})();
+</script>"""
+                            
+                            content = content.replace('</body>', f'{live_reload_script}</body>')
+                            
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'text/html; charset=utf-8')
+                            self.send_header('Content-Length', len(content.encode('utf-8')))
+                            self.end_headers()
+                            self.wfile.write(content.encode('utf-8'))
+                            return
+                    except Exception:
+                        pass  # Fall back to default handler
+                
+                # For non-HTML files or if injection fails, use default handler
+                super().do_GET()
+            
+            def log_message(self, format, *args):
+                # Suppress HTTP server logs for cleaner output
+                pass
+        
+        # Start file watcher
+        event_handler = ChangeHandler()
+        observer = Observer()
+        
+        # Watch content, templates, static, and pages directories
+        watch_dirs = ['content', 'templates', 'static', 'pages']
+        for watch_dir in watch_dirs:
+            if os.path.exists(watch_dir):
+                observer.schedule(event_handler, watch_dir, recursive=True)
+                print(f"Watching {watch_dir}/ for changes...")
+        
+        observer.start()
+        
+        # Start WebSocket server
+        async def start_websocket_server():
+            await websockets.serve(websocket_handler, "localhost", port + 1)
+            print(f"WebSocket server started on ws://localhost:{port + 1}")
+        
+        # Start WebSocket server in background
+        def run_websocket_server():
+            nonlocal websocket_loop
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            websocket_loop = loop
+            loop.run_until_complete(start_websocket_server())
+            loop.run_forever()
+        
+        websocket_thread = threading.Thread(target=run_websocket_server, daemon=True)
+        websocket_thread.start()
+        
+        # Start HTTP server
+        httpd = HTTPServer(("localhost", port), LiveReloadHandler)
+        
+        print(f"Development server running at http://localhost:{port}/")
+        print("Press Ctrl+C to stop the server")
+        
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            print("\nShutting down server...")
+            observer.stop()
+            httpd.shutdown()
+            observer.join()
+            
+    except ImportError as e:
+        print(f"[ERROR] Missing dependencies for development server: {e}")
+        print("Install with: pip install watchdog websockets")
+    except Exception as e:
+        print(f"[ERROR] Failed to start development server: {e}")
+
+def watch_and_rebuild():
+    """Watch for file changes and rebuild without serving"""
+    try:
+        import time
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+        import os
+        
+        print("Starting file watcher...")
+        
+        class ChangeHandler(FileSystemEventHandler):
+            def __init__(self):
+                self.last_rebuild = 0
+                self.rebuild_delay = 1  # Wait 1 second between rebuilds
+            
+            def on_modified(self, event):
+                if event.is_directory:
+                    return
+                
+                # Only rebuild for relevant file changes
+                if self.should_rebuild(event.src_path):
+                    current_time = time.time()
+                    if current_time - self.last_rebuild > self.rebuild_delay:
+                        self.last_rebuild = current_time
+                        self.rebuild_site()
+            
+            def should_rebuild(self, file_path):
+                """Check if file change should trigger rebuild"""
+                file_path = str(file_path).lower()
+                rebuild_extensions = {'.md', '.yaml', '.yml', '.css', '.js', '.html', '.jpg', '.jpeg', '.png', '.webp'}
+                rebuild_dirs = {'content', 'templates', 'static', 'pages'}
+                
+                # Check file extension
+                for ext in rebuild_extensions:
+                    if file_path.endswith(ext):
+                        break
+                else:
+                    return False
+                
+                # Check if in relevant directory
+                for dir_name in rebuild_dirs:
+                    if f'{os.sep}{dir_name}{os.sep}' in file_path or file_path.startswith(dir_name):
+                        return True
+                
+                return False
+            
+            def rebuild_site(self):
+                """Rebuild site"""
+                try:
+                    print("File change detected, rebuilding...")
+                    
+                    # Ensure build directory exists
+                    import os
+                    os.makedirs(BUILD_DIR, exist_ok=True)
+                    
+                    # Build site with same settings as initial build
+                    build_site(include_drafts=getattr(self, 'include_drafts', False), 
+                             no_epub=True,  # Skip EPUB for faster rebuilds
+                             optimize_images=False)  # Skip image optimization for speed
+                    print("Site rebuilt")
+                except Exception as e:
+                    print(f"Error rebuilding site: {e}")
+        
+        # Start file watcher
+        event_handler = ChangeHandler()
+        observer = Observer()
+        
+        # Watch content, templates, static, and pages directories
+        watch_dirs = ['content', 'templates', 'static', 'pages']
+        for watch_dir in watch_dirs:
+            if os.path.exists(watch_dir):
+                observer.schedule(event_handler, watch_dir, recursive=True)
+                print(f"Watching {watch_dir}/ for changes...")
+        
+        observer.start()
+        
+        print("File watcher started. Press Ctrl+C to stop.")
+        
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nStopping file watcher...")
+            observer.stop()
+            observer.join()
+            
+    except ImportError as e:
+        print(f"[ERROR] Missing dependencies for file watching: {e}")
+        print("Install with: pip install watchdog")
+    except Exception as e:
+        print(f"[ERROR] Failed to start file watcher: {e}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Static site generator for web novels')
     parser.add_argument('--include-drafts', action='store_true', 
                         help='Include draft chapters in the generated site')
     parser.add_argument('--check-links', action='store_true',
                         help='Check for broken internal links after site generation')
+    parser.add_argument('--clean', action='store_true',
+                        help='Delete build directory before generating')
+    parser.add_argument('--no-epub', action='store_true',
+                        help='Skip EPUB generation for faster builds')
+    parser.add_argument('--serve', type=int, nargs='?', const=8000, metavar='PORT',
+                        help='Start local server with live reload (default: 8000)')
+    parser.add_argument('--watch', action='store_true',
+                        help='Watch for file changes and rebuild automatically')
+    parser.add_argument('--validate', action='store_true',
+                        help='Validate all config files and content without building')
+    parser.add_argument('--stats', action='store_true',
+                        help='Generate statistics report (stats_report.md)')
+    parser.add_argument('--optimize-images', action='store_true',
+                        help='Convert images to WebP format during build')
     args = parser.parse_args()
     
-    # Pass the include_drafts flag to build_site
-    build_site(include_drafts=args.include_drafts)
+    # Handle --clean flag
+    if args.clean:
+        clean_build_directory()
+    
+    # Handle --validate flag  
+    if args.validate:
+        validate_all_configs()
+        exit(0)
+    
+    # Handle --watch flag (watch and rebuild without server)
+    if args.watch:
+        # Build site once first
+        build_site(include_drafts=args.include_drafts, 
+                   no_epub=True,  # Skip EPUB for faster rebuilds
+                   optimize_images=False)  # Skip optimization for speed
+        # Start watching for changes
+        watch_and_rebuild()
+        exit(0)
+    
+    # Handle --serve flag (build, serve, and watch with live reload)
+    if args.serve:
+        # Build site once first
+        build_site(include_drafts=args.include_drafts, 
+                   no_epub=True,  # Skip EPUB for faster rebuilds
+                   optimize_images=False)  # Skip optimization for speed
+        # Start development server
+        start_development_server(args.serve)
+        exit(0)
+    
+    # Normal build mode
+    build_site(include_drafts=args.include_drafts, 
+               no_epub=args.no_epub,
+               optimize_images=args.optimize_images)
+    
+    # Generate statistics report if requested
+    if args.stats:
+        generate_stats_report()
     
     # Check for broken links if requested
     if args.check_links:

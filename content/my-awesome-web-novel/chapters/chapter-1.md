@@ -32,6 +32,8 @@ comments:
 
 # Chapter 1: The Prophecy Unveiled
 
+This is a test!!
+
 In the ancient city of Eldoria, a young scribe named Aria discovered a mysterious scroll that would change the fate of the realm forever.
 
 ![The Ancient Scroll](ancient_scroll.jpg "A mysterious scroll with golden edges")

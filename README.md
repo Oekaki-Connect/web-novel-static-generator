@@ -255,21 +255,190 @@ You can also place images in the `static/images/` directory for site-wide use:
 
 ### 6. Generate the Site
 
+See the [Command-Line Reference](#command-line-reference) section below for all available options.
+
+Basic usage:
 ```bash
-python generate.py                  # Excludes draft chapters
-python generate.py --include-drafts # Includes draft chapters
+python generate.py                  # Standard build
+python generate.py --include-drafts # Include draft chapters
 ```
 
 The generated site will be in the `build/` directory.
 
-### 7. Test Locally
+## Command-Line Reference
 
-```bash
-cd build
-python -m http.server 8000
+The generator supports various command-line options to customize the build process:
+
+### Basic Commands
+
+#### `python generate.py`
+**Standard site generation**
+- Builds the complete site with all features
+- Excludes draft chapters (use `--include-drafts` to include them)
+- Generates EPUB downloads
+- Updates table of contents with download links
+
+#### `python generate.py --include-drafts`
+**Include draft chapters**
+- Same as standard build but includes chapters marked with `draft: true`
+- Useful for previewing work-in-progress content
+- Draft chapters appear in navigation and downloads
+
+### Development Commands
+
+#### `python generate.py --validate`
+**Validate configuration and content**
+- Checks all config files for errors and missing required fields
+- Validates that referenced chapter files exist
+- Parses chapter front matter for syntax errors
+- Reports warnings for missing optional fields
+- Exits without building if validation fails
+
+**Example output:**
+```
+Validating configuration files and content...
+[OK] Site config loaded successfully
+[OK] Novel config loaded: my-awesome-web-novel
+
+==================================================
+VALIDATION RESULTS
+==================================================
+
+[SUCCESS] Validation passed!
+[PASSED] All configs and content are valid
 ```
 
-Visit `http://localhost:8000` to preview your site.
+#### `python generate.py --clean`
+**Clean build directory**
+- Deletes the entire `build/` directory before generating
+- Ensures a completely fresh build without leftover files
+- Useful when files have been deleted or renamed
+- Can be combined with other options
+
+#### `python generate.py --no-epub`
+**Skip EPUB generation**
+- Generates the website but skips creating EPUB files
+- Significantly faster builds during development
+- Useful when only testing website functionality
+- Table of contents pages will not show download links
+
+#### `python generate.py --stats`
+**Generate statistics report**
+- Creates a detailed `stats_report.md` file in the project root
+- Shows comprehensive statistics about novels, chapters, and content
+- Includes word counts, translation progress, and tag usage
+- Useful for tracking project growth and completion
+
+**Report includes:**
+- Total novels, chapters, words, and characters
+- Per-novel breakdowns with arc statistics
+- Translation progress percentages
+- Popular tags and usage counts
+- Build file counts and language coverage
+
+#### `python generate.py --check-links`
+**Check for broken links**
+- Validates all internal links, images, and resources
+- Creates `broken_links_report.md` if issues are found
+- Checks social media preview images (og:image, twitter:image)
+- Verifies CSS and JavaScript file references
+- Should be run before deployment
+
+### Performance Commands
+
+#### `python generate.py --serve [PORT]`
+**Local development server with live reload**
+- Starts a local web server (default port 8000)
+- Automatically rebuilds when files change
+- Refreshes browser pages via websocket connection
+- Injects live reload script into HTML pages
+- Skips EPUB generation and image optimization for faster rebuilds
+- Watches `content/`, `templates/`, `static/`, and `pages/` directories
+
+**Usage examples:**
+```bash
+python generate.py --serve           # Start on port 8000
+python generate.py --serve 3000      # Start on custom port
+python generate.py --serve --include-drafts  # Include draft chapters
+```
+
+**Features:**
+- **Live reload**: Browser automatically refreshes when files change
+- **WebSocket connection**: Fast communication between server and browser
+- **Smart rebuilding**: Only rebuilds when relevant files are modified
+- **Development optimized**: Skips slow operations for faster iteration
+
+#### `python generate.py --watch`
+**Watch and rebuild without server**
+- Monitors content files for changes
+- Automatically rebuilds when changes detected
+- No web server (use your own server setup)
+- Useful with external development servers or static hosts
+
+**Usage examples:**
+```bash
+python generate.py --watch                    # Basic watching
+python generate.py --watch --include-drafts   # Include drafts
+```
+
+**Use cases:**
+- External server setups (Apache, Nginx, etc.)
+- Integration with other development tools
+- Automated deployment workflows
+- Continuous integration environments
+
+#### `python generate.py --optimize-images`
+**Convert images to WebP format**
+- Converts JPEG, PNG, BMP, and TIFF images to WebP format
+- Preserves original files alongside optimized versions
+- Can be enabled permanently in site config or used as one-time flag
+- Configurable compression quality (0-100, default: 100 = no compression)
+- Shows compression statistics and space savings
+- Significantly reduces site size and loading times
+
+**Configuration in `site_config.yaml`:**
+```yaml
+image_optimization:
+  enabled: true    # Enable automatic optimization
+  quality: 85     # WebP quality (0-100)
+```
+
+**Example output:**
+```
+Optimizing images to WebP (quality: 85%)...
+  Converted 2 images to WebP
+  Original size: 298.9 KB
+  WebP size: 22.9 KB
+  Space saved: 92.4%
+```
+
+### Combined Usage
+
+Commands can be combined for complex workflows:
+
+```bash
+# Clean build with validation and stats
+python generate.py --clean --validate --stats
+
+# Fast development build without EPUBs
+python generate.py --clean --no-epub --include-drafts
+
+# Production build with link checking
+python generate.py --clean --check-links
+
+# Complete development workflow with live reload
+python generate.py --clean --serve --include-drafts
+
+# Watch-only mode for external servers
+python generate.py --clean --watch --include-drafts
+```
+
+### Command-Line Help
+
+Get help and see all available options:
+```bash
+python generate.py --help
+```
 
 ## GitHub Pages Deployment
 
@@ -704,81 +873,33 @@ Home (/)
 - Table of Contents link
 - Breadcrumb navigation showing current location
 
-### Broken Link Checker
-
-Automatically detect and report broken internal links in your generated site:
-
-**Usage:**
-```bash
-python generate.py --check-links
-```
-
-**Features:**
-- Validates all internal links in HTML files
-- Checks images embedded in content
-- Validates social media preview images (og:image, twitter:image)
-- Detects missing CSS and JavaScript files
-- Generates detailed markdown report for broken links
-- Shows progress and summary in console output
-
-**What Gets Checked:**
-- Internal page links (`<a href="">`)
-- Embedded images (`<img src="">`)
-- Social media images (even when using full URLs like `https://your-site.com/...`)
-- CSS stylesheets (`<link rel="stylesheet">`)
-- JavaScript files (`<script src="">`)
-
-**Report Generation:**
-- Creates `broken_links_report.md` when broken links are found
-- Includes timestamp, summary statistics, and detailed tables
-- Groups broken links by type for easy review
-- Shows source file, broken URL, and expected target path
-- Automatically removes report when all links are fixed
-
-**Example Output:**
-```
-==================================================
-BROKEN LINK CHECK
-==================================================
-[INFO] Checking 47 HTML files for broken links...
-
-[RESULTS]
-   Files checked: 47
-   Broken links found: 60
-
-[ERROR] BROKEN LINKS DETECTED:
---------------------------------------------------
-[INFO] Detailed report written to: .\broken_links_report.md
-
-[SOCIAL EMBED IMAGE] (60 broken):
-   [X] https://oekaki-connect.github.io/web-novel/static/images/site-default-social.jpg
-       Source: index.html
-       Target: static\images\site-default-social.jpg
-   
-   ... and 50 more social embed image links
-
-[FAILED] Link check FAILED - broken links detected!
-```
-
-**Common Issues Detected:**
-- Missing social media preview images
-- Incorrect relative paths in chapter pages
-- Tag pages linking to non-existent cross-language tags
-- Draft chapters being referenced but not generated
-- Images referenced but not copied to build directory
-
 ## Dependencies
 
 - `jinja2`: Template engine for HTML generation
 - `markdown`: Markdown to HTML conversion
 - `pyyaml`: YAML configuration file parsing
 - `ebooklib`: EPUB generation and manipulation
+- `Pillow`: Image processing for WebP optimization (optional)
+- `watchdog`: File system monitoring for live reload (optional)
+- `websockets`: WebSocket server for live reload (optional)
 
 ## License
 
 This generator is provided as-is for creating web novel sites. Customize as needed for your project.
 
 ## Troubleshooting
+
+### Getting Help
+
+For a complete list of available commands and options:
+```bash
+python generate.py --help
+```
+
+Use `--validate` to check for configuration errors before building:
+```bash
+python generate.py --validate
+```
 
 ### Images Not Displaying
 - Ensure images are in the `static/images/` directory

@@ -77,6 +77,16 @@ comments:
   # Label for utterances
   utterances_label: "utterance-comment"
 
+# Image optimization configuration
+image_optimization:
+  # Enable automatic image optimization to WebP format
+  enabled: false
+  
+  # WebP quality (0-100, where 100 is lossless)
+  # Lower values = smaller files but lower quality
+  # Default: 100 (no compression)
+  quality: 85
+
 # Footer configuration
 footer:
   # Default copyright text
