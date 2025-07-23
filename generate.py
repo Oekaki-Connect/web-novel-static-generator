@@ -84,10 +84,13 @@ def _process_html_content_for_pdf(html_content, pdf_obj, novel_slug, font_family
                     
                     # Get image dimensions and scale to fit page
                     page_width = pdf_obj.w - 2 * pdf_obj.l_margin
-                    max_width = page_width * 0.8  # Use 80% of page width
+                    max_width = page_width * 0.7  # Use 70% of page width for better centering
                     
-                    # Add image centered
-                    pdf_obj.image(img_absolute, x=None, y=None, w=max_width)
+                    # Calculate x position to center the image
+                    x_pos = (pdf_obj.w - max_width) / 2
+                    
+                    # Add image centered horizontally
+                    pdf_obj.image(img_absolute, x=x_pos, y=None, w=max_width)
                     
                     # Add caption if available
                     if img_alt and img_alt != 'Image':
@@ -934,7 +937,7 @@ def generate_pdf_content(novel_config, chapters_data, title, is_arc=False):
     
     return html_content
 
-def generate_story_pdf_fpdf2(novel_slug, novel_config, site_config):
+def generate_story_pdf_fpdf2(novel_slug, novel_config, site_config, language='en'):
     """Generate PDF for entire story using fpdf2"""
     if not _check_fpdf2():
         return False
@@ -953,14 +956,15 @@ def generate_story_pdf_fpdf2(novel_slug, novel_config, site_config):
         from bs4 import BeautifulSoup
         import re
         
-        # Get non-hidden chapters
-        chapters_data = get_non_hidden_chapters(novel_config, novel_slug)
+        # Get non-hidden chapters for the specified language
+        chapters_data = get_non_hidden_chapters(novel_config, novel_slug, language)
         if not chapters_data:
             return False
         
-        # Create PDF document
+        # Create PDF document with better margins
         pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_auto_page_break(auto=True, margin=20)
+        pdf.set_margins(15, 20, 15)  # left, top, right - wider text area
         
         # Add fonts (try to use better fonts if available)
         try:
@@ -971,57 +975,94 @@ def generate_story_pdf_fpdf2(novel_slug, novel_config, site_config):
             # Fall back to built-in fonts
             font_family = 'Helvetica'
         
+        # Add cover image as first page if available
+        story_title = novel_config.get('title', novel_slug)
+        cover_art_path = novel_config.get('front_page', {}).get('cover_art')
+        if cover_art_path:
+            cover_image_absolute = os.path.join(BUILD_DIR, cover_art_path)
+            if os.path.exists(cover_image_absolute):
+                cover_image_absolute = os.path.abspath(cover_image_absolute)
+                pdf.add_page()
+                # Center the cover image on the page
+                page_width = pdf.w - 2 * pdf.l_margin
+                page_height = pdf.h - 2 * pdf.t_margin
+                # Try to use most of the page while maintaining aspect ratio
+                max_width = page_width * 0.8
+                max_height = page_height * 0.7
+                pdf.image(cover_image_absolute, x=(pdf.w - max_width) / 2, y=pdf.t_margin + 20, w=max_width)
+        
         # Add title page
         pdf.add_page()
-        pdf.set_font(font_family, 'B', 24)
-        story_title = novel_config.get('title', novel_slug)
-        pdf.cell(0, 15, story_title, align='C', new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(30)  # Add space from top
+        pdf.set_font(font_family, 'B', 28)
+        # Multi-cell for long titles
+        pdf.multi_cell(0, 15, story_title, align='C')
         
         # Add author if available
         author_name = novel_config.get('author', {}).get('name', '')
         if author_name:
-            pdf.ln(10)
-            pdf.set_font(font_family, '', 16)
+            pdf.ln(15)
+            pdf.set_font(font_family, '', 18)
             pdf.cell(0, 10, f'by {author_name}', align='C', new_x='LMARGIN', new_y='NEXT')
         
         # Add description if available
         description = novel_config.get('description', '')
         if description:
-            pdf.ln(20)
+            pdf.ln(25)
             pdf.set_font(font_family, '', 12)
-            pdf.multi_cell(0, 8, description)
+            pdf.multi_cell(0, 8, description, align='C')
         
         # Add chapters
         for arc in chapters_data:
-            # Add arc title
+            # Add arc cover image as full page if available
+            arc_cover_path = arc.get('cover_art')
+            if arc_cover_path:
+                arc_cover_absolute = os.path.join(BUILD_DIR, arc_cover_path)
+                if os.path.exists(arc_cover_absolute):
+                    arc_cover_absolute = os.path.abspath(arc_cover_absolute)
+                    pdf.add_page()
+                    # Center the arc cover image on the page
+                    page_width = pdf.w - 2 * pdf.l_margin
+                    page_height = pdf.h - 2 * pdf.t_margin
+                    max_width = page_width * 0.8
+                    max_height = page_height * 0.7
+                    pdf.image(arc_cover_absolute, x=(pdf.w - max_width) / 2, y=pdf.t_margin + 20, w=max_width)
+            
+            # Add arc title page
             pdf.add_page()
-            pdf.set_font(font_family, 'B', 18)
-            pdf.cell(0, 15, arc['title'], align='C', new_x='LMARGIN', new_y='NEXT')
-            pdf.ln(5)
+            pdf.ln(40)  # Add space from top
+            pdf.set_font(font_family, 'B', 22)
+            pdf.multi_cell(0, 15, arc['title'], align='C')
+            pdf.ln(20)
             
             for chapter in arc['chapters']:
-                # Add chapter title
-                pdf.set_font(font_family, 'B', 14)
-                pdf.cell(0, 12, chapter['title'], new_x='LMARGIN', new_y='NEXT')
-                pdf.ln(5)
+                # Start each chapter on a new page
+                pdf.add_page()
                 
-                # Load and process chapter content
-                chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+                # Add chapter title
+                pdf.set_font(font_family, 'B', 16)
+                pdf.multi_cell(0, 12, chapter['title'], align='L')
+                pdf.ln(8)
+                
+                # Load and process chapter content for the specified language
+                chapter_html = load_processed_chapter_content(novel_slug, chapter['id'], language)
                 if not chapter_html:
                     # Fall back to markdown
                     chapter_html = markdown.markdown(chapter['content'])
                 
                 # Process HTML content with images
                 _process_html_content_for_pdf(chapter_html, pdf, novel_slug, font_family)
-                
-                pdf.ln(10)  # Space between chapters
         
         # Ensure output directory exists
         pdf_dir = os.path.join(BUILD_DIR, "static", "pdf")
         os.makedirs(pdf_dir, exist_ok=True)
         
-        # Save PDF
-        pdf_path = os.path.join(pdf_dir, f"{novel_slug}.pdf")
+        # Save PDF with language suffix if not English
+        if language == 'en':
+            pdf_filename = f"{novel_slug}.pdf"
+        else:
+            pdf_filename = f"{novel_slug}_{language}.pdf"
+        pdf_path = os.path.join(pdf_dir, pdf_filename)
         pdf.output(pdf_path)
         
         return True
@@ -1029,7 +1070,7 @@ def generate_story_pdf_fpdf2(novel_slug, novel_config, site_config):
         print(f"Error generating PDF with fpdf2 for {novel_slug}: {e}")
         return False
 
-def generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index):
+def generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index, language='en'):
     """Generate PDF for a specific arc using fpdf2"""
     if not _check_fpdf2():
         return False
@@ -1050,8 +1091,8 @@ def generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index):
         from bs4 import BeautifulSoup
         import re
         
-        # Get all chapters and filter for this arc
-        all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+        # Get all chapters and filter for this arc for the specified language
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, language)
         if not all_chapters or arc_index >= len(all_chapters):
             return False
         
@@ -1060,9 +1101,10 @@ def generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index):
         if not arc_data['chapters']:
             return False
         
-        # Create PDF document
+        # Create PDF document with better margins
         pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.set_auto_page_break(auto=True, margin=20)
+        pdf.set_margins(15, 20, 15)  # left, top, right - wider text area
         
         # Add fonts (try to use better fonts if available)
         try:
@@ -1073,51 +1115,68 @@ def generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index):
             # Fall back to built-in fonts
             font_family = 'Helvetica'
         
-        # Add title page
-        pdf.add_page()
-        pdf.set_font(font_family, 'B', 24)
+        # Add arc cover image as first page if available
         story_title = novel_config.get('title', novel_slug)
         arc_title = arc_data['title']
-        pdf_title = f"{story_title} - {arc_title}"
-        pdf.multi_cell(0, 15, pdf_title, align='C')
+        arc_cover_path = arc_data.get('cover_art')
+        
+        if arc_cover_path:
+            arc_cover_absolute = os.path.join(BUILD_DIR, arc_cover_path)
+            if os.path.exists(arc_cover_absolute):
+                arc_cover_absolute = os.path.abspath(arc_cover_absolute)
+                pdf.add_page()
+                # Center the arc cover image on the page
+                page_width = pdf.w - 2 * pdf.l_margin
+                page_height = pdf.h - 2 * pdf.t_margin
+                max_width = page_width * 0.8
+                max_height = page_height * 0.7
+                pdf.image(arc_cover_absolute, x=(pdf.w - max_width) / 2, y=pdf.t_margin + 20, w=max_width)
+        
+        # Add title page
+        pdf.add_page()
+        pdf.ln(30)  # Add space from top
+        pdf.set_font(font_family, 'B', 26)
+        pdf.multi_cell(0, 15, story_title, align='C')
+        pdf.ln(10)
+        pdf.set_font(font_family, 'B', 20)
+        pdf.multi_cell(0, 12, arc_title, align='C')
         
         # Add author if available
         author_name = novel_config.get('author', {}).get('name', '')
         if author_name:
-            pdf.ln(10)
+            pdf.ln(15)
             pdf.set_font(font_family, '', 16)
             pdf.cell(0, 10, f'by {author_name}', align='C', new_x='LMARGIN', new_y='NEXT')
         
-        # Add arc title page
-        pdf.add_page()
-        pdf.set_font(font_family, 'B', 18)
-        pdf.cell(0, 15, arc_title, align='C', new_x='LMARGIN', new_y='NEXT')
-        pdf.ln(5)
-        
         for chapter in arc_data['chapters']:
-            # Add chapter title
-            pdf.set_font(font_family, 'B', 14)
-            pdf.cell(0, 12, chapter['title'], new_x='LMARGIN', new_y='NEXT')
-            pdf.ln(5)
+            # Start each chapter on a new page
+            pdf.add_page()
             
-            # Load and process chapter content
-            chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+            # Add chapter title
+            pdf.set_font(font_family, 'B', 16)
+            pdf.multi_cell(0, 12, chapter['title'], align='L')
+            pdf.ln(8)
+            
+            # Load and process chapter content for the specified language
+            chapter_html = load_processed_chapter_content(novel_slug, chapter['id'], language)
             if not chapter_html:
                 # Fall back to markdown
                 chapter_html = markdown.markdown(chapter['content'])
             
             # Process HTML content with images
             _process_html_content_for_pdf(chapter_html, pdf, novel_slug, font_family)
-            
-            pdf.ln(10)  # Space between chapters
         
         # Ensure output directory exists
         pdf_dir = os.path.join(BUILD_DIR, "static", "pdf")
         os.makedirs(pdf_dir, exist_ok=True)
         
-        # Generate PDF with arc-specific filename
+        # Generate PDF with arc-specific filename and language suffix if not English
         arc_slug = arc_title.lower().replace(' ', '-').replace(':', '').replace(',', '')
-        pdf_path = os.path.join(pdf_dir, f"{novel_slug}-{arc_slug}.pdf")
+        if language == 'en':
+            pdf_filename = f"{novel_slug}-{arc_slug}.pdf"
+        else:
+            pdf_filename = f"{novel_slug}-{arc_slug}_{language}.pdf"
+        pdf_path = os.path.join(pdf_dir, pdf_filename)
         pdf.output(pdf_path)
         
         return True
@@ -1125,7 +1184,7 @@ def generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index):
         print(f"Error generating PDF with fpdf2 for {novel_slug} arc {arc_index}: {e}")
         return False
 
-def generate_story_pdf(novel_slug, novel_config, site_config):
+def generate_story_pdf(novel_slug, novel_config, site_config, language='en'):
     """Generate PDF for entire story using configured engine"""
     pdf_engine = site_config.get('pdf_epub', {}).get('pdf_engine', 'auto')
     
@@ -1139,12 +1198,12 @@ def generate_story_pdf(novel_slug, novel_config, site_config):
         if not _check_fpdf2():
             print("fpdf2 not available for PDF generation")
             return False
-        return generate_story_pdf_fpdf2(novel_slug, novel_config, site_config)
+        return generate_story_pdf_fpdf2(novel_slug, novel_config, site_config, language)
     else:
         # Auto mode - try fpdf2 first, fall back to WeasyPrint
         if _check_fpdf2():
             try:
-                return generate_story_pdf_fpdf2(novel_slug, novel_config, site_config)
+                return generate_story_pdf_fpdf2(novel_slug, novel_config, site_config, language)
             except Exception as e:
                 print(f"fpdf2 PDF generation failed, trying WeasyPrint: {e}")
         
@@ -1185,7 +1244,7 @@ def generate_story_pdf(novel_slug, novel_config, site_config):
         print(f"Error generating PDF for {novel_slug}: {e}")
         return False
 
-def generate_arc_pdf(novel_slug, novel_config, site_config, arc_index):
+def generate_arc_pdf(novel_slug, novel_config, site_config, arc_index, language='en'):
     """Generate PDF for a specific arc using configured engine"""
     pdf_engine = site_config.get('pdf_epub', {}).get('pdf_engine', 'auto')
     
@@ -1199,12 +1258,12 @@ def generate_arc_pdf(novel_slug, novel_config, site_config, arc_index):
         if not _check_fpdf2():
             print("fpdf2 not available for PDF generation")
             return False
-        return generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index)
+        return generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index, language)
     else:
         # Auto mode - try fpdf2 first, fall back to WeasyPrint
         if _check_fpdf2():
             try:
-                return generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index)
+                return generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index, language)
             except Exception as e:
                 print(f"fpdf2 PDF generation failed, trying WeasyPrint: {e}")
         
@@ -1255,7 +1314,7 @@ def generate_arc_pdf(novel_slug, novel_config, site_config, arc_index):
         print(f"Error generating PDF for {novel_slug} arc {arc_index}: {e}")
         return False
 
-def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None):
+def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None, language='en'):
     """Generate EPUB for entire story"""
     if not _check_ebooklib():
         return False
@@ -1269,8 +1328,8 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None):
         return False
     
     try:
-        # Get non-hidden chapters
-        chapters_data = get_non_hidden_chapters(novel_config, novel_slug)
+        # Get non-hidden chapters for the specified language
+        chapters_data = get_non_hidden_chapters(novel_config, novel_slug, language)
         if not chapters_data:
             return False
         
@@ -1348,7 +1407,7 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None):
                 chapter_file = f"chapter_{arc_index}_{chapter_index}.xhtml"
                 
                 # Try to load processed HTML content first, fall back to markdown
-                chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+                chapter_html = load_processed_chapter_content(novel_slug, chapter['id'], language)
                 if not chapter_html:
                     # Fallback to markdown processing
                     chapter_html = markdown.markdown(chapter['content'])
@@ -1400,8 +1459,12 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None):
         epub_dir = os.path.join(BUILD_DIR, "static", "epub")
         os.makedirs(epub_dir, exist_ok=True)
         
-        # Write EPUB file
-        epub_path = os.path.join(epub_dir, f"{novel_slug}.epub")
+        # Write EPUB file with language suffix if not English
+        if language == 'en':
+            epub_filename = f"{novel_slug}.epub"
+        else:
+            epub_filename = f"{novel_slug}_{language}.epub"
+        epub_path = os.path.join(epub_dir, epub_filename)
         epub.write_epub(epub_path, book, {})
         
         return True
@@ -1409,7 +1472,7 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None):
         print(f"Error generating EPUB for {novel_slug}: {e}")
         return False
 
-def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_data=None):
+def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_data=None, language='en'):
     """Generate EPUB for a specific arc"""
     if not _check_ebooklib():
         return False
@@ -1515,7 +1578,7 @@ def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_da
             chapter_file = f"chapter_{chapter_index}.xhtml"
             
             # Try to load processed HTML content first, fall back to markdown
-            chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+            chapter_html = load_processed_chapter_content(novel_slug, chapter['id'], language)
             if not chapter_html:
                 # Fallback to markdown processing
                 chapter_html = markdown.markdown(chapter['content'])
@@ -1561,9 +1624,13 @@ def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_da
         epub_dir = os.path.join(BUILD_DIR, "static", "epub")
         os.makedirs(epub_dir, exist_ok=True)
         
-        # Generate EPUB with arc-specific filename
+        # Generate EPUB with arc-specific filename and language suffix if not English
         arc_slug = arc_title.lower().replace(' ', '-').replace(':', '').replace(',', '')
-        epub_path = os.path.join(epub_dir, f"{novel_slug}-{arc_slug}.epub")
+        if language == 'en':
+            epub_filename = f"{novel_slug}-{arc_slug}.epub"
+        else:
+            epub_filename = f"{novel_slug}-{arc_slug}_{language}.epub"
+        epub_path = os.path.join(epub_dir, epub_filename)
         epub.write_epub(epub_path, book, {})
         
         return True
