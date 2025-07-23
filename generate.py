@@ -582,7 +582,10 @@ def filter_hidden_chapters_from_novel(novel, novel_slug, lang):
             try:
                 _, chapter_metadata = load_chapter_content(novel_slug, chapter['id'], lang)
                 if not is_chapter_hidden(chapter_metadata):
-                    filtered_chapters.append(chapter)
+                    # Add published date to chapter data for TOC display
+                    enhanced_chapter = chapter.copy()
+                    enhanced_chapter['published'] = chapter_metadata.get('published')
+                    filtered_chapters.append(enhanced_chapter)
             except:
                 # Include chapters that can't be loaded (they might exist in other languages)
                 filtered_chapters.append(chapter)

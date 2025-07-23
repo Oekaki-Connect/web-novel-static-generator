@@ -3,6 +3,7 @@ title: "My Awesome Web Novel"
 description: "An epic fantasy adventure following the journey of heroes in the land of Eldoria"
 slug: "my-awesome-web-novel"
 primary_language: "en"
+status: "ongoing"  # "ongoing" or "complete"
 
 # Display settings - these can be overridden in individual chapter front matter
 display:

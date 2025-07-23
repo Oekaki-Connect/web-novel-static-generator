@@ -141,7 +141,14 @@
 </head>
 <body>
     <header>
-        <nav>
+        <nav class="breadcrumbs">
+            <a href="../../../">Home</a>
+            <span class="breadcrumb-separator">></span>
+            <a href="../toc/">{{ novel.title }}</a>
+            <span class="breadcrumb-separator">></span>
+            <span class="current-page">{{ chapter_title }}</span>
+        </nav>
+        <nav class="chapter-nav">
             {% if prev_chapter %}
             <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
             {% endif %}

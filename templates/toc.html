@@ -42,8 +42,18 @@
 </head>
 <body>
     <header>
-        <nav><a href="../../../">← Back to Novels</a></nav>
+        <nav class="breadcrumbs">
+            <a href="../../../">Home</a>
+            <span class="breadcrumb-separator">></span>
+            <span class="current-page">{{ novel.title }}</span>
+        </nav>
         <h1>{{ novel.title }}</h1>
+        {% if novel.status %}
+        <div class="story-status">
+            <span class="status-label">Status:</span>
+            <span class="status-value status-{{ novel.status }}">{{ novel.status|title }}</span>
+        </div>
+        {% endif %}
         {% if available_languages and available_languages|length > 1 %}
         <div class="language-switcher">
             <h3>Languages:</h3>
@@ -67,7 +77,12 @@
             <h3>{{ arc.title }}</h3>
             <ul>
                 {% for chapter in arc.chapters %}
-                <li><a href="../{{ chapter.id }}/">{{ chapter.title }}</a></li>
+                <li>
+                    <a href="../{{ chapter.id }}/">{{ chapter.title }}</a>
+                    {% if chapter.published %}
+                    <span class="chapter-date">{{ chapter.published }}</span>
+                    {% endif %}
+                </li>
                 {% endfor %}
             </ul>
         </section>

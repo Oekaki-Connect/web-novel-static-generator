@@ -123,6 +123,58 @@ nav a:hover {
     text-decoration: none;
 }
 
+/* Breadcrumbs styling */
+.breadcrumbs {
+    margin-bottom: 1rem;
+    font-size: 14px;
+    color: var(--color-secondary);
+}
+
+.breadcrumbs a {
+    color: var(--color-primary);
+    text-decoration: none;
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 14px;
+}
+
+.breadcrumbs a:hover {
+    color: var(--color-primary-hover);
+    text-decoration: underline;
+}
+
+.breadcrumb-separator {
+    margin: 0 0.5rem;
+    color: var(--color-secondary);
+}
+
+.current-page {
+    color: var(--color-secondary);
+    font-weight: normal;
+}
+
+/* Chapter navigation styling */
+.chapter-nav {
+    margin-bottom: 1.5rem;
+}
+
+.chapter-nav a {
+    color: var(--color-primary);
+    text-decoration: underline;
+    margin: 0 0.5em;
+    padding: 0;
+    border: none;
+    display: inline;
+    font-weight: normal;
+    font-size: 16px;
+}
+
+.chapter-nav a:hover {
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
 /* Remove pipe separators - they look weird on navigation */
 
 main {
@@ -162,6 +214,9 @@ main {
 
 .arc li {
     margin: 0.5em 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .arc a {
@@ -176,6 +231,14 @@ main {
 .arc a:hover {
     color: var(--color-primary-hover);
     text-decoration: none;
+}
+
+.chapter-date {
+    color: var(--color-secondary);
+    font-size: 0.85rem;
+    font-style: italic;
+    margin-left: 1rem;
+    white-space: nowrap;
 }
 
 .chapter-content h1 {
@@ -297,6 +360,34 @@ footer p {
         padding: 0.75rem 1rem;
     }
     
+    .breadcrumbs {
+        font-size: 12px;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .breadcrumb-separator {
+        margin: 0 0.25rem;
+    }
+    
+    .chapter-nav a {
+        display: block;
+        margin: 0.5rem 0;
+        text-align: center;
+        padding: 0.75rem 1rem;
+    }
+    
+    .arc li {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .chapter-date {
+        margin-left: 0;
+        font-size: 0.8rem;
+    }
+    
     .language-switcher {
         padding: 1rem;
     }
@@ -340,6 +431,69 @@ footer p {
     }
     
     /* Tags are now centered at all resolutions */
+}
+
+/* Story status styling */
+.story-status {
+    margin: 1rem 0;
+    text-align: center;
+    font-size: 16px;
+}
+
+.status-label {
+    color: var(--color-secondary);
+    font-weight: normal;
+}
+
+.status-value {
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 14px;
+    margin-left: 0.5rem;
+}
+
+.status-ongoing {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.status-complete {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+}
+
+[data-theme="dark"] .status-ongoing {
+    background-color: #1565c0;
+    color: #e3f2fd;
+}
+
+[data-theme="dark"] .status-complete {
+    background-color: #2e7d32;
+    color: #e8f5e8;
+}
+
+@media (prefers-color-scheme: dark) {
+    .status-ongoing {
+        background-color: #1565c0;
+        color: #e3f2fd;
+    }
+    
+    .status-complete {
+        background-color: #2e7d32;
+        color: #e8f5e8;
+    }
+    
+    /* Override auto dark mode if user has manually set light mode */
+    [data-theme="light"] .status-ongoing {
+        background-color: #e3f2fd;
+        color: #1976d2;
+    }
+    
+    [data-theme="light"] .status-complete {
+        background-color: #e8f5e8;
+        color: #2e7d32;
+    }
 }
 
 /* Language switcher styling - Minimal academic style */
@@ -743,7 +897,7 @@ footer p {
 
 .unlock-button {
     background-color: var(--color-primary);
-    color: white;
+    color: var(--color-base);
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 4px;
