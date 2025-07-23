@@ -457,6 +457,17 @@
         </div>
         {% endif %}
         
+        <!-- Chapter Navigation -->
+        <nav class="chapter-nav-bottom">
+            {% if prev_chapter %}
+            <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
+            {% endif %}
+            <a href="../toc/">Table of Contents</a>
+            {% if next_chapter %}
+            <a href="../{{ next_chapter.id }}/">Next Chapter</a>
+            {% endif %}
+        </nav>
+        
         {% if comments_enabled and not is_password_protected %}
         <div class="comments-section">
             <h3>Comments</h3>
