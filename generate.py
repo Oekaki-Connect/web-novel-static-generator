@@ -645,7 +645,7 @@ def collect_author_contributions(all_novels_data):
     return author_contributions
 
 def get_non_hidden_chapters(novel_config, novel_slug, language='en', include_drafts=False):
-    """Get list of chapters that are not hidden, password protected, or drafts"""
+    """Get list of chapters that are not hidden or drafts"""
     visible_chapters = []
     
     for arc in novel_config.get('arcs', []):
@@ -659,6 +659,42 @@ def get_non_hidden_chapters(novel_config, novel_slug, language='en', include_dra
                 
                 # Skip if chapter should be skipped
                 if should_skip_chapter(chapter_metadata, include_drafts):
+                    continue
+                
+                arc_chapters.append({
+                    'id': chapter_id,
+                    'title': chapter['title'],
+                    'content': chapter_content,
+                    'metadata': chapter_metadata
+                })
+            except:
+                # Skip chapters that can't be loaded
+                continue
+        
+        if arc_chapters:  # Only include arcs with visible chapters
+            visible_chapters.append({
+                'title': arc['title'],
+                'cover_art': arc.get('cover_art'),
+                'chapters': arc_chapters
+            })
+    
+    return visible_chapters
+
+def get_chapters_for_epub(novel_config, novel_slug, language='en', include_drafts=False):
+    """Get list of chapters for EPUB generation (excludes hidden, draft, and password-protected)"""
+    visible_chapters = []
+    
+    for arc in novel_config.get('arcs', []):
+        arc_chapters = []
+        for chapter in arc.get('chapters', []):
+            chapter_id = chapter['id']
+            
+            # Load chapter content to check if it should be included in EPUB
+            try:
+                chapter_content, chapter_metadata = load_chapter_content(novel_slug, chapter_id, language)
+                
+                # Skip if chapter should be skipped in EPUB
+                if should_skip_chapter_in_epub(chapter_metadata, include_drafts):
                     continue
                 
                 arc_chapters.append({
@@ -696,7 +732,7 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None, 
     
     try:
         # Get non-hidden chapters for the specified language
-        chapters_data = get_non_hidden_chapters(novel_config, novel_slug, language, INCLUDE_DRAFTS)
+        chapters_data = get_chapters_for_epub(novel_config, novel_slug, language, INCLUDE_DRAFTS)
         if not chapters_data:
             return False
         
@@ -856,7 +892,7 @@ def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_da
     
     try:
         # Get all chapters and filter for this arc
-        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, 'en', INCLUDE_DRAFTS)
+        all_chapters = get_chapters_for_epub(novel_config, novel_slug, language, INCLUDE_DRAFTS)
         if not all_chapters or arc_index >= len(all_chapters):
             return False
         
@@ -1323,7 +1359,13 @@ def should_skip_chapter(chapter_metadata, include_drafts=False):
         return True
     if is_chapter_draft(chapter_metadata) and not include_drafts:
         return True
-    # Skip password-protected chapters
+    return False
+
+def should_skip_chapter_in_epub(chapter_metadata, include_drafts=False):
+    """Check if a chapter should be skipped in EPUB generation"""
+    if should_skip_chapter(chapter_metadata, include_drafts):
+        return True
+    # Also skip password-protected chapters in EPUBs
     if chapter_metadata.get('password'):
         return True
     return False
