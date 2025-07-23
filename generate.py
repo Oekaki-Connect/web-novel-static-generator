@@ -24,6 +24,118 @@ def _check_weasyprint():
         WEASYPRINT_AVAILABLE = False
         return False
 
+def _check_fpdf2():
+    """Check if fpdf2 is available for PDF generation"""
+    try:
+        from fpdf import FPDF
+        return True
+    except ImportError:
+        print("fpdf2 not available for PDF generation")
+        return False
+
+def _process_html_content_for_pdf(html_content, pdf_obj, novel_slug, font_family='Helvetica'):
+    """Process HTML content for PDF, handling text and images"""
+    from bs4 import BeautifulSoup
+    import html2text
+    
+    if not html_content:
+        return
+    
+    # Parse HTML
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # Configure html2text
+    h = html2text.HTML2Text()
+    h.ignore_links = True
+    h.ignore_images = True
+    
+    # Process each element in order
+    for element in soup.find_all(['p', 'img', 'h1', 'h2', 'h3', 'div']):
+        if element.name == 'img':
+            # Handle image
+            img_src = element.get('src', '')
+            img_alt = element.get('alt', 'Image')
+            
+            # Convert relative path to absolute
+            if img_src.startswith('../../../images/'):
+                # Remove the ../ prefix and build absolute path
+                img_path = img_src.replace('../../../images/', '')
+                img_absolute = os.path.join(BUILD_DIR, 'images', img_path)
+            elif img_src.startswith('../../../static/images/'):
+                # Handle static images path
+                img_path = img_src.replace('../../../static/images/', '')
+                img_absolute = os.path.join(BUILD_DIR, 'static', 'images', img_path)
+            elif img_src.startswith('images/'):
+                # Handle EPUB-style paths
+                img_path = img_src.replace('images/', '')
+                img_absolute = os.path.join(BUILD_DIR, 'images', img_path)
+            else:
+                # Try to resolve relative to BUILD_DIR
+                img_absolute = os.path.join(BUILD_DIR, img_src.lstrip('../'))
+            
+            # Convert to absolute path for fpdf2
+            img_absolute = os.path.abspath(img_absolute)
+            
+            # Add image to PDF if it exists
+            if os.path.exists(img_absolute):
+                try:
+                    # Add some space before image
+                    pdf_obj.ln(8)
+                    
+                    # Get image dimensions and scale to fit page
+                    page_width = pdf_obj.w - 2 * pdf_obj.l_margin
+                    max_width = page_width * 0.8  # Use 80% of page width
+                    
+                    # Add image centered
+                    pdf_obj.image(img_absolute, x=None, y=None, w=max_width)
+                    
+                    # Add caption if available
+                    if img_alt and img_alt != 'Image':
+                        pdf_obj.ln(4)
+                        pdf_obj.set_font(font_family, 'I', 10)
+                        pdf_obj.cell(0, 6, f'Figure: {img_alt}', align='C', new_x='LMARGIN', new_y='NEXT')
+                    
+                    # Add space after image
+                    pdf_obj.ln(8)
+                    
+                except Exception as e:
+                    print(f"Error adding image {img_absolute}: {e}")
+                    # Add placeholder text
+                    pdf_obj.set_font(font_family, 'I', 10)
+                    pdf_obj.cell(0, 6, f'[Image: {img_alt}]', align='C', new_x='LMARGIN', new_y='NEXT')
+                    pdf_obj.ln(4)
+            else:
+                # Image not found, add placeholder
+                pdf_obj.set_font(font_family, 'I', 10)
+                pdf_obj.cell(0, 6, f'[Image not found: {img_alt}]', align='C', new_x='LMARGIN', new_y='NEXT')
+                pdf_obj.ln(4)
+        
+        elif element.name in ['p', 'div']:
+            # Handle paragraph text
+            text_content = h.handle(str(element)).strip()
+            if text_content:
+                pdf_obj.set_font(font_family, '', 11)
+                # Split text into paragraphs
+                paragraphs = text_content.split('\n\n')
+                for paragraph in paragraphs:
+                    if paragraph.strip():
+                        pdf_obj.multi_cell(0, 6, paragraph.strip())
+                        pdf_obj.ln(4)
+        
+        elif element.name in ['h1', 'h2', 'h3']:
+            # Handle headers
+            header_text = element.get_text().strip()
+            if header_text:
+                pdf_obj.ln(4)
+                if element.name == 'h1':
+                    pdf_obj.set_font(font_family, 'B', 16)
+                elif element.name == 'h2':
+                    pdf_obj.set_font(font_family, 'B', 14)
+                else:
+                    pdf_obj.set_font(font_family, 'B', 12)
+                pdf_obj.cell(0, 10, header_text, new_x='LMARGIN', new_y='NEXT')
+                pdf_obj.ln(4)
+
 def _check_ebooklib():
     global EBOOKLIB_AVAILABLE
     try:
@@ -822,10 +934,224 @@ def generate_pdf_content(novel_config, chapters_data, title, is_arc=False):
     
     return html_content
 
-def generate_story_pdf(novel_slug, novel_config, site_config):
-    """Generate PDF for entire story"""
-    if not _check_weasyprint():
+def generate_story_pdf_fpdf2(novel_slug, novel_config, site_config):
+    """Generate PDF for entire story using fpdf2"""
+    if not _check_fpdf2():
         return False
+    
+    # Check if PDF generation is enabled
+    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+        return False
+    if not site_config.get('pdf_epub', {}).get('pdf_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('pdf_enabled', True):
+        return False
+    
+    try:
+        from fpdf import FPDF
+        import html2text
+        from bs4 import BeautifulSoup
+        import re
+        
+        # Get non-hidden chapters
+        chapters_data = get_non_hidden_chapters(novel_config, novel_slug)
+        if not chapters_data:
+            return False
+        
+        # Create PDF document
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # Add fonts (try to use better fonts if available)
+        try:
+            pdf.add_font('DejaVuSans', '', 'DejaVuSans.ttf')
+            pdf.add_font('DejaVuSans', 'B', 'DejaVuSans-Bold.ttf')
+            font_family = 'DejaVuSans'
+        except:
+            # Fall back to built-in fonts
+            font_family = 'Helvetica'
+        
+        # Add title page
+        pdf.add_page()
+        pdf.set_font(font_family, 'B', 24)
+        story_title = novel_config.get('title', novel_slug)
+        pdf.cell(0, 15, story_title, align='C', new_x='LMARGIN', new_y='NEXT')
+        
+        # Add author if available
+        author_name = novel_config.get('author', {}).get('name', '')
+        if author_name:
+            pdf.ln(10)
+            pdf.set_font(font_family, '', 16)
+            pdf.cell(0, 10, f'by {author_name}', align='C', new_x='LMARGIN', new_y='NEXT')
+        
+        # Add description if available
+        description = novel_config.get('description', '')
+        if description:
+            pdf.ln(20)
+            pdf.set_font(font_family, '', 12)
+            pdf.multi_cell(0, 8, description)
+        
+        # Add chapters
+        for arc in chapters_data:
+            # Add arc title
+            pdf.add_page()
+            pdf.set_font(font_family, 'B', 18)
+            pdf.cell(0, 15, arc['title'], align='C', new_x='LMARGIN', new_y='NEXT')
+            pdf.ln(5)
+            
+            for chapter in arc['chapters']:
+                # Add chapter title
+                pdf.set_font(font_family, 'B', 14)
+                pdf.cell(0, 12, chapter['title'], new_x='LMARGIN', new_y='NEXT')
+                pdf.ln(5)
+                
+                # Load and process chapter content
+                chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+                if not chapter_html:
+                    # Fall back to markdown
+                    chapter_html = markdown.markdown(chapter['content'])
+                
+                # Process HTML content with images
+                _process_html_content_for_pdf(chapter_html, pdf, novel_slug, font_family)
+                
+                pdf.ln(10)  # Space between chapters
+        
+        # Ensure output directory exists
+        pdf_dir = os.path.join(BUILD_DIR, "static", "pdf")
+        os.makedirs(pdf_dir, exist_ok=True)
+        
+        # Save PDF
+        pdf_path = os.path.join(pdf_dir, f"{novel_slug}.pdf")
+        pdf.output(pdf_path)
+        
+        return True
+    except Exception as e:
+        print(f"Error generating PDF with fpdf2 for {novel_slug}: {e}")
+        return False
+
+def generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index):
+    """Generate PDF for a specific arc using fpdf2"""
+    if not _check_fpdf2():
+        return False
+    
+    # Check if PDF generation is enabled
+    if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
+        return False
+    if not site_config.get('pdf_epub', {}).get('pdf_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('pdf_enabled', True):
+        return False
+    if not novel_config.get('downloads', {}).get('include_arcs', True):
+        return False
+    
+    try:
+        from fpdf import FPDF
+        import html2text
+        from bs4 import BeautifulSoup
+        import re
+        
+        # Get all chapters and filter for this arc
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug)
+        if not all_chapters or arc_index >= len(all_chapters):
+            return False
+        
+        # Get the specific arc
+        arc_data = all_chapters[arc_index]
+        if not arc_data['chapters']:
+            return False
+        
+        # Create PDF document
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        
+        # Add fonts (try to use better fonts if available)
+        try:
+            pdf.add_font('DejaVuSans', '', 'DejaVuSans.ttf')
+            pdf.add_font('DejaVuSans', 'B', 'DejaVuSans-Bold.ttf')
+            font_family = 'DejaVuSans'
+        except:
+            # Fall back to built-in fonts
+            font_family = 'Helvetica'
+        
+        # Add title page
+        pdf.add_page()
+        pdf.set_font(font_family, 'B', 24)
+        story_title = novel_config.get('title', novel_slug)
+        arc_title = arc_data['title']
+        pdf_title = f"{story_title} - {arc_title}"
+        pdf.multi_cell(0, 15, pdf_title, align='C')
+        
+        # Add author if available
+        author_name = novel_config.get('author', {}).get('name', '')
+        if author_name:
+            pdf.ln(10)
+            pdf.set_font(font_family, '', 16)
+            pdf.cell(0, 10, f'by {author_name}', align='C', new_x='LMARGIN', new_y='NEXT')
+        
+        # Add arc title page
+        pdf.add_page()
+        pdf.set_font(font_family, 'B', 18)
+        pdf.cell(0, 15, arc_title, align='C', new_x='LMARGIN', new_y='NEXT')
+        pdf.ln(5)
+        
+        for chapter in arc_data['chapters']:
+            # Add chapter title
+            pdf.set_font(font_family, 'B', 14)
+            pdf.cell(0, 12, chapter['title'], new_x='LMARGIN', new_y='NEXT')
+            pdf.ln(5)
+            
+            # Load and process chapter content
+            chapter_html = load_processed_chapter_content(novel_slug, chapter['id'])
+            if not chapter_html:
+                # Fall back to markdown
+                chapter_html = markdown.markdown(chapter['content'])
+            
+            # Process HTML content with images
+            _process_html_content_for_pdf(chapter_html, pdf, novel_slug, font_family)
+            
+            pdf.ln(10)  # Space between chapters
+        
+        # Ensure output directory exists
+        pdf_dir = os.path.join(BUILD_DIR, "static", "pdf")
+        os.makedirs(pdf_dir, exist_ok=True)
+        
+        # Generate PDF with arc-specific filename
+        arc_slug = arc_title.lower().replace(' ', '-').replace(':', '').replace(',', '')
+        pdf_path = os.path.join(pdf_dir, f"{novel_slug}-{arc_slug}.pdf")
+        pdf.output(pdf_path)
+        
+        return True
+    except Exception as e:
+        print(f"Error generating PDF with fpdf2 for {novel_slug} arc {arc_index}: {e}")
+        return False
+
+def generate_story_pdf(novel_slug, novel_config, site_config):
+    """Generate PDF for entire story using configured engine"""
+    pdf_engine = site_config.get('pdf_epub', {}).get('pdf_engine', 'auto')
+    
+    if pdf_engine == 'weasyprint':
+        # Force WeasyPrint
+        if not _check_weasyprint():
+            print("WeasyPrint not available for PDF generation")
+            return False
+    elif pdf_engine == 'fpdf2':
+        # Force fpdf2
+        if not _check_fpdf2():
+            print("fpdf2 not available for PDF generation")
+            return False
+        return generate_story_pdf_fpdf2(novel_slug, novel_config, site_config)
+    else:
+        # Auto mode - try fpdf2 first, fall back to WeasyPrint
+        if _check_fpdf2():
+            try:
+                return generate_story_pdf_fpdf2(novel_slug, novel_config, site_config)
+            except Exception as e:
+                print(f"fpdf2 PDF generation failed, trying WeasyPrint: {e}")
+        
+        # Fall back to WeasyPrint
+        if not _check_weasyprint():
+            print("Neither fpdf2 nor WeasyPrint is available for PDF generation")
+            return False
     
     # Check if PDF generation is enabled
     if not site_config.get('pdf_epub', {}).get('generate_enabled', True):
@@ -860,9 +1186,32 @@ def generate_story_pdf(novel_slug, novel_config, site_config):
         return False
 
 def generate_arc_pdf(novel_slug, novel_config, site_config, arc_index):
-    """Generate PDF for a specific arc"""
-    if not _check_weasyprint():
-        return False
+    """Generate PDF for a specific arc using configured engine"""
+    pdf_engine = site_config.get('pdf_epub', {}).get('pdf_engine', 'auto')
+    
+    if pdf_engine == 'weasyprint':
+        # Force WeasyPrint
+        if not _check_weasyprint():
+            print("WeasyPrint not available for PDF generation")
+            return False
+    elif pdf_engine == 'fpdf2':
+        # Force fpdf2
+        if not _check_fpdf2():
+            print("fpdf2 not available for PDF generation")
+            return False
+        return generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index)
+    else:
+        # Auto mode - try fpdf2 first, fall back to WeasyPrint
+        if _check_fpdf2():
+            try:
+                return generate_arc_pdf_fpdf2(novel_slug, novel_config, site_config, arc_index)
+            except Exception as e:
+                print(f"fpdf2 PDF generation failed, trying WeasyPrint: {e}")
+        
+        # Fall back to WeasyPrint
+        if not _check_weasyprint():
+            print("Neither fpdf2 nor WeasyPrint is available for PDF generation")
+            return False
     
     # Check if PDF generation is enabled
     if not site_config.get('pdf_epub', {}).get('generate_enabled', True):

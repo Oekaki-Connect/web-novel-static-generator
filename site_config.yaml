@@ -59,6 +59,12 @@ pdf_epub:
   # Enable/disable specific formats
   pdf_enabled: true
   epub_enabled: true
+  
+  # PDF generation engine preference
+  # "fpdf2" - Pure Python, no external dependencies (recommended)
+  # "weasyprint" - More advanced HTML/CSS support, requires external libs
+  # "auto" - Try fpdf2 first, fall back to weasyprint
+  pdf_engine: "auto"
 
 # Comments system (utterances)
 comments:
