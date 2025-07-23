@@ -1323,6 +1323,9 @@ def should_skip_chapter(chapter_metadata, include_drafts=False):
         return True
     if is_chapter_draft(chapter_metadata) and not include_drafts:
         return True
+    # Skip password-protected chapters
+    if chapter_metadata.get('password'):
+        return True
     return False
 
 def get_navigation_chapters(novel_slug, all_chapters, current_chapter_id, lang):
