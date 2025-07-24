@@ -32,6 +32,7 @@ A Python-based static website generator specifically designed for web novels, wi
 - **robots.txt Generation**: Automatic SEO indexing control
 - **Sitemap Generation**: XML sitemaps for search engine optimization
 - **Reading Progress Tracking**: Track visited and completed chapters with localStorage
+- **Modular Template Extensions**: Novel-specific template overrides for unique styling and branding
 
 ## Project Structure
 
@@ -43,6 +44,7 @@ web-novel-generator/
 ├── content/
 │   └── novel_title/
 │       ├── config.yaml         # Novel configuration
+│       ├── templates/          # Novel-specific template overrides (optional)
 │       └── chapters/           # Chapter content files
 ├── templates/
 │   ├── index.html             # Front page template
@@ -335,6 +337,7 @@ VALIDATION RESULTS
 - Translation progress percentages
 - Popular tags and usage counts
 - Build file counts and language coverage
+- Template override usage and statistics
 
 #### `python generate.py --check-links`
 **Check for broken links**
@@ -470,6 +473,67 @@ Modify the Jinja2 templates in the `templates/` directory:
 - `index.html`: Front page layout
 - `toc.html`: Table of contents structure
 - `chapter.html`: Chapter page layout
+
+### Modular Template Extensions
+
+Create novel-specific template overrides for unique styling and branding:
+
+**Directory Structure:**
+```
+content/
+  your-novel-name/
+    templates/
+      chapter.html      ← Custom chapter template for this novel
+      toc.html         ← Custom table of contents (optional)
+    chapters/
+      chapter-1.md     ← Chapter content
+    config.yaml        ← Novel configuration
+```
+
+**Features:**
+- **Novel-specific branding**: Each novel can have its own unique look and feel
+- **Template inheritance**: Falls back to default templates seamlessly
+- **Gradual customization**: Override only the templates you want to customize
+- **Multi-novel support**: Different novels can have completely different designs
+- **Statistics tracking**: Monitor template override usage in stats reports
+
+**Example Custom Template:**
+```html
+<!-- Custom styling in content/my-novel/templates/chapter.html -->
+<style>
+.custom-novel-header {
+    background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-radius: 8px;
+}
+</style>
+
+<div class="custom-novel-header">
+    <h1>{{ novel_title }}</h1>
+    <div>Custom Story Template</div>
+</div>
+
+<!-- All standard template functionality preserved -->
+```
+
+**Template Variables Available:**
+- `novel_slug`: Novel identifier
+- `novel_title`: Novel display title  
+- `chapter_id`: Current chapter ID
+- `chapter_title`: Current chapter title
+- `arcs`: Complete story arc structure
+- `language`: Current language code
+- `available_languages`: Available language options
+- All other standard template variables
+
+**Benefits:**
+- Create unique themes for different story genres
+- Maintain consistent branding across novel chapters
+- Easy to implement and maintain
+- Full access to all template functionality
+- Tracked in statistics reports
 
 ### Chapter Sorting
 
