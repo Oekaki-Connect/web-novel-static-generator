@@ -158,11 +158,14 @@ jobs:
         
     - name: Deploy to GitHub Pages
       if: steps.check_content.outputs.should_rebuild == 'true'
-      uses: peaceiris/actions-gh-pages@v3
+      uses: peaceiris/actions-gh-pages@v4
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+        personal_token: ${{ secrets.DEPLOY_TOKEN }}
+        external_repository: Oekaki-Connect/web-novel
         publish_dir: ./build
-        force_orphan: true
+        publish_branch: main
+        user_name: 'github-actions[bot]'
+        user_email: 'github-actions[bot]@users.noreply.github.com'
         commit_message: |
           🤖 Automated rebuild: New scheduled content published
           
