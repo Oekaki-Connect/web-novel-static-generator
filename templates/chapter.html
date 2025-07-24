@@ -128,7 +128,7 @@
         function initReadingProgress() {
             const novelSlug = '{{ novel.slug }}';
             const chapterId = '{{ chapter.id }}';
-            const chapterTitle = '{{ chapter_title }}';
+            const chapterTitle = {{ chapter_title | tojson }};
             
             // Mark this chapter as visited
             markChapterVisited(novelSlug, chapterId, chapterTitle);
