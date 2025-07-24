@@ -584,7 +584,7 @@
         {% endif %}
         <h1>{{ chapter_title }}</h1>
         
-        {% if chapter_metadata and show_metadata %}
+        {% if chapter_metadata and show_metadata and (chapter_metadata.author or chapter_metadata.translator or chapter_metadata.published or (chapter_metadata.tags and show_tags) or chapter_metadata.translation_notes) %}
         <div class="chapter-metadata">
             {% if chapter_metadata.author %}
             <div class="metadata-item">

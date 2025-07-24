@@ -2309,8 +2309,15 @@ def load_all_novels_data():
 
 
 def convert_markdown_to_html(md_content):
-    # Convert Markdown to HTML with table support. This will also handle image paths.
-    return markdown.markdown(md_content, extensions=['tables'])
+    # Convert Markdown to HTML with essential extensions for web novels
+    return markdown.markdown(md_content, extensions=[
+        'tables',      # Table support for comparisons/data
+        'footnotes',   # Author notes, translation notes
+        'smarty',      # Professional typography (curly quotes, em-dashes)
+        'attr_list',   # Custom CSS classes {: .class-name}
+        'md_in_html',  # Mix markdown inside HTML blocks
+        'abbr'         # Abbreviations with hover tooltips
+    ])
 
 def calculate_file_hash(filepath, length=8):
     """Calculate a partial hash of a file for cache busting"""

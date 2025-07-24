@@ -140,6 +140,10 @@ arcs:
         title: "Chapter Recent: Just Published"
       - id: "chapter-future"
         title: "Chapter Future: Scheduled Release"
+  - title: "Technical Demonstrations"
+    chapters:
+      - id: "chapter-markdown-demo"
+        title: "Chapter Markdown Demo: The Scholar's Discovery"
 
 # New chapter tags configuration (overrides site defaults)
 new_chapter_tags:

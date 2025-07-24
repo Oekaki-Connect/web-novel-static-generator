@@ -151,6 +151,87 @@
             border-color: var(--color-border, #4a5568);
             color: var(--color-text, #f7fafc);
         }
+        
+        /* Custom styles for markdown demo chapter */
+        .chapter-section {
+            padding: 1rem 0;
+            border-left: 4px solid #4a5568;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .important-section {
+            background: var(--color-accent, #f7fafc);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            border-left: 4px solid #e53e3e;
+        }
+        
+        .advanced-content {
+            position: relative;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, rgba(74, 85, 104, 0.1) 0%, rgba(45, 55, 72, 0.1) 100%);
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        
+        .advanced-content::before {
+            content: "⚡ Advanced";
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: var(--color-base);
+            padding: 0 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .conclusion {
+            border-top: 2px solid #4a5568;
+            padding-top: 1.5rem;
+            margin-top: 3rem;
+            font-style: italic;
+        }
+        
+        .magical-text {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            position: relative;
+        }
+        
+        .magical-text::before {
+            content: "✨";
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .author-note {
+            background: var(--color-accent, #f7fafc);
+            border-left: 4px solid #718096;
+            padding: 1rem;
+            margin: 2rem 0;
+            font-style: italic;
+            font-size: 0.9rem;
+            color: var(--color-secondary);
+        }
+        
+        /* Dark mode adjustments for demo styles */
+        [data-theme="dark"] .important-section {
+            background: var(--color-accent, #2d3748);
+            border-left-color: #fc8181;
+        }
+        
+        [data-theme="dark"] .author-note {
+            background: var(--color-accent, #2d3748);
+            border-left-color: #a0aec0;
+        }
     </style>
     
     <!-- SEO Meta Tags -->
@@ -744,6 +825,7 @@
         </script>
         {% endif %}
         
+        {% if chapter_metadata and (chapter_metadata.author or chapter_metadata.translator or chapter_metadata.published or chapter_metadata.tags or chapter_metadata.translation_notes) %}
         <div class="chapter-metadata">
             {% if chapter_metadata.author %}
             <div class="metadata-item">
@@ -793,6 +875,7 @@
             </div>
             {% endif %}
         </div>
+        {% endif %}
         
     </header>
     <main>
