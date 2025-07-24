@@ -1,19 +1,3 @@
 these todos are currently all related to the manga/comic features:
-- Add reading direction support (LTR/RTL), it should be a story and chapter setting
-- in full screen mode, when I click on the left 50% of an image it should try to go to the previous page and right right 50% to the next page (unless RTL is enabled then this should be reversed), currently I think it only uses the left and right sides of the image for clicking to change page but it should take each 50% half for this, the clicking on the image to change pages seems to work sometimes but sometimes it does not, I am noticing an error in the console which could be related but I'm not sure:
-Uncaught ReferenceError: markChapterCompleted is not defined
-    at showPage (chapter-1/:1038:25)
-    at changePage (chapter-1/:738:21)
-    at HTMLDivElement.handleViewerClick (chapter-1/:811:21)
-- I'm still not seeing the text of manga chapters below the images check the build version this text that's in the .md isn't in the final .html file so it might be a template issue?:
-# Chapter 1: The Sovereign's Secret Sin
-
-*This is a manga chapter. The story is told through sequential art. Use the manga reader controls to navigate through the pages.*
-etc
-
-- if double page is selected it doesn't seem to do anything, it should show 2 images next to each other
-- the Manga Reader should be in its own div outside of the main div, in manga chapters it needs to be broken out I think so its width can be larger without getting clipped by the main width? if I set the zoom to a high amount scroll bars appear
-- clicking fit to viewport should consistently work, currently if the zoom is changed and it's clicked it doesn't seem to behave as expected
-- when in full screen mode the UI elements at the top are a little too close together, the fit to viewport button doesn't need to be shown when in full screen mode 
-- when in full screen mode if you click the "Reader settings (esc)" button (it should be "Manga Reader Settings (ESC)") the modal doesn't show as it's below the full screen manga, so you only see it after existing full screen mode, it should appear above
 - the Manga Reader Settings modal should be aligned vertically in the viewport right now it's aligned to the top
+- when on the first page of a manga chapter and the if the user tries to go to to the previous page it should go to the previous chapter, same with being on the final page it should try to go to the next chapter, in both cases the next page should have a ? variable added to the link so that when that chapter's page mode it restores the current mode (if in fullscreen for example) so that they can seamlessly continue reading (if not in full screen mode there should be a ? value which makes the page automatically fit the manga page to the viewport) the goal is to allow seamless reading (could include a non-obtrusive toast of the current chapter #/title at the top right so readers know they switches chapters)

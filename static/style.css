@@ -2765,6 +2765,13 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     justify-content: center;
     margin: 0;
     padding: 0;
+    overflow: hidden; /* Prevent scrollbars in fullscreen */
+}
+
+/* Ensure fullscreen images fit without scrollbars */
+.manga-reader.fullscreen .manga-image {
+    max-width: 100vw;
+    max-height: 100vh;
 }
 
 .manga-controls-left,
@@ -2930,9 +2937,6 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     max-width: 100%;
     max-height: 90vh;
     height: auto;
-    border-radius: 4px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
     cursor: pointer;
     object-fit: contain;
     user-select: none;
@@ -2970,9 +2974,7 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     margin-right: calc(-50vw + 50%);
 }
 
-.manga-image:hover {
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-}
+/* No hover effects on manga images */
 
 /* Loading state for manga images */
 .manga-image.loading {
@@ -3122,13 +3124,7 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     border-color: #555555;
 }
 
-[data-theme="dark"] .manga-image {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="dark"] .manga-image:hover {
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-}
+/* No decorative effects on manga images in dark mode either */
 
 [data-theme="dark"] .manga-settings-content {
     background-color: var(--color-base);
