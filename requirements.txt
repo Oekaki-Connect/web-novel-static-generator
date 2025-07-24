@@ -10,6 +10,9 @@ pyyaml==6.0.1
 # EPUB generation
 ebooklib==0.18
 
+# HTML parsing for broken link detection
+beautifulsoup4==4.12.2
+
 # Image processing for WebP optimization
 Pillow==10.1.0
 
