@@ -1,0 +1,189 @@
+name: Smart Scheduled Rebuild
+
+on:
+  # Check for scheduled content every hour except midnight (when scheduled-rebuild.yml runs)
+  schedule:
+    - cron: '0 1-23 * * *'  # Every hour from 1 AM to 11 PM UTC
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild even if no scheduled content is ready'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  check-and-rebuild:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Check for ready scheduled content
+      id: check_content
+      run: |
+        python << 'EOF'
+        import os
+        import yaml
+        import datetime
+        from pathlib import Path
+        
+        def parse_publish_date(date_string):
+            """Parse publish date like the generator does"""
+            if not date_string:
+                return None
+            
+            date_string = str(date_string).strip()
+            formats = [
+                "%Y-%m-%d",
+                "%Y-%m-%d %H:%M:%S", 
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%dT%H:%M:%SZ"
+            ]
+            
+            for fmt in formats:
+                try:
+                    return datetime.datetime.strptime(date_string, fmt)
+                except ValueError:
+                    continue
+            
+            try:
+                if '+' in date_string[-6:] or date_string.endswith('Z'):
+                    return datetime.datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+            except ValueError:
+                pass
+            
+            return None
+        
+        def check_scheduled_chapters():
+            """Check if any scheduled chapters are now ready to publish"""
+            current_time = datetime.datetime.now()
+            ready_chapters = []
+            
+            # Find all content directories
+            content_dir = Path('content')
+            if not content_dir.exists():
+                return []
+            
+            for novel_dir in content_dir.iterdir():
+                if not novel_dir.is_dir():
+                    continue
+                    
+                chapters_dir = novel_dir / 'chapters'
+                if not chapters_dir.exists():
+                    continue
+                
+                # Check all chapter files
+                for chapter_file in chapters_dir.glob('*.md'):
+                    try:
+                        with open(chapter_file, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        
+                        # Extract front matter
+                        if content.startswith('---\n'):
+                            end_marker = content.find('\n---\n', 4)
+                            if end_marker != -1:
+                                front_matter = content[4:end_marker]
+                                metadata = yaml.safe_load(front_matter)
+                                
+                                if metadata:
+                                    published_date = parse_publish_date(metadata.get('published'))
+                                    is_draft = metadata.get('draft', False)
+                                    
+                                    if published_date and not is_draft:
+                                        if published_date <= current_time:
+                                            # This chapter should be published now
+                                            chapter_id = chapter_file.stem
+                                            novel_slug = novel_dir.name
+                                            
+                                            # Check if it was previously scheduled for future
+                                            if published_date > (current_time - datetime.timedelta(hours=6)):
+                                                ready_chapters.append({
+                                                    'novel': novel_slug,
+                                                    'chapter': chapter_id,
+                                                    'title': metadata.get('title', chapter_id),
+                                                    'published': str(published_date)
+                                                })
+                    
+                    except Exception as e:
+                        print(f"Error checking {chapter_file}: {e}")
+                        continue
+            
+            return ready_chapters
+        
+        # Check for ready content
+        ready_chapters = check_scheduled_chapters()
+        
+        print(f"Current time: {datetime.datetime.now()}")
+        print(f"Found {len(ready_chapters)} chapters ready for publishing")
+        
+        should_rebuild = len(ready_chapters) > 0 or "${{ github.event.inputs.force_rebuild }}" == "true"
+        
+        if ready_chapters:
+            print("Ready chapters:")
+            for chapter in ready_chapters:
+                print(f"  - {chapter['novel']}/{chapter['chapter']}: {chapter['title']} (published: {chapter['published']})")
+        
+        # Set output for GitHub Actions
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            f.write(f"should_rebuild={str(should_rebuild).lower()}\n")
+            f.write(f"ready_count={len(ready_chapters)}\n")
+            
+        if ready_chapters:
+            chapters_json = str(ready_chapters).replace("'", '"')
+            f.write(f"ready_chapters={chapters_json}\n")
+        EOF
+        
+    - name: Build site with new content
+      if: steps.check_content.outputs.should_rebuild == 'true'
+      run: |
+        echo "🚀 Building site with newly available scheduled content..."
+        echo "Ready chapters count: ${{ steps.check_content.outputs.ready_count }}"
+        
+        # Clean build to ensure fresh state
+        python generate.py --clean
+        
+    - name: Deploy to GitHub Pages
+      if: steps.check_content.outputs.should_rebuild == 'true'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./build
+        force_orphan: true
+        commit_message: |
+          🤖 Automated rebuild: New scheduled content published
+          
+          Published chapters: ${{ steps.check_content.outputs.ready_count }}
+          Triggered by: scheduled workflow
+          
+    - name: Create release notification (optional)
+      if: steps.check_content.outputs.should_rebuild == 'true' && steps.check_content.outputs.ready_count > 0
+      run: |
+        echo "📢 New content published!"
+        echo "Chapters: ${{ steps.check_content.outputs.ready_count }}"
+        
+        # Optional: Create a GitHub release or issue to announce new content
+        # Optional: Send webhook notifications to Discord/Slack
+        # Optional: Update RSS feeds or send email notifications
+        
+    - name: Report status
+      if: always()
+      run: |
+        if [ "${{ steps.check_content.outputs.should_rebuild }}" = "true" ]; then
+          echo "✅ Rebuild completed - ${{ steps.check_content.outputs.ready_count }} new chapters published"
+        else
+          echo "ℹ️ No rebuild needed - no scheduled content ready yet"
+        fi

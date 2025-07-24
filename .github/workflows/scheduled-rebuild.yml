@@ -1,0 +1,111 @@
+name: Scheduled Rebuild
+
+on:
+  # Rebuild daily at midnight for general maintenance and newly published scheduled content
+  schedule:
+    - cron: '0 0 * * *'    # Daily at midnight UTC
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
+    inputs:
+      include_drafts:
+        description: 'Include draft chapters'
+        required: false
+        default: false
+        type: boolean
+      include_scheduled:
+        description: 'Include scheduled chapters (force include future content)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  scheduled-rebuild:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Check for new scheduled content
+      id: check_scheduled
+      run: |
+        # Run a test build to see if any scheduled chapters are now ready
+        python generate.py --validate > validation_output.txt 2>&1 || true
+        
+        # Check if there are any scheduled chapters that should now be published
+        # This is a simple check - in production you might want more sophisticated logic
+        CURRENT_DATE=$(date +%Y-%m-%d)
+        echo "Current date: $CURRENT_DATE"
+        
+        # For now, always attempt rebuild (in production, you could check file modification times)
+        echo "should_rebuild=true" >> $GITHUB_OUTPUT
+        echo "Proceeding with rebuild to check for newly published content"
+        
+    - name: Build site
+      if: steps.check_scheduled.outputs.should_rebuild == 'true'
+      run: |
+        # Set build arguments based on workflow inputs
+        BUILD_ARGS="--clean"
+        
+        if [ "${{ github.event.inputs.include_drafts }}" = "true" ]; then
+          BUILD_ARGS="$BUILD_ARGS --include-drafts"
+          echo "Including draft chapters"
+        fi
+        
+        if [ "${{ github.event.inputs.include_scheduled }}" = "true" ]; then
+          BUILD_ARGS="$BUILD_ARGS --include-scheduled"
+          echo "Force including scheduled chapters"
+        fi
+        
+        echo "Building with arguments: $BUILD_ARGS"
+        python generate.py $BUILD_ARGS
+        
+    - name: Deploy to GitHub Pages
+      if: steps.check_scheduled.outputs.should_rebuild == 'true'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./build
+        force_orphan: true
+        
+    - name: Report results
+      if: always()
+      run: |
+        if [ "${{ steps.check_scheduled.outputs.should_rebuild }}" = "true" ]; then
+          echo "✅ Scheduled rebuild completed successfully"
+          
+          # Optional: Could add logic here to send notifications
+          # - Discord webhook
+          # - Email notification  
+          # - Create GitHub issue/comment
+          
+        else
+          echo "ℹ️ No rebuild needed - no new scheduled content ready"
+        fi
+
+# Optional: Add notification on failure
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: scheduled-rebuild
+    if: failure()
+    
+    steps:
+    - name: Notify on failure
+      run: |
+        echo "❌ Scheduled rebuild failed!"
+        # In production, you might want to:
+        # - Send a notification to Discord/Slack
+        # - Create a GitHub issue
+        # - Send an email alert
+        echo "Manual intervention may be required"

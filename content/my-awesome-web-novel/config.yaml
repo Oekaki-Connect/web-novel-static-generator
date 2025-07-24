@@ -134,3 +134,9 @@ arcs:
         title: "Chapter Premium: Early Access 🔒"
       - id: "chapter-hidden"
         title: "Chapter Hidden: Secret Interlude 👁️"
+  - title: "Scheduled Content"
+    chapters:
+      - id: "chapter-recent"
+        title: "Chapter Recent: Just Published"
+      - id: "chapter-future"
+        title: "Chapter Future: Scheduled Release"

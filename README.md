@@ -33,6 +33,10 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Sitemap Generation**: XML sitemaps for search engine optimization
 - **Reading Progress Tracking**: Track visited and completed chapters with localStorage
 - **Modular Template Extensions**: Novel-specific template overrides for unique styling and branding
+- **Scheduled Publishing**: Future-dated chapters automatically publish when their date arrives
+- **Story Length Statistics**: Display word counts with language-specific units
+- **Story Publishing Status**: Show "ongoing" or "complete" badges
+- **Story Genre Tags**: Categorize stories by theme and genre
 
 ## Project Structure
 
@@ -613,9 +617,100 @@ This chapter is still being written and won't be included in the generated site.
 
 **Use Cases:**
 - Work-in-progress chapters
-- Scheduled content releases
+- Scheduled content releases (see Scheduled Publishing)
 - Beta testing new chapters
 - Collaborative editing before publication
+
+### Scheduled Publishing
+
+Publish chapters automatically when their scheduled date arrives:
+
+```markdown
+---
+title: "Chapter 10: The Big Reveal"
+published: "2025-08-01"
+tags: ["plot-twist", "reveal", "climax"]
+---
+
+This chapter will automatically appear on the site on August 1st, 2025.
+```
+
+**How It Works:**
+- Chapters with future `published` dates are excluded from normal builds
+- Use `--include-scheduled` flag to preview: `python generate.py --include-scheduled`
+- GitHub Actions workflows automatically rebuild when content becomes available
+- Supports multiple date formats (ISO, RFC, plain dates)
+- Time zone aware - uses UTC if no timezone specified
+
+**Date Format Examples:**
+```yaml
+published: "2025-08-01"                    # Simple date (midnight UTC)
+published: "2025-08-01 14:30:00"           # Date and time
+published: "2025-08-01T14:30:00"           # ISO format
+published: "2025-08-01T14:30:00Z"          # UTC timezone
+published: "2025-08-01T14:30:00-05:00"     # With timezone offset
+```
+
+**GitHub Actions Automation:**
+
+1. **Daily Scheduled Rebuild** (`.github/workflows/scheduled-rebuild.yml`):
+   - Runs daily at midnight UTC
+   - Rebuilds entire site for general maintenance and newly available content
+   - Provides reliable daily updates for future features
+   - Can be disabled if daily rebuilds aren't needed
+
+2. **Smart Hourly Rebuild** (`.github/workflows/smart-scheduled-rebuild.yml`):
+   - Runs every hour from 1 AM to 11 PM UTC (skips midnight)
+   - Checks if any scheduled content is ready for publishing
+   - Only rebuilds when chapters have actually become available
+   - More efficient for sites with frequent scheduled releases
+
+**Workflow Schedule:**
+```yaml
+# Daily rebuild at midnight
+schedule:
+  - cron: '0 0 * * *'      # Daily at midnight UTC
+
+# Smart hourly rebuild (skips midnight to avoid conflicts)
+schedule:
+  - cron: '0 1-23 * * *'   # Every hour from 1 AM to 11 PM UTC
+
+# Custom schedule examples:
+  - cron: '0 */12 * * *'   # Every 12 hours
+  - cron: '0 9 * * MON'    # Weekly on Monday at 9 AM
+  - cron: '0 6,18 * * *'   # Twice daily at 6 AM and 6 PM
+```
+
+**How the Dual System Works:**
+- **Midnight (00:00)**: Daily rebuild runs for maintenance and batch updates
+- **1 AM - 11 PM**: Smart rebuild checks hourly for new scheduled content
+- **No conflicts**: Workflows are designed to never overlap
+- **Flexibility**: Either workflow can be disabled independently
+
+**Use Cases:**
+- **Serial releases**: Schedule chapters weeks in advance
+- **Timed reveals**: Coordinate story events with real-world dates
+- **Buffer management**: Upload multiple chapters but release gradually
+- **Event tie-ins**: Release special chapters on holidays or anniversaries
+- **Time zone releases**: Schedule for specific regions
+
+**Chapter Publishing Logic:**
+- **No `published` date**: Always included in builds (traditional behavior)
+- **Past/current `published` date**: Always included in builds  
+- **Future `published` date**: Excluded until the date arrives (unless `--include-scheduled` is used)
+
+**Console Output:**
+```
+⏳ Skipping future chapter: chapter-10 - Chapter 10: The Big Reveal (publishes: 2025-08-01)
+⏳ Skipping future chapter: chapter-11 - Chapter 11: Aftermath (publishes: 2025-08-08)
+```
+
+**Best Practices:**
+- Chapters without dates work like traditional static content (always published)
+- Set publish dates in UTC to avoid timezone confusion
+- Test scheduled content with `--include-scheduled` before the release date
+- Monitor GitHub Actions runs to ensure successful rebuilds
+- Consider using smart rebuilds for efficiency with many scheduled chapters
 
 ### Comments System
 
@@ -809,8 +904,6 @@ The generator automatically detects and processes multiple novels:
 1. Create subdirectories in `content/` for each novel
 2. Add a `config.yaml` file in each novel directory
 3. The front page will list all available novels
-
-## New Features
 
 ### Story Publishing Status
 

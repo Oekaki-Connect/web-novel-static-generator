@@ -15,8 +15,9 @@ from bs4 import BeautifulSoup
 # Lazy import for optional dependencies
 EBOOKLIB_AVAILABLE = False
 
-# Global flag for including drafts
+# Global flags for chapter inclusion
 INCLUDE_DRAFTS = False
+INCLUDE_SCHEDULED = False
 
 
 def _check_ebooklib():
@@ -172,7 +173,7 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                 chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
                 
                 # Skip draft chapters unless include_drafts is True
-                if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                     continue
                 
                 # Skip hidden chapters, password-protected, or non-indexed chapters
@@ -231,7 +232,7 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
                     
                     # Skip draft chapters unless include_drafts is True
-                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                    if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                         continue
                     
                     # Skip hidden, password-protected, or non-indexed chapters
@@ -406,7 +407,7 @@ def generate_sitemap_xml(site_config, novels_data):
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
                     
                     # Skip draft chapters unless include_drafts is True
-                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                    if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                         continue
                     
                     # Skip chapters that don't allow indexing, are password-protected, or are hidden
@@ -507,7 +508,7 @@ def generate_robots_txt(site_config, novels_data):
                         chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
                         
                         # Skip draft chapters unless include_drafts is True
-                        if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
+                        if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                             continue
                         
                         # Check chapter-level indexing
@@ -757,7 +758,7 @@ def collect_author_contributions(all_novels_data):
     
     return author_contributions
 
-def get_non_hidden_chapters(novel_config, novel_slug, language='en', include_drafts=False):
+def get_non_hidden_chapters(novel_config, novel_slug, language='en', include_drafts=False, include_scheduled=False):
     """Get list of chapters that are not hidden or drafts"""
     visible_chapters = []
     
@@ -771,7 +772,7 @@ def get_non_hidden_chapters(novel_config, novel_slug, language='en', include_dra
                 chapter_content, chapter_metadata = load_chapter_content(novel_slug, chapter_id, language)
                 
                 # Skip if chapter should be skipped
-                if should_skip_chapter(chapter_metadata, include_drafts):
+                if should_skip_chapter(chapter_metadata, include_drafts, include_scheduled):
                     continue
                 
                 arc_chapters.append({
@@ -793,7 +794,7 @@ def get_non_hidden_chapters(novel_config, novel_slug, language='en', include_dra
     
     return visible_chapters
 
-def get_chapters_for_epub(novel_config, novel_slug, language='en', include_drafts=False):
+def get_chapters_for_epub(novel_config, novel_slug, language='en', include_drafts=False, include_scheduled=False):
     """Get list of chapters for EPUB generation (excludes hidden, draft, and password-protected)"""
     visible_chapters = []
     
@@ -989,7 +990,7 @@ def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None, 
     
     try:
         # Get non-hidden chapters for the specified language
-        chapters_data = get_chapters_for_epub(novel_config, novel_slug, language, INCLUDE_DRAFTS)
+        chapters_data = get_chapters_for_epub(novel_config, novel_slug, language, INCLUDE_DRAFTS, INCLUDE_SCHEDULED)
         if not chapters_data:
             return False
         
@@ -1149,7 +1150,7 @@ def generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel_da
     
     try:
         # Get all chapters and filter for this arc
-        all_chapters = get_chapters_for_epub(novel_config, novel_slug, language, INCLUDE_DRAFTS)
+        all_chapters = get_chapters_for_epub(novel_config, novel_slug, language, INCLUDE_DRAFTS, INCLUDE_SCHEDULED)
         if not all_chapters or arc_index >= len(all_chapters):
             return False
         
@@ -1512,7 +1513,7 @@ def generate_download_links(novel_slug, novel_config, site_config, language='en'
     
     # Arc-specific downloads
     if novel_config.get('downloads', {}).get('include_arcs', True):
-        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, 'en', INCLUDE_DRAFTS)
+        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, 'en', INCLUDE_DRAFTS, INCLUDE_SCHEDULED)
         arc_downloads = []
         
         for arc_index, arc in enumerate(all_chapters):
@@ -1623,17 +1624,90 @@ def is_chapter_draft(chapter_metadata):
     """Check if a chapter is marked as a draft"""
     return chapter_metadata.get('draft', False)
 
-def should_skip_chapter(chapter_metadata, include_drafts=False):
-    """Check if a chapter should be skipped during generation"""
+def parse_publish_date(date_string):
+    """
+    Parse a publish date string into a datetime object.
+    Supports multiple formats:
+    - "2025-01-15" (date only)
+    - "2025-01-15 14:30:00" (date and time)
+    - "2025-01-15T14:30:00" (ISO format)
+    - "2025-01-15T14:30:00Z" (UTC)
+    - "2025-01-15T14:30:00-05:00" (with timezone)
+    """
+    if not date_string:
+        return None
+    
+    # Convert to string if not already
+    date_string = str(date_string).strip()
+    
+    # List of date formats to try
+    formats = [
+        "%Y-%m-%d",                    # 2025-01-15
+        "%Y-%m-%d %H:%M:%S",          # 2025-01-15 14:30:00
+        "%Y-%m-%dT%H:%M:%S",          # 2025-01-15T14:30:00
+        "%Y-%m-%dT%H:%M:%SZ",         # 2025-01-15T14:30:00Z
+    ]
+    
+    # Try parsing with each format
+    for fmt in formats:
+        try:
+            return datetime.datetime.strptime(date_string, fmt)
+        except ValueError:
+            continue
+    
+    # Try parsing ISO format with timezone
+    try:
+        # Handle timezone offsets like +05:00 or -05:00
+        if '+' in date_string[-6:] or date_string.endswith('Z'):
+            from datetime import timezone
+            return datetime.datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+    except (ValueError, ImportError):
+        pass
+    
+    print(f"Warning: Could not parse publish date '{date_string}'. Using current time as fallback.")
+    return datetime.datetime.now()
+
+def is_chapter_scheduled_future(chapter_metadata, current_time=None):
+    """
+    Check if a chapter has a future publish date and should not be published yet.
+    Returns True if the chapter should be excluded from the build.
+    """
+    if current_time is None:
+        current_time = datetime.datetime.now()
+    
+    published_date_str = chapter_metadata.get('published')
+    if not published_date_str:
+        # No publish date means publish immediately
+        return False
+    
+    published_date = parse_publish_date(published_date_str)
+    if not published_date:
+        # Invalid date, publish immediately as fallback
+        return False
+    
+    # If published date is in the future, exclude from build
+    return published_date > current_time
+
+def should_skip_chapter(chapter_metadata, include_drafts=False, include_scheduled=False):
+    """
+    Check if a chapter should be skipped during generation.
+    
+    Args:
+        chapter_metadata: Chapter metadata dictionary
+        include_drafts: Whether to include draft chapters
+        include_scheduled: Whether to include chapters with future publish dates
+    """
     if is_chapter_hidden(chapter_metadata):
         return True
     if is_chapter_draft(chapter_metadata) and not include_drafts:
         return True
+    if is_chapter_scheduled_future(chapter_metadata) and not include_scheduled:
+        return True
     return False
 
-def should_skip_chapter_in_epub(chapter_metadata, include_drafts=False):
+def should_skip_chapter_in_epub(chapter_metadata, include_drafts=False, include_scheduled=False):
     """Check if a chapter should be skipped in EPUB generation"""
-    if should_skip_chapter(chapter_metadata, include_drafts):
+    if should_skip_chapter(chapter_metadata, include_drafts, include_scheduled):
         return True
     # Also skip password-protected chapters in EPUBs
     if chapter_metadata.get('password'):
@@ -1648,7 +1722,7 @@ def get_navigation_chapters(novel_slug, all_chapters, current_chapter_id, lang):
     for chapter in all_chapters:
         try:
             _, chapter_metadata = load_chapter_content(novel_slug, chapter['id'], lang)
-            if not should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
+            if not should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                 visible_chapters.append(chapter)
         except:
             # Include chapters that can't be loaded (they might exist in other languages)
@@ -1689,7 +1763,7 @@ def calculate_story_length_stats(novel_slug, lang):
             chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
             
             # Skip chapters that should be skipped
-            if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
+            if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                 continue
             
             # Remove markdown formatting and count characters/words
@@ -1750,7 +1824,7 @@ def filter_hidden_chapters_from_novel(novel, novel_slug, lang):
         for chapter in arc.get('chapters', []):
             try:
                 _, chapter_metadata = load_chapter_content(novel_slug, chapter['id'], lang)
-                if not should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
+                if not should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                     # Add published date to chapter data for TOC display
                     enhanced_chapter = chapter.copy()
                     enhanced_chapter['published'] = chapter_metadata.get('published')
@@ -2323,9 +2397,10 @@ def render_template(template_name, novel_slug=None, **kwargs):
     
     return template.render(**kwargs)
 
-def build_site(include_drafts=False, no_epub=False, optimize_images=False, serve_mode=False, serve_port=8000):
-    global INCLUDE_DRAFTS
+def build_site(include_drafts=False, include_scheduled=False, no_epub=False, optimize_images=False, serve_mode=False, serve_port=8000):
+    global INCLUDE_DRAFTS, INCLUDE_SCHEDULED
     INCLUDE_DRAFTS = include_drafts
+    INCLUDE_SCHEDULED = include_scheduled
     
     print("Building site...")
     if os.path.exists(BUILD_DIR):
@@ -2605,9 +2680,17 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False, serve
                     # Generate normal chapter page
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
                     
-                    # Skip draft chapters unless include_drafts is True
-                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
-                        print(f"      Skipping draft chapter: {chapter_id} - {chapter_title}")
+                    # Skip draft/scheduled chapters unless flags are set
+                    if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
+                        # Safe printing that handles Unicode issues
+                        safe_title = chapter_title.encode('ascii', errors='replace').decode('ascii')
+                        if is_chapter_draft(chapter_metadata):
+                            print(f"      Skipping draft chapter: {chapter_id} - {safe_title}")
+                        elif is_chapter_scheduled_future(chapter_metadata):
+                            publish_date = chapter_metadata.get('published', 'Unknown')
+                            print(f"      Skipping scheduled chapter: {chapter_id} - {safe_title} (publish: {publish_date})")
+                        else:
+                            print(f"      Skipping chapter: {chapter_id} - {safe_title}")
                         continue
                     
                     # Process chapter images and update markdown
@@ -2737,9 +2820,17 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False, serve
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
                     
-                    # Skip draft chapters unless include_drafts is True (same check as above)
-                    if is_chapter_draft(chapter_metadata) and not INCLUDE_DRAFTS:
-                        print(f"      Skipping draft chapter: {chapter_id} - {chapter_title}")
+                    # Skip draft/scheduled chapters unless flags are set (same check as above)
+                    if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
+                        # Safe printing that handles Unicode issues
+                        safe_title = chapter_title.encode('ascii', errors='replace').decode('ascii')
+                        if is_chapter_draft(chapter_metadata):
+                            print(f"      Skipping draft chapter: {chapter_id} - {safe_title}")
+                        elif is_chapter_scheduled_future(chapter_metadata):
+                            publish_date = chapter_metadata.get('published', 'Unknown')
+                            print(f"      Skipping scheduled chapter: {chapter_id} - {safe_title} (publish: {publish_date})")
+                        else:
+                            print(f"      Skipping chapter: {chapter_id} - {safe_title}")
                         continue
                     
                     # Process chapter images and update markdown (using primary language)
@@ -2940,7 +3031,7 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False, serve
                     
                     # Generate arc-specific EPUBs if enabled
                     if novel_config.get('downloads', {}).get('include_arcs', True):
-                        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, language, INCLUDE_DRAFTS)
+                        all_chapters = get_non_hidden_chapters(novel_config, novel_slug, language, INCLUDE_DRAFTS, INCLUDE_SCHEDULED)
                         for arc_index, arc in enumerate(all_chapters):
                             if arc['chapters']:  # Only generate if arc has chapters
                                 if generate_arc_epub(novel_slug, novel_config, site_config, arc_index, novel, language):
@@ -3943,7 +4034,7 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
             return False
         
         # Skip if chapter should be skipped
-        if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS):
+        if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
             print(f"    Skipping draft/hidden chapter: {chapter_id}")
             return True
         
@@ -3971,7 +4062,7 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
         for arc in novel_config.get('arcs', []):
             for chapter in arc.get('chapters', []):
                 chapter_content_check, chapter_metadata_check = load_chapter_content(novel_slug, chapter['id'], language)
-                if chapter_content_check and not should_skip_chapter(chapter_metadata_check, INCLUDE_DRAFTS):
+                if chapter_content_check and not should_skip_chapter(chapter_metadata_check, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
                     all_chapters.append(chapter)
         
         current_index = next((i for i, ch in enumerate(all_chapters) if ch['id'] == chapter_id), -1)
@@ -3997,7 +4088,7 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
             for chapter in arc.get('chapters', []):
                 chapter_content_check, chapter_metadata_check = load_chapter_content(novel_slug, chapter['id'], language)
                 if (chapter_content_check and 
-                    not should_skip_chapter(chapter_metadata_check, INCLUDE_DRAFTS) and 
+                    not should_skip_chapter(chapter_metadata_check, INCLUDE_DRAFTS, INCLUDE_SCHEDULED) and 
                     not chapter_metadata_check.get('hidden', False)):
                     visible_chapters.append(chapter)
             
@@ -4087,10 +4178,11 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
         print(f"    Error rebuilding chapter {novel_slug}/{chapter_id}: {e}")
         return False
 
-def perform_incremental_rebuild(rebuild_info, include_drafts=False):
+def perform_incremental_rebuild(rebuild_info, include_drafts=False, include_scheduled=False):
     """Perform incremental rebuild based on the rebuild scope"""
-    global INCLUDE_DRAFTS
+    global INCLUDE_DRAFTS, INCLUDE_SCHEDULED
     INCLUDE_DRAFTS = include_drafts
+    INCLUDE_SCHEDULED = include_scheduled
     
     rebuild_type = rebuild_info['type']
     
@@ -4099,7 +4191,7 @@ def perform_incremental_rebuild(rebuild_info, include_drafts=False):
         # Ensure build directory exists
         os.makedirs(BUILD_DIR, exist_ok=True)
         # Perform full rebuild
-        build_site(include_drafts=include_drafts, no_epub=True, optimize_images=False)
+        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False)
         return True
         
     elif rebuild_type == 'static':
@@ -4119,7 +4211,7 @@ def perform_incremental_rebuild(rebuild_info, include_drafts=False):
         # For novel config changes, we need to rebuild the entire novel
         # This is complex, so for now fall back to full rebuild
         os.makedirs(BUILD_DIR, exist_ok=True)
-        build_site(include_drafts=include_drafts, no_epub=True, optimize_images=False)
+        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False)
         return True
         
     elif rebuild_type == 'novel_template':
@@ -4132,14 +4224,14 @@ def perform_incremental_rebuild(rebuild_info, include_drafts=False):
         # For template changes, we need to rebuild the entire novel since 
         # we don't know which pages use this template
         os.makedirs(BUILD_DIR, exist_ok=True)
-        build_site(include_drafts=include_drafts, no_epub=True, optimize_images=False)
+        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False)
         return True
         
     else:
         print(f"Unknown rebuild type: {rebuild_type}")
         return False
 
-def start_development_server(port=8000, include_drafts=False):
+def start_development_server(port=8000, include_drafts=False, include_scheduled=False):
     """Start development server with live reload"""
     try:
         import asyncio
@@ -4164,6 +4256,7 @@ def start_development_server(port=8000, include_drafts=False):
                 self.last_rebuild = 0
                 self.rebuild_delay = 1  # Wait 1 second between rebuilds
                 self.include_drafts = include_drafts
+                self.include_scheduled = include_scheduled
             
             def on_modified(self, event):
                 if event.is_directory:
@@ -4205,7 +4298,7 @@ def start_development_server(port=8000, include_drafts=False):
                     rebuild_info = determine_rebuild_scope(changed_file_path)
                     
                     # Perform incremental rebuild
-                    success = perform_incremental_rebuild(rebuild_info, include_drafts=self.include_drafts)
+                    success = perform_incremental_rebuild(rebuild_info, include_drafts=self.include_drafts, include_scheduled=self.include_scheduled)
                     
                     if success:
                         print("Rebuild completed, waiting for filesystem sync...")
@@ -4229,7 +4322,7 @@ def start_development_server(port=8000, include_drafts=False):
                         print("Rebuild failed, falling back to full rebuild...")
                         # Fallback to full rebuild if incremental failed
                         os.makedirs(BUILD_DIR, exist_ok=True)
-                        build_site(include_drafts=self.include_drafts, no_epub=True, optimize_images=False)
+                        build_site(include_drafts=self.include_drafts, include_scheduled=self.include_scheduled, no_epub=True, optimize_images=False)
                         
                 except Exception as e:
                     print(f"Error rebuilding site: {e}")
@@ -4384,7 +4477,7 @@ def start_development_server(port=8000, include_drafts=False):
     except Exception as e:
         print(f"[ERROR] Failed to start development server: {e}")
 
-def watch_and_rebuild(include_drafts=False):
+def watch_and_rebuild(include_drafts=False, include_scheduled=False):
     """Watch for file changes and rebuild without serving"""
     try:
         import time
@@ -4399,6 +4492,7 @@ def watch_and_rebuild(include_drafts=False):
                 self.last_rebuild = 0
                 self.rebuild_delay = 1  # Wait 1 second between rebuilds
                 self.include_drafts = include_drafts
+                self.include_scheduled = include_scheduled
             
             def on_modified(self, event):
                 if event.is_directory:
@@ -4440,7 +4534,7 @@ def watch_and_rebuild(include_drafts=False):
                     rebuild_info = determine_rebuild_scope(changed_file_path)
                     
                     # Perform incremental rebuild
-                    success = perform_incremental_rebuild(rebuild_info, include_drafts=self.include_drafts)
+                    success = perform_incremental_rebuild(rebuild_info, include_drafts=self.include_drafts, include_scheduled=self.include_scheduled)
                     
                     if success:
                         print("Rebuild complete")
@@ -4448,7 +4542,7 @@ def watch_and_rebuild(include_drafts=False):
                         print("Rebuild failed, falling back to full rebuild...")
                         # Fallback to full rebuild if incremental failed
                         os.makedirs(BUILD_DIR, exist_ok=True)
-                        build_site(include_drafts=self.include_drafts, no_epub=True, optimize_images=False)
+                        build_site(include_drafts=self.include_drafts, include_scheduled=self.include_scheduled, no_epub=True, optimize_images=False)
                         print("Full rebuild complete")
                         
                 except Exception as e:
@@ -4487,6 +4581,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Static site generator for web novels')
     parser.add_argument('--include-drafts', action='store_true', 
                         help='Include draft chapters in the generated site')
+    parser.add_argument('--include-scheduled', action='store_true',
+                        help='Include chapters with future publish dates in the generated site')
     parser.add_argument('--check-links', action='store_true',
                         help='Check for broken internal links after site generation')
     parser.add_argument('--clean', action='store_true',
@@ -4521,7 +4617,7 @@ if __name__ == "__main__":
                    no_epub=True,  # Skip EPUB for faster rebuilds
                    optimize_images=False)  # Skip optimization for speed
         # Start watching for changes
-        watch_and_rebuild(include_drafts=args.include_drafts)
+        watch_and_rebuild(include_drafts=args.include_drafts, include_scheduled=args.include_scheduled)
         exit(0)
     
     # Handle --serve flag (build, serve, and watch with live reload)
@@ -4531,11 +4627,12 @@ if __name__ == "__main__":
                    no_epub=True,  # Skip EPUB for faster rebuilds
                    optimize_images=False)  # Skip optimization for speed
         # Start development server
-        start_development_server(args.serve, include_drafts=args.include_drafts)
+        start_development_server(args.serve, include_drafts=args.include_drafts, include_scheduled=args.include_scheduled)
         exit(0)
     
     # Normal build mode
-    build_site(include_drafts=args.include_drafts, 
+    build_site(include_drafts=args.include_drafts,
+               include_scheduled=args.include_scheduled,
                no_epub=args.no_epub,
                optimize_images=args.optimize_images)
     
