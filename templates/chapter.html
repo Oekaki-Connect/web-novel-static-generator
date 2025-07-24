@@ -817,16 +817,11 @@
                 
                 // Handle fitviewport parameter
                 if (urlParams.get('fitviewport') === 'true') {
-                    // Apply fit to viewport
+                    // Just scroll to viewport, don't change zoom settings
                     setTimeout(() => {
                         const mangaViewer = document.getElementById('manga-viewer');
                         if (mangaViewer) {
                             mangaViewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            // Apply zoom to fit if needed
-                            const zoomFitBtn = document.getElementById('zoom-fit-btn');
-                            if (zoomFitBtn) {
-                                zoomFitBtn.click();
-                            }
                         }
                     }, 100);
                 }
