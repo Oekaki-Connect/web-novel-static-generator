@@ -3243,3 +3243,32 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     border-top: 2px solid var(--color-border);
 }
 
+/* Table styling for markdown tables */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1rem 0;
+    background-color: var(--color-base);
+}
+
+th, td {
+    border: 1px solid var(--color-secondary);
+    padding: 0.5rem;
+    text-align: left;
+}
+
+th {
+    background-color: var(--color-accent);
+    font-weight: 600;
+    color: var(--color-heading);
+}
+
+td {
+    color: var(--color-contrast);
+}
+
+/* Dark mode table adjustments */
+[data-theme="dark"] table {
+    background-color: var(--color-base);
+}
+

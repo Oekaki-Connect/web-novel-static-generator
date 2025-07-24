@@ -2309,8 +2309,8 @@ def load_all_novels_data():
 
 
 def convert_markdown_to_html(md_content):
-    # Convert Markdown to HTML. This will also handle image paths.
-    return markdown.markdown(md_content)
+    # Convert Markdown to HTML with table support. This will also handle image paths.
+    return markdown.markdown(md_content, extensions=['tables'])
 
 def calculate_file_hash(filepath, length=8):
     """Calculate a partial hash of a file for cache busting"""
