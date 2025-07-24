@@ -159,7 +159,12 @@
                     <li>
                         <a href="../{{ chapter.id }}/">{{ chapter.title }}</a>
                         {% if chapter.published %}
-                        <span class="chapter-date">{{ chapter.published }}</span>
+                        <span class="chapter-date">
+                            {% if chapter.published | is_chapter_new %}
+                            <span class="chapter-new">(NEW!) </span>
+                            {% endif %}
+                            {{ chapter.published | format_date_for_display }}
+                        </span>
                         {% endif %}
                     </li>
                     {% endfor %}

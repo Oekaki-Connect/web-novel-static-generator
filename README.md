@@ -120,6 +120,11 @@ rss:
 # EPUB generation configuration
 epub:
   generate_enabled: true
+
+# NEW! chapter tags configuration
+new_chapter_tags:
+  enabled: true        # Show (NEW!) tags on recently published chapters
+  threshold_days: 7    # Days to consider a chapter "new"
 ```
 
 ### 3. Configure Your Novel
@@ -185,6 +190,11 @@ footer:
       url: "https://ko-fi.com/author"
     - text: "Original Source"
       url: "https://example.com/original"
+
+# NEW! chapter tags override (optional)
+new_chapter_tags:
+  enabled: true        # Override site setting for this story
+  threshold_days: 14   # Custom threshold (2 weeks instead of site default)
 ```
 
 ### 4. Add Chapter Content
@@ -418,6 +428,38 @@ Optimizing images to WebP (quality: 85%)...
   WebP size: 22.9 KB
   Space saved: 92.4%
 ```
+
+#### NEW! Chapter Tags
+
+**Enable (NEW!) tags for recently published chapters**
+- Shows a prominent (NEW!) indicator next to recently published chapters on table of contents
+- Configurable threshold for how many days to consider chapters "new"
+- Can be disabled globally or per-story for different content strategies
+
+**Configuration in `site_config.yaml`:**
+```yaml
+new_chapter_tags:
+  enabled: true        # Enable/disable (NEW!) tags globally
+  threshold_days: 7    # Days to show NEW! tag (default: 7)
+```
+
+**Per-story override in `content/story/config.yaml`:**
+```yaml
+new_chapter_tags:
+  enabled: true        # Override global setting
+  threshold_days: 14   # Custom threshold (e.g., 2 weeks for this story)
+```
+
+**Example display:**
+- `Chapter 5: The Climax (NEW!) 2025-07-22` - Published 1 day ago
+- `Chapter 4: Building Tension 2025-07-15` - Published 8 days ago (no tag with 7-day threshold)
+
+**Use Cases:**
+- **Serial releases**: Highlight the latest chapters for returning readers
+- **Story updates**: Draw attention to recently updated translations
+- **Multi-story sites**: Different NEW! thresholds per story genre/audience
+- **Seasonal content**: Longer thresholds for infrequently updated stories
+- **Clean TOCs**: Disable entirely for completed stories or archives
 
 ### Combined Usage
 

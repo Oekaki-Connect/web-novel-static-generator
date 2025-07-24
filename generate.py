@@ -66,7 +66,10 @@ def get_novel_template_env(novel_slug):
         
         # Add the same filters as the global environment
         novel_env.filters['slugify_tag'] = slugify_tag
+        novel_env.filters['format_date_for_display'] = format_date_for_display
         novel_env.filters['find_author_username'] = find_author_username_filter
+        
+        # Note: is_chapter_new filter will be set per render with proper config
         
         _novel_template_envs[novel_slug] = novel_env
     
@@ -1469,6 +1472,8 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
     with open(toc_file, "w", encoding='utf-8') as f:
         f.write(render_template("toc.html", 
                                novel_slug=novel_slug,
+                               site_config=site_config,
+                               novel_config=novel_config,
                                novel=filtered_novel, 
                                current_language=lang, 
                                available_languages=available_languages,
@@ -1657,9 +1662,10 @@ def parse_publish_date(date_string):
     
     # Try parsing ISO format with timezone
     try:
-        # Handle timezone offsets like +05:00 or -05:00
-        if '+' in date_string[-6:] or date_string.endswith('Z'):
-            from datetime import timezone
+        # Handle timezone offsets like +05:00 or -05:00 or Z
+        if ('+' in date_string and '+' in date_string[-6:]) or \
+           ('-' in date_string and '-' in date_string[-6:]) or \
+           date_string.endswith('Z'):
             return datetime.datetime.fromisoformat(date_string.replace('Z', '+00:00'))
     except (ValueError, ImportError):
         pass
@@ -1685,6 +1691,17 @@ def is_chapter_scheduled_future(chapter_metadata, current_time=None):
         # Invalid date, publish immediately as fallback
         return False
     
+    # Handle timezone awareness - convert both to naive datetimes for comparison
+    if published_date.tzinfo is not None:
+        # Convert timezone-aware datetime to naive UTC
+        published_date = published_date.utctimetuple()
+        published_date = datetime.datetime(*published_date[:6])
+    
+    if current_time.tzinfo is not None:
+        # Convert timezone-aware datetime to naive UTC
+        current_time = current_time.utctimetuple()
+        current_time = datetime.datetime(*current_time[:6])
+    
     # If published date is in the future, exclude from build
     return published_date > current_time
 
@@ -1704,6 +1721,56 @@ def should_skip_chapter(chapter_metadata, include_drafts=False, include_schedule
     if is_chapter_scheduled_future(chapter_metadata) and not include_scheduled:
         return True
     return False
+
+def format_date_for_display(date_string):
+    """
+    Format a date string to YYYY-MM-DD format for display on TOC.
+    Handles various input formats and returns simplified date.
+    """
+    if not date_string:
+        return None
+    
+    parsed_date = parse_publish_date(date_string)
+    if not parsed_date:
+        return date_string  # Return original if parsing fails
+    
+    return parsed_date.strftime("%Y-%m-%d")
+
+def is_chapter_new(published_date_str, current_time=None, new_threshold_days=7, show_new_tags=True):
+    """
+    Check if a chapter was published within the configured threshold.
+    Returns True if the chapter should be marked as (NEW!).
+    
+    Args:
+        published_date_str: The publish date string from chapter metadata
+        current_time: Current time for comparison (defaults to now)
+        new_threshold_days: Number of days to consider a chapter "new" (default: 7)
+        show_new_tags: Whether to show NEW! tags at all (default: True)
+    """
+    if not published_date_str or not show_new_tags:
+        return False
+    
+    if current_time is None:
+        current_time = datetime.datetime.now()
+    
+    published_date = parse_publish_date(published_date_str)
+    if not published_date:
+        return False
+    
+    # Handle timezone awareness - convert both to naive datetimes for comparison
+    if published_date.tzinfo is not None:
+        # Convert timezone-aware datetime to naive UTC
+        published_date = published_date.utctimetuple()
+        published_date = datetime.datetime(*published_date[:6])
+    
+    if current_time.tzinfo is not None:
+        # Convert timezone-aware datetime to naive UTC
+        current_time = current_time.utctimetuple()
+        current_time = datetime.datetime(*current_time[:6])
+    
+    # Check if published within the configured threshold
+    time_difference = current_time - published_date
+    return time_difference.days <= new_threshold_days and time_difference.days >= 0
 
 def should_skip_chapter_in_epub(chapter_metadata, include_drafts=False, include_scheduled=False):
     """Check if a chapter should be skipped in EPUB generation"""
@@ -2056,6 +2123,31 @@ def process_chapter_images(novel_slug, chapter_id, language, markdown_content):
 # Add the slugify_tag function as a Jinja2 filter
 env.filters['slugify_tag'] = slugify_tag
 
+# Add date formatting and new chapter detection filters
+env.filters['format_date_for_display'] = format_date_for_display
+
+# Create a configurable is_chapter_new filter that will be set up per template render
+def create_is_chapter_new_filter(site_config, novel_config):
+    """Create a configured is_chapter_new filter based on site and novel configs"""
+    # Get site-level defaults
+    site_new_config = site_config.get('new_chapter_tags', {})
+    site_show_new = site_new_config.get('enabled', True)
+    site_threshold = site_new_config.get('threshold_days', 7)
+    
+    # Get novel-level overrides
+    novel_new_config = novel_config.get('new_chapter_tags', {}) if novel_config else {}
+    show_new_tags = novel_new_config.get('enabled', site_show_new)
+    threshold_days = novel_new_config.get('threshold_days', site_threshold)
+    
+    
+    def is_chapter_new_filter(published_date_str, current_time=None):
+        return is_chapter_new(published_date_str, current_time, threshold_days, show_new_tags)
+    
+    return is_chapter_new_filter
+
+# Default filter (will be overridden during template rendering)
+env.filters['is_chapter_new'] = lambda x: is_chapter_new(x)
+
 # Add the find_author_username function as a Jinja2 filter
 def find_author_username_filter(author_name, authors_config):
     """Jinja2 filter to find author username by name"""
@@ -2385,15 +2477,24 @@ def generate_page_index(site_config):
     
     print("Page index generated.")
 
-def render_template(template_name, novel_slug=None, **kwargs):
+def render_template(template_name, novel_slug=None, site_config=None, novel_config=None, **kwargs):
     """Render a template with optional novel-specific override support"""
+    template_env = None
+    
     if novel_slug:
         # Use novel-specific template environment if novel_slug is provided
         novel_env = get_novel_template_env(novel_slug)
+        template_env = novel_env
         template = novel_env.get_template(template_name)
     else:
         # Use global template environment for non-novel-specific templates
+        template_env = env
         template = env.get_template(template_name)
+    
+    # Set up configurable is_chapter_new filter if configs are provided
+    if site_config is not None:
+        is_chapter_new_filter = create_is_chapter_new_filter(site_config, novel_config)
+        template_env.filters['is_chapter_new'] = is_chapter_new_filter
     
     return template.render(**kwargs)
 
@@ -2641,6 +2742,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
                 f.write(render_template("toc.html", 
                                        novel_slug=novel_slug,
+                                       site_config=site_config,
+                                       novel_config=novel_config,
                                        novel=filtered_novel, 
                                        current_language=lang, 
                                        available_languages=available_languages,

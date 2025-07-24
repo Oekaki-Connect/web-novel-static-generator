@@ -400,6 +400,12 @@ main {
     white-space: nowrap;
 }
 
+.chapter-new {
+    color: var(--color-primary);
+    font-weight: bold;
+    font-style: normal;
+}
+
 .chapter-content h1 {
     font-family: var(--font-heading);
     font-size: 24px;

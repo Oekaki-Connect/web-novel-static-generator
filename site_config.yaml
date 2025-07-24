@@ -87,6 +87,15 @@ image_optimization:
   # Default: 100 (no compression)
   quality: 85
 
+# New chapter tags configuration
+new_chapter_tags:
+  # Enable/disable (NEW!) tags on recently published chapters
+  enabled: true
+  
+  # Number of days to consider a chapter "new"
+  # Chapters published within this many days will show (NEW!) tag
+  threshold_days: 7
+
 # Footer configuration
 footer:
   # Default copyright text

@@ -140,3 +140,12 @@ arcs:
         title: "Chapter Recent: Just Published"
       - id: "chapter-future"
         title: "Chapter Future: Scheduled Release"
+
+# New chapter tags configuration (overrides site defaults)
+new_chapter_tags:
+  # Enable/disable (NEW!) tags for this story
+  enabled: true
+  
+  # Custom threshold for this story (overrides site default)
+  # Uncomment to use a different threshold than the site default
+  # threshold_days: 14  # Show NEW! for 2 weeks instead of default 7 days

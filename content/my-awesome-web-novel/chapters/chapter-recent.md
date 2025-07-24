@@ -1,7 +1,7 @@
 ---
 title: "Chapter Recent: Just Published"
 author: "Original Author"
-published: "2025-01-23"
+published: "2025-07-20"
 tags: ["recent", "test", "demo"]
 translation_notes: "This chapter should appear since it has yesterday's date"
 
