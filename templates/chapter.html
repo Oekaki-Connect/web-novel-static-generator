@@ -1224,6 +1224,15 @@
             }
             
             function handleViewerClick(e) {
+                const viewer = document.getElementById('manga-viewer');
+                
+                // Special behavior for vertical scroll mode
+                if (viewer.classList.contains('scroll-mode')) {
+                    handleScrollModeClick(e);
+                    return;
+                }
+                
+                // Original click behavior for single/double page modes
                 const rect = e.currentTarget.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const width = rect.width;
@@ -1241,6 +1250,64 @@
                 } else if (isRightHalf) {
                     // Right half - next page (LTR) or previous page (RTL)
                     changePage(isRTL ? -1 : 1);
+                }
+            }
+            
+            function handleScrollModeClick(e) {
+                // Find which page was clicked or is currently in view
+                const currentPageInView = getCurrentPageInScrollView();
+                const totalPages = mangaData.page_count;
+                
+                if (currentPageInView >= totalPages) {
+                    // On final page - navigate to next chapter
+                    navigateToNextChapter();
+                } else {
+                    // Not on final page - scroll to next page
+                    scrollToPage(currentPageInView + 1);
+                }
+            }
+            
+            function getCurrentPageInScrollView() {
+                const pages = document.querySelectorAll('.manga-page');
+                const viewportTop = window.pageYOffset;
+                const viewportMiddle = viewportTop + (window.innerHeight / 2);
+                
+                // Find which page is in the middle of the viewport
+                for (let i = 0; i < pages.length; i++) {
+                    const page = pages[i];
+                    const pageTop = page.getBoundingClientRect().top + viewportTop;
+                    const pageBottom = pageTop + page.offsetHeight;
+                    
+                    if (viewportMiddle >= pageTop && viewportMiddle <= pageBottom) {
+                        return i + 1; // Pages are 1-indexed
+                    }
+                }
+                
+                // Fallback: return the last visible page
+                for (let i = pages.length - 1; i >= 0; i--) {
+                    const page = pages[i];
+                    const pageTop = page.getBoundingClientRect().top + viewportTop;
+                    
+                    if (pageTop <= viewportMiddle) {
+                        return i + 1;
+                    }
+                }
+                
+                return 1; // Default to first page
+            }
+            
+            function scrollToPage(pageNumber) {
+                const targetPage = document.querySelector(`.manga-page[data-page="${pageNumber}"]`);
+                if (targetPage) {
+                    // Smooth scroll to the target page
+                    targetPage.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // Update current page tracker
+                    currentPage = pageNumber;
+                    updatePageIndicator();
                 }
             }
             
