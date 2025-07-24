@@ -698,6 +698,18 @@
                 </div>
                 
                 <div class="setting-group">
+                    <label for="preload-images">Image Preloading:</label>
+                    <select id="preload-images">
+                        <option value="0">Disabled</option>
+                        <option value="1">1 Image</option>
+                        <option value="2">2 Images</option>
+                        <option value="3" selected>3 Images</option>
+                        <option value="4">4 Images</option>
+                        <option value="5">5 Images</option>
+                    </select>
+                </div>
+                
+                <div class="setting-group">
                     <button id="reset-settings" class="manga-btn">Reset to Defaults</button>
                 </div>
                 
@@ -715,8 +727,10 @@
             let imageScaling = '{{ manga_data.config.image_scaling }}';
             let zoomLevel = {{ manga_data.config.zoom_level }};
             let readingDirection = '{{ manga_data.config.reading_direction }}';
+            let preloadImages = 3; // Default to 3 images
             let isFullscreen = false;
             let mouseTimer = null;
+            const preloadedImages = new Map(); // Cache for preloaded images
             
             document.addEventListener('DOMContentLoaded', function() {
                 initMangaReader();
@@ -727,9 +741,49 @@
                 setupPageCompletionTracking();
             });
             
+            function preloadUpcomingImages() {
+                if (preloadImages === 0) return; // Preloading disabled
+                
+                const totalPages = mangaData.page_count;
+                
+                // Preload upcoming pages
+                for (let i = 1; i <= preloadImages; i++) {
+                    const nextPage = currentPage + i;
+                    if (nextPage <= totalPages) {
+                        preloadImage(nextPage);
+                    }
+                }
+            }
+            
+            function preloadImage(pageNumber) {
+                const pageKey = `page${pageNumber}`;
+                
+                // Skip if already preloaded
+                if (preloadedImages.has(pageKey)) return;
+                
+                // Find the page data
+                const pageData = mangaData.pages.find(p => p.page_number === pageNumber);
+                if (!pageData) return;
+                
+                // Create and preload the image
+                const img = new Image();
+                img.onload = () => {
+                    preloadedImages.set(pageKey, img);
+                    console.log(`Preloaded page ${pageNumber}`);
+                };
+                img.onerror = () => {
+                    console.warn(`Failed to preload page ${pageNumber}`);
+                };
+                
+                img.src = pageData.url;
+            }
+            
             function initMangaReader() {
                 // Update UI
                 updatePageIndicator();
+                
+                // Start preloading images for current page
+                preloadUpcomingImages();
                 
                 // Event listeners
                 document.getElementById('prev-page').addEventListener('click', () => changePage(-1));
@@ -757,6 +811,15 @@
                     document.getElementById('zoom-display').textContent = zoomLevel + '%';
                     saveMangaSettings();
                     applyMangaSettings();
+                });
+                
+                document.getElementById('preload-images').addEventListener('change', (e) => {
+                    preloadImages = parseInt(e.target.value);
+                    saveMangaSettings();
+                    // Clear existing preload cache when settings change
+                    preloadedImages.clear();
+                    // Trigger preloading for current page
+                    preloadUpcomingImages();
                 });
                 
                 document.getElementById('reset-settings').addEventListener('click', resetMangaSettings);
@@ -789,6 +852,9 @@
                     
                     // Scroll to top of page
                     newPageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Preload upcoming images
+                    preloadUpcomingImages();
                 }
             }
             
@@ -812,6 +878,7 @@
                     document.getElementById('image-scaling').value = imageScaling;
                     document.getElementById('zoom-level').value = zoomLevel;
                     document.getElementById('zoom-display').textContent = zoomLevel + '%';
+                    document.getElementById('preload-images').value = preloadImages;
                 }
             }
             
@@ -871,6 +938,7 @@
                     viewMode = settings.viewMode || viewMode;
                     imageScaling = settings.imageScaling || imageScaling;
                     zoomLevel = settings.zoomLevel || zoomLevel;
+                    preloadImages = settings.preloadImages !== undefined ? settings.preloadImages : preloadImages;
                 }
             }
             
@@ -878,7 +946,8 @@
                 const settings = {
                     viewMode,
                     imageScaling,
-                    zoomLevel
+                    zoomLevel,
+                    preloadImages
                 };
                 localStorage.setItem('manga-reader-settings', JSON.stringify(settings));
             }
@@ -921,15 +990,21 @@
                 viewMode = '{{ manga_data.config.view_mode }}';
                 imageScaling = '{{ manga_data.config.image_scaling }}';
                 zoomLevel = {{ manga_data.config.zoom_level }};
+                preloadImages = 3; // Reset to default
                 
                 saveMangaSettings();
                 applyMangaSettings();
+                
+                // Clear and restart preloading
+                preloadedImages.clear();
+                preloadUpcomingImages();
                 
                 // Update UI
                 document.getElementById('view-mode').value = viewMode;
                 document.getElementById('image-scaling').value = imageScaling;
                 document.getElementById('zoom-level').value = zoomLevel;
                 document.getElementById('zoom-display').textContent = zoomLevel + '%';
+                document.getElementById('preload-images').value = preloadImages;
             }
             
             function toggleFullscreen() {
