@@ -63,6 +63,94 @@
             box-sizing: border-box;
             max-width: 100%;
         }
+        
+        /* Password protection styling */
+        .password-protection {
+            background: var(--color-accent, #f7fafc);
+            border: 2px solid var(--color-border, #e2e8f0);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem auto;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+        }
+        
+        .password-protection h2 {
+            color: var(--color-heading, #2d3748);
+            margin: 0 0 1rem 0;
+            font-size: 1.5rem;
+        }
+        
+        .password-protection p {
+            color: var(--color-text, #4a5568);
+            margin: 0 0 1.5rem 0;
+            font-size: 1.1rem;
+        }
+        
+        .password-form {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+        
+        .password-form input[type="password"] {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--color-border, #e2e8f0);
+            border-radius: 6px;
+            font-size: 1rem;
+            min-width: 200px;
+            background: var(--color-base, white);
+            color: var(--color-text, #2d3748);
+        }
+        
+        .password-form input[type="password"]:focus {
+            outline: none;
+            border-color: var(--color-accent-strong, #4299e1);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .password-form button {
+            background-color: var(--color-secondary);
+            color: var(--color-base);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .password-form button:hover {
+            background-color: var(--color-primary);
+        }
+        
+        .password-form button:active {
+            transform: translateY(1px);
+        }
+        
+        /* Dark mode password protection */
+        [data-theme="dark"] .password-protection {
+            background: var(--color-accent, #2d3748);
+            border-color: var(--color-border, #4a5568);
+        }
+        
+        [data-theme="dark"] .password-protection h2 {
+            color: var(--color-heading, #f7fafc);
+        }
+        
+        [data-theme="dark"] .password-protection p {
+            color: var(--color-text, #e2e8f0);
+        }
+        
+        [data-theme="dark"] .password-form input[type="password"] {
+            background: var(--color-base, #1a202c);
+            border-color: var(--color-border, #4a5568);
+            color: var(--color-text, #f7fafc);
+        }
     </style>
     
     <!-- SEO Meta Tags -->
@@ -773,12 +861,6 @@
         </nav>
         {% endif %}
         
-        <!-- Theme Toggle -->
-        <div class="theme-toggle">
-            <span onclick="toggleTheme()" id="theme-toggle-text">
-                [ <span id="light-mode" class="theme-option">light mode</span> | <span id="dark-mode" class="theme-option">dark mode</span> ]
-            </span>
-        </div>
     </footer>
 </body>
 </html>

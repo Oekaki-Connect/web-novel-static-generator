@@ -4914,13 +4914,23 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
         # Start HTTP server
         httpd = HTTPServer(("localhost", port), LiveReloadHandler)
         
+        # Global shutdown flag to prevent multiple shutdown attempts
+        shutdown_in_progress = False
+        
         # Set up proper signal handling for graceful shutdown
         def signal_handler(signum, frame):
+            nonlocal shutdown_in_progress
+            if shutdown_in_progress:
+                print("Force terminating...")
+                os._exit(1)
+                return
+                
+            shutdown_in_progress = True
             print("\nShutting down server...")
             
-            # Set up a hard timeout to force exit
+            # Force exit after 1 second regardless
             def force_exit():
-                time.sleep(2)  # Give 2 seconds for graceful shutdown
+                time.sleep(1)
                 print("Force exiting...")
                 os._exit(1)
             
@@ -4928,51 +4938,70 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
             timeout_thread.start()
             
             try:
-                # Stop file watcher immediately
+                # Stop everything immediately
                 observer.stop()
-                
-                # Shutdown HTTP server
                 httpd.shutdown()
                 httpd.server_close()
                 
-                # Force stop WebSocket server (don't wait)
-                if websocket_loop:
-                    try:
-                        websocket_loop.call_soon_threadsafe(websocket_loop.stop)
-                    except Exception:
-                        pass  # Ignore errors, we're shutting down anyway
-                
+                # Don't wait for websocket cleanup
                 print("Server shutdown complete.")
                 
             except Exception as e:
                 print(f"Error during shutdown: {e}")
             finally:
-                # Force exit immediately - don't wait for threads
-                import threading
-                print(f"Active threads: {threading.active_count()}")
                 os._exit(0)
         
-        # Register signal handlers for Ctrl+C
-        signal.signal(signal.SIGINT, signal_handler)
-        if hasattr(signal, 'SIGTERM'):
-            signal.signal(signal.SIGTERM, signal_handler)
+        # Register signal handlers for Ctrl+C (and re-register periodically)
+        def register_handlers():
+            signal.signal(signal.SIGINT, signal_handler)
+            if hasattr(signal, 'SIGTERM'):
+                signal.signal(signal.SIGTERM, signal_handler)
+        
+        register_handlers()
+        
+        # Simplified signal re-registration (less aggressive)
+        def reregister_signals():
+            while not shutdown_in_progress:
+                time.sleep(10)  # Re-register every 10 seconds
+                try:
+                    register_handlers()
+                except:
+                    pass
+        
+        signal_thread = threading.Thread(target=reregister_signals, daemon=True)
+        signal_thread.start()
         
         print(f"Development server running at http://localhost:{port}/")
         print("Press Ctrl+C to stop the server")
         
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            signal_handler(signal.SIGINT, None)
-        finally:
-            # Ensure cleanup happens even if signal handler fails
+        # Run HTTP server in a separate thread to keep main thread free for signals
+        def run_server():
             try:
-                observer.stop()
-                httpd.shutdown()
-                httpd.server_close()
-            except:
-                pass
-            os._exit(0)
+                httpd.serve_forever()
+            except Exception as e:
+                if not shutdown_in_progress:
+                    print(f"Server error: {e}")
+        
+        server_thread = threading.Thread(target=run_server, daemon=True)
+        server_thread.start()
+        
+        # Keep main thread alive and responsive to signals
+        try:
+            while not shutdown_in_progress:
+                time.sleep(0.5)  # Check every 500ms
+        except KeyboardInterrupt:
+            print("\nKeyboardInterrupt caught in main thread")
+            signal_handler(signal.SIGINT, None)
+        
+        # Final cleanup
+        print("\nServer stopped.")
+        try:
+            observer.stop()
+            httpd.shutdown()
+            httpd.server_close()
+        except:
+            pass
+        os._exit(0)
             
     except ImportError as e:
         print(f"[ERROR] Missing dependencies for development server: {e}")
