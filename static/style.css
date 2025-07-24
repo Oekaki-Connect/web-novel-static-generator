@@ -2683,7 +2683,7 @@ footer p {
 
 .manga-controls {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     background-color: var(--color-accent);
     border: 1px solid var(--color-border);
@@ -2734,17 +2734,22 @@ body:has(.manga-reader.fullscreen) {
     display: none;
 }
 
-/* Increase spacing between fullscreen controls */
-.manga-reader.fullscreen .manga-controls-left,
-.manga-reader.fullscreen .manga-controls-center,
-.manga-reader.fullscreen .manga-controls-right {
-    gap: 1rem;
-}
-
+/* Fullscreen controls styling */
 .manga-reader.fullscreen .manga-controls {
     padding: 1rem 1.5rem;
     gap: 2rem; /* Add significant space between control groups */
     justify-content: center; /* Center the controls instead of space-between */
+}
+
+.manga-reader.fullscreen .manga-controls-left,
+.manga-reader.fullscreen .manga-controls-right {
+    position: static;
+}
+
+.manga-reader.fullscreen .manga-controls-left,
+.manga-reader.fullscreen .manga-controls-center,
+.manga-reader.fullscreen .manga-controls-right {
+    gap: 1rem;
 }
 
 /* Ensure settings modal appears above fullscreen manga reader */
@@ -2782,6 +2787,20 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.manga-controls-left {
+    position: absolute;
+    left: 1rem;
+}
+
+.manga-controls-right {
+    position: absolute;
+    right: 1rem;
+}
+
+.manga-controls-center {
+    position: relative;
 }
 
 .page-indicator {
@@ -3161,6 +3180,7 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     .manga-controls-left,
     .manga-controls-center,
     .manga-controls-right {
+        position: static;
         justify-content: center;
     }
     
