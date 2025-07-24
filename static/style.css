@@ -2921,7 +2921,7 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1rem;
+    gap: 0; /* No gap between pages for book-like experience */
 }
 
 .manga-viewer.double-page .manga-page {

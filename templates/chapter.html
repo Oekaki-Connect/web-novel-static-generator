@@ -1032,7 +1032,27 @@
             }
             
             function changePage(direction) {
-                const newPage = currentPage + direction;
+                // Calculate how many pages to advance based on view mode
+                let pageStep = 1;
+                if (viewMode === 'double') {
+                    if (direction === 1) {
+                        // Moving forward: check how many pages are left
+                        const pagesRemaining = mangaData.page_count - currentPage;
+                        if (pagesRemaining === 1) {
+                            // Only 1 page left, advance by 1 to show it alone
+                            pageStep = 1;
+                        } else {
+                            // 2 or more pages left, advance by 2 for double page
+                            pageStep = 2;
+                        }
+                    } else {
+                        // Moving backward: advance by 2 if we're currently showing 2 pages
+                        const currentlyShowingTwo = currentPage % 2 === 0 || currentPage < mangaData.page_count;
+                        pageStep = currentlyShowingTwo ? 2 : 1;
+                    }
+                }
+                
+                const newPage = currentPage + (direction * pageStep);
                 
                 // Check if we're trying to go beyond the current chapter
                 if (newPage < 1 && direction === -1) {
@@ -1043,6 +1063,9 @@
                     navigateToNextChapter();
                 } else if (newPage >= 1 && newPage <= mangaData.page_count) {
                     showPage(newPage);
+                } else if (direction === 1 && currentPage < mangaData.page_count) {
+                    // If we would overshoot, just go to the last page
+                    showPage(mangaData.page_count);
                 }
             }
             
@@ -1093,13 +1116,11 @@
                 const readerTop = mangaReader.offsetTop;
                 const relativeScroll = currentScrollTop - readerTop;
                 
-                // Hide current page
-                const currentPageEl = document.querySelector(`.manga-page[data-page="${currentPage}"]`);
-                if (currentPageEl) {
-                    currentPageEl.style.display = 'none';
-                }
+                // Update current page number first
+                currentPage = pageNum;
+                updatePageIndicator();
                 
-                // Show new page
+                // Preload the image for the new page
                 const newPageEl = document.querySelector(`.manga-page[data-page="${pageNum}"]`);
                 if (newPageEl) {
                     const imgElement = newPageEl.querySelector('.manga-image');
@@ -1131,35 +1152,33 @@
                             }
                         }
                     }
+                }
+                
+                // Apply view mode to show the correct pages based on current mode
+                applyViewMode();
+                
+                // Always position manga image optimally in viewport when changing pages
+                setTimeout(() => {
+                    const controls = document.querySelector('.manga-controls');
+                    const controlsHeight = controls ? controls.offsetHeight : 0;
                     
-                    // Now show the page with image ready
-                    newPageEl.style.display = 'block';
-                    currentPage = pageNum;
-                    updatePageIndicator();
+                    // Calculate ideal scroll position to show image optimally
+                    // Position just below controls with some padding
+                    const targetScroll = readerTop + controlsHeight + 10;
                     
-                    // Always position manga image optimally in viewport when changing pages
-                    setTimeout(() => {
-                        const controls = document.querySelector('.manga-controls');
-                        const controlsHeight = controls ? controls.offsetHeight : 0;
-                        
-                        // Calculate ideal scroll position to show image optimally
-                        // Position just below controls with some padding
-                        const targetScroll = readerTop + controlsHeight + 10;
-                        
-                        // Always scroll to optimal position for manga viewing
-                        window.scrollTo({ 
-                            top: targetScroll, 
-                            behavior: 'smooth' 
-                        });
-                    }, 50); // Small delay to ensure page is fully rendered
-                    
-                    // Preload upcoming images immediately
-                    preloadUpcomingImages();
-                    
-                    // Check for manga completion
-                    if (window.mangaCompletionCheck) {
-                        window.mangaCompletionCheck(pageNum);
-                    }
+                    // Always scroll to optimal position for manga viewing
+                    window.scrollTo({ 
+                        top: targetScroll, 
+                        behavior: 'smooth' 
+                    });
+                }, 50); // Small delay to ensure page is fully rendered
+                
+                // Preload upcoming images immediately
+                preloadUpcomingImages();
+                
+                // Check for manga completion
+                if (window.mangaCompletionCheck) {
+                    window.mangaCompletionCheck(pageNum);
                 }
             }
             
@@ -1578,7 +1597,8 @@
                     page.classList.remove('active', 'single-cover');
                 });
                 
-                if (currentPage === 1 && coverSeparate) {
+                // Handle cover page separately if configured
+                if (coverSeparate && currentPage === 1) {
                     // Show first page alone
                     const firstPage = document.querySelector('.manga-page[data-page="1"]');
                     if (firstPage) {
@@ -1586,19 +1606,52 @@
                         firstPage.classList.add('active', 'single-cover');
                     }
                 } else {
-                    // Show two pages side by side
-                    const startPage = coverSeparate ? 
-                        (currentPage === 1 ? 1 : (currentPage % 2 === 0 ? currentPage : currentPage - 1)) :
-                        (currentPage % 2 === 1 ? currentPage : currentPage - 1);
+                    // Calculate page pairs for book-like layout
+                    let leftPage, rightPage;
                     
-                    for (let i = 0; i < 2; i++) {
-                        const pageNum = startPage + i;
-                        if (pageNum <= mangaData.page_count) {
-                            const page = document.querySelector(`.manga-page[data-page="${pageNum}"]`);
-                            if (page) {
-                                page.style.display = 'block';
-                                page.classList.add('active');
-                            }
+                    if (coverSeparate) {
+                        // After cover, pages start at 2: pairs are (2,3), (4,5), (6,7), etc.
+                        // If user is on an even page, show (current, current+1)
+                        // If user is on an odd page > 1, show (current-1, current)
+                        if (currentPage === 2) {
+                            leftPage = 2;
+                            rightPage = 3;
+                        } else if (currentPage % 2 === 0) {
+                            // Even page - show current and next
+                            leftPage = currentPage;
+                            rightPage = currentPage + 1;
+                        } else {
+                            // Odd page > 1 - show previous and current
+                            leftPage = currentPage - 1;
+                            rightPage = currentPage;
+                        }
+                    } else {
+                        // No separate cover: pairs are (1,2), (3,4), (5,6), etc.
+                        if (currentPage % 2 === 1) {
+                            // Odd page - show current and next
+                            leftPage = currentPage;
+                            rightPage = currentPage + 1;
+                        } else {
+                            // Even page - show previous and current
+                            leftPage = currentPage - 1;
+                            rightPage = currentPage;
+                        }
+                    }
+                    
+                    // Show the pages (left page first in DOM for LTR, right page first for RTL)
+                    if (leftPage >= 1 && leftPage <= mangaData.page_count) {
+                        const leftPageEl = document.querySelector(`.manga-page[data-page="${leftPage}"]`);
+                        if (leftPageEl) {
+                            leftPageEl.style.display = 'block';
+                            leftPageEl.classList.add('active');
+                        }
+                    }
+                    
+                    if (rightPage >= 1 && rightPage <= mangaData.page_count) {
+                        const rightPageEl = document.querySelector(`.manga-page[data-page="${rightPage}"]`);
+                        if (rightPageEl) {
+                            rightPageEl.style.display = 'block';
+                            rightPageEl.classList.add('active');
                         }
                     }
                 }
