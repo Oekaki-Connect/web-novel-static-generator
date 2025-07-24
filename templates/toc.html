@@ -52,19 +52,28 @@
             const visitedKey = `visited_${novelSlug}`;
             const visitedChapters = JSON.parse(localStorage.getItem(visitedKey) || '{}');
             
+            console.log('Reading progress data:', visitedChapters);
+            
             // Add read indicators to chapter links
             const chapterLinks = document.querySelectorAll('.arc ul li a');
+            console.log('Found chapter links:', chapterLinks.length);
+            
             chapterLinks.forEach(link => {
                 const href = link.getAttribute('href');
                 const chapterId = href.split('/').filter(Boolean).pop();
                 
+                console.log(`Processing link: ${href} -> chapter ID: ${chapterId}`);
+                
                 if (visitedChapters[chapterId]) {
+                    console.log(`Adding indicator for chapter ${chapterId}:`, visitedChapters[chapterId]);
                     const indicator = document.createElement('span');
                     indicator.className = visitedChapters[chapterId].completed ? 'read-completed' : 'read-visited';
                     indicator.textContent = visitedChapters[chapterId].completed ? ' ✓' : ' ○';
                     
                     // Insert indicator inside the link at the end
                     link.appendChild(indicator);
+                } else {
+                    console.log(`No visit data found for chapter ${chapterId}`);
                 }
             });
         }

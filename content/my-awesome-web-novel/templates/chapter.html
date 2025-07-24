@@ -185,9 +185,9 @@
         
         // Reading progress tracking
         function initReadingProgress() {
-            const novelSlug = '{{ novel_slug or "" }}';
-            const chapterId = '{{ chapter_id or "" }}';
-            const chapterTitle = '{{ chapter_title or "" }}';
+            const novelSlug = '{{ novel.slug }}';
+            const chapterId = '{{ chapter.id }}';
+            const chapterTitle = '{{ chapter_title }}';
             
             // Mark this chapter as visited
             markChapterVisited(novelSlug, chapterId, chapterTitle);
@@ -238,11 +238,36 @@
                 const windowHeight = window.innerHeight;
                 const documentHeight = document.documentElement.scrollHeight;
                 
-                // Consider chapter "completed" when user scrolls to within 100px of the bottom
-                const scrolledToEnd = (scrollTop + windowHeight) >= (documentHeight - 100);
+                // Try to find meaningful completion points
+                let completionPoint = documentHeight - 200; // Default fallback
+                
+                // Check if comments section exists - completion point is when comments are visible
+                const commentsSection = document.querySelector('.comments-section, #utterances-container, [data-repo]');
+                if (commentsSection) {
+                    const commentsTop = commentsSection.getBoundingClientRect().top + scrollTop;
+                    completionPoint = Math.min(commentsTop - windowHeight * 0.3, completionPoint);
+                }
+                
+                // Check if footer exists - completion point is when footer is visible  
+                const footer = document.querySelector('footer');
+                if (footer) {
+                    const footerTop = footer.getBoundingClientRect().top + scrollTop;
+                    completionPoint = Math.min(footerTop - windowHeight * 0.5, completionPoint);
+                }
+                
+                // Check if chapter content wrapper exists - completion point is shortly after content ends
+                const contentWrapper = document.querySelector('#chapter-content-wrapper, .chapter-content');
+                if (contentWrapper) {
+                    const contentBottom = contentWrapper.getBoundingClientRect().bottom + scrollTop;
+                    completionPoint = Math.min(contentBottom + 100, completionPoint);
+                }
+                
+                // Consider chapter "completed" when user scrolls past the main content
+                const scrolledToEnd = (scrollTop + windowHeight) >= completionPoint;
                 
                 if (scrolledToEnd) {
                     hasScrolledToEnd = true;
+                    console.log('Chapter marked as completed - reached content end');
                     markChapterCompleted(novelSlug, chapterId);
                 }
             }
@@ -252,6 +277,19 @@
             
             // Also check on load in case content is short
             setTimeout(checkScrollProgress, 1000);
+            
+            // Mark as completed if user clicks next chapter link
+            const nextChapterLinks = document.querySelectorAll('nav a[href*="../"]:not([href*="toc"]), .chapter-nav a[href*="../"]:not([href*="toc"])');
+            nextChapterLinks.forEach(link => {
+                // Only add to links that look like next chapter (not prev or toc)
+                const linkText = link.textContent.toLowerCase();
+                if (linkText.includes('next') || linkText.includes('chapter') && !linkText.includes('previous') && !linkText.includes('prev')) {
+                    link.addEventListener('click', () => {
+                        console.log('Chapter marked as completed - clicked next chapter');
+                        markChapterCompleted(novelSlug, chapterId);
+                    });
+                }
+            });
         }
         
         // Initialize reading progress tracking

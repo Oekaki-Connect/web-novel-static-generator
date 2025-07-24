@@ -2743,6 +2743,8 @@ body:has(.manga-reader.fullscreen) {
 
 .manga-reader.fullscreen .manga-controls {
     padding: 1rem 1.5rem;
+    gap: 2rem; /* Add significant space between control groups */
+    justify-content: center; /* Center the controls instead of space-between */
 }
 
 /* Ensure settings modal appears above fullscreen manga reader */
@@ -2871,8 +2873,7 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     min-height: 70vh;
     position: relative;
     background-color: var(--color-base);
-    border-radius: 6px;
-    overflow: auto;
+    overflow: hidden; /* Prevent horizontal scrollbars */
 }
 
 /* Single page mode */
@@ -3175,6 +3176,41 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     
     .manga-image {
         max-height: 80vh;
+    }
+    
+    /* Ensure no decorative styling on small screens */
+    .manga-viewer {
+        border-radius: 0; /* Remove any inherited border radius */
+        box-shadow: none; /* Ensure no shadow */
+        overflow: hidden; /* Prevent scrollbars */
+    }
+    
+    .manga-page {
+        box-shadow: none; /* Ensure no shadow on container */
+        border-radius: 0; /* Remove any inherited border radius */
+        max-width: 100vw; /* Prevent width overflow */
+        overflow: hidden; /* Prevent any internal overflow */
+    }
+    
+    /* Prevent scrollbar overlap on small viewports */
+    .manga-image {
+        /* Use multiple fallbacks for better browser support */
+        max-width: calc(100vw - 17px) !important; /* Standard scrollbar width */
+        max-width: calc(100vw - env(scrollbar-gutter, 17px)) !important; /* Modern browsers */
+        box-shadow: none !important; /* Absolutely no shadows */
+        border-radius: 0 !important; /* Absolutely no rounded corners */
+    }
+    
+    /* Add safe area for scrollbar */
+    .manga-viewer {
+        padding-right: 15px; /* Safe padding for scrollbar */
+        margin-right: 2px; /* Small additional buffer */
+        box-sizing: border-box;
+    }
+    
+    .manga-page {
+        padding-right: 10px; /* Ensure page content doesn't touch scrollbar */
+        box-sizing: border-box;
     }
     
     .manga-settings-content {
