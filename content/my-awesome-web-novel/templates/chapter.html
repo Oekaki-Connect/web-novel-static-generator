@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ chapter_title }}</title>
+    <link rel="stylesheet" href="../../../static/style.css">
+    
+    <!-- Custom styles for My Awesome Web Novel -->
+    <style>
+        .custom-novel-header {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            color: white;
+            padding: 20px;
+            margin: 0 0 20px 0;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .custom-novel-title {
+            font-size: 2.2em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .custom-novel-subtitle {
+            margin-top: 8px;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .custom-chapter-intro {
+            background: var(--bg-secondary, #f7fafc);
+            border-left: 4px solid #4a5568;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 6px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        [data-theme="dark"] .custom-chapter-intro {
+            background: var(--bg-secondary, #2d3748);
+            border-left-color: #718096;
+        }
+        
+        .custom-fantasy-decoration {
+            text-align: center;
+            font-size: 1.5em;
+            color: #4a5568;
+            margin: 20px 0;
+        }
+        
+        [data-theme="dark"] .custom-fantasy-decoration {
+            color: #a0aec0;
+        }
+        
+        /* Ensure no horizontal overflow */
+        .custom-novel-header, 
+        .custom-chapter-intro {
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+    </style>
+    
+    <!-- SEO Meta Tags -->
+    {% if seo_meta_description %}
+    <meta name="description" content="{{ seo_meta_description }}">
+    {% endif %}
+    {% if seo_keywords %}
+    <meta name="keywords" content="{{ seo_keywords }}">
+    {% endif %}
+    {% if not allow_indexing %}
+    <meta name="robots" content="noindex, nofollow">
+    {% endif %}
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{{ social_title }}">
+    <meta property="og:description" content="{{ social_description }}">
+    <meta property="og:image" content="{{ social_image }}">
+    <meta property="og:url" content="{{ social_url }}">
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="{{ site_name }}">
+    {% if chapter_metadata.published %}
+    <meta property="article:published_time" content="{{ chapter_metadata.published }}">
+    {% endif %}
+    {% if chapter_metadata.author %}
+    <meta property="article:author" content="{{ chapter_metadata.author }}">
+    {% endif %}
+    {% if chapter_metadata.tags %}
+    {% for tag in chapter_metadata.tags %}
+    <meta property="article:tag" content="{{ tag }}">
+    {% endfor %}
+    {% endif %}
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ social_title }}">
+    <meta name="twitter:description" content="{{ social_description }}">
+    <meta name="twitter:image" content="{{ social_image }}">
+    {% if twitter_handle %}
+    <meta name="twitter:site" content="@{{ twitter_handle }}">
+    <meta name="twitter:creator" content="@{{ twitter_handle }}">
+    {% endif %}
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ social_url }}">
+    
+    <!-- Theme Toggle Script -->
+    <script src="../../../static/theme-toggle.js"></script>
+    
+    <!-- Chapter Navigation Script -->
+    <script>
+        function jumpToChapter() {
+            const select = document.getElementById('chapter-select');
+            if (select.value) {
+                window.location.href = select.value;
+            }
+        }
+        
+        // Reading settings functionality
+        let currentTextSize = 100;
+        let currentLineSpacing = 1.6;
+        
+        function loadReadingSettings() {
+            const savedTextSize = localStorage.getItem('readingTextSize');
+            const savedLineSpacing = localStorage.getItem('readingLineSpacing');
+            
+            if (savedTextSize) {
+                currentTextSize = parseInt(savedTextSize);
+                applyTextSize();
+            }
+            
+            if (savedLineSpacing) {
+                currentLineSpacing = parseFloat(savedLineSpacing);
+                applyLineSpacing();
+            }
+            
+            updateDisplays();
+        }
+        
+        function adjustTextSize(delta) {
+            currentTextSize = Math.max(70, Math.min(200, currentTextSize + (delta * 10)));
+            applyTextSize();
+            localStorage.setItem('readingTextSize', currentTextSize);
+            updateDisplays();
+        }
+        
+        function adjustLineSpacing(delta) {
+            currentLineSpacing = Math.max(1.0, Math.min(3.0, currentLineSpacing + delta));
+            applyLineSpacing();
+            localStorage.setItem('readingLineSpacing', currentLineSpacing);
+            updateDisplays();
+        }
+        
+        function applyTextSize() {
+            // Set CSS custom property on the root document for text size
+            document.documentElement.style.setProperty('--reading-font-size', (currentTextSize / 100) + 'rem');
+        }
+        
+        function applyLineSpacing() {
+            // Set CSS custom property on the root document for line spacing
+            document.documentElement.style.setProperty('--reading-line-height', currentLineSpacing);
+        }
+        
+        function updateDisplays() {
+            document.getElementById('text-size-display').textContent = currentTextSize + '%';
+            document.getElementById('line-spacing-display').textContent = currentLineSpacing.toFixed(1);
+        }
+        
+        function resetReadingSettings() {
+            currentTextSize = 100;
+            currentLineSpacing = 1.6;
+            applyTextSize();
+            applyLineSpacing();
+            localStorage.removeItem('readingTextSize');
+            localStorage.removeItem('readingLineSpacing');
+            updateDisplays();
+        }
+        
+        // Load settings when page loads
+        document.addEventListener('DOMContentLoaded', loadReadingSettings);
+        
+        // Reading progress tracking
+        function initReadingProgress() {
+            const novelSlug = '{{ novel_slug or "" }}';
+            const chapterId = '{{ chapter_id or "" }}';
+            const chapterTitle = '{{ chapter_title or "" }}';
+            
+            // Mark this chapter as visited
+            markChapterVisited(novelSlug, chapterId, chapterTitle);
+            
+            // Set up scroll tracking for completion
+            setupScrollTracking(novelSlug, chapterId);
+        }
+        
+        function markChapterVisited(novelSlug, chapterId, chapterTitle) {
+            const visitedKey = `visited_${novelSlug}`;
+            let visitedChapters = JSON.parse(localStorage.getItem(visitedKey) || '{}');
+            
+            visitedChapters[chapterId] = {
+                title: chapterTitle,
+                visitedAt: new Date().toISOString(),
+                completed: visitedChapters[chapterId]?.completed || false
+            };
+            
+            localStorage.setItem(visitedKey, JSON.stringify(visitedChapters));
+        }
+        
+        function markChapterCompleted(novelSlug, chapterId) {
+            const visitedKey = `visited_${novelSlug}`;
+            let visitedChapters = JSON.parse(localStorage.getItem(visitedKey) || '{}');
+            
+            if (visitedChapters[chapterId]) {
+                visitedChapters[chapterId].completed = true;
+                visitedChapters[chapterId].completedAt = new Date().toISOString();
+                localStorage.setItem(visitedKey, JSON.stringify(visitedChapters));
+                
+                // Update latest chapter read
+                const latestKey = `latest_${novelSlug}`;
+                localStorage.setItem(latestKey, JSON.stringify({
+                    chapterId: chapterId,
+                    title: visitedChapters[chapterId].title,
+                    completedAt: visitedChapters[chapterId].completedAt
+                }));
+            }
+        }
+        
+        function setupScrollTracking(novelSlug, chapterId) {
+            let hasScrolledToEnd = false;
+            
+            function checkScrollProgress() {
+                if (hasScrolledToEnd) return;
+                
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                
+                // Consider chapter "completed" when user scrolls to within 100px of the bottom
+                const scrolledToEnd = (scrollTop + windowHeight) >= (documentHeight - 100);
+                
+                if (scrolledToEnd) {
+                    hasScrolledToEnd = true;
+                    markChapterCompleted(novelSlug, chapterId);
+                }
+            }
+            
+            window.addEventListener('scroll', checkScrollProgress);
+            window.addEventListener('resize', checkScrollProgress);
+            
+            // Also check on load in case content is short
+            setTimeout(checkScrollProgress, 1000);
+        }
+        
+        // Initialize reading progress tracking
+        document.addEventListener('DOMContentLoaded', initReadingProgress);
+    </script>
+    
+    {% if is_serve_mode %}
+    <script>
+        // Live reload websocket connection for development
+        (function() {
+            const ws = new WebSocket('ws://localhost:{{ serve_port }}/ws');
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.type === 'reload') {
+                    console.log('File change detected, reloading page...');
+                    window.location.reload();
+                }
+            };
+            
+            ws.onclose = function() {
+                console.log('Live reload connection closed. Trying to reconnect in 3 seconds...');
+                setTimeout(function() {
+                    window.location.reload();
+                }, 3000);
+            };
+        })();
+    </script>
+    {% endif %}
+</head>
+<body>
+    <!-- Custom Fantasy Novel Header -->
+    <div class="custom-novel-header">
+        <h1 class="custom-novel-title">{{ novel_title }}</h1>
+        <div class="custom-novel-subtitle">Custom Story Template Example</div>
+    </div>
+    
+    <header>
+        <nav class="breadcrumbs">
+            <a href="../../../">Home</a>
+            <span class="breadcrumb-separator">></span>
+            <a href="../toc/">{{ novel_title }}</a>
+            <span class="breadcrumb-separator">></span>
+            <span class="current-page">{{ chapter_title }}</span>
+        </nav>
+        <nav class="chapter-nav">
+            {% if prev_chapter %}
+            <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
+            {% endif %}
+            <a href="../toc/">Table of Contents</a>
+            {% if next_chapter %}
+            <a href="../{{ next_chapter.id }}/">Next Chapter</a>
+            {% endif %}
+        </nav>
+        
+        <div class="chapter-dropdown">
+            <label for="chapter-select">Jump to Chapter:</label>
+            <select id="chapter-select" onchange="jumpToChapter()">
+                <option value="">Select a chapter...</option>
+                {% for arc in arcs %}
+                    <optgroup label="{{ arc.title }}">
+                        {% for chapter in arc.chapters %}
+                            {% if not chapter.get('hidden', False) %}
+                            <option value="../{{ chapter.id }}/" {% if chapter.id == chapter_id %}selected{% endif %}>
+                                {{ chapter.title }}
+                            </option>
+                            {% endif %}
+                        {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="reading-config">
+            <details>
+                <summary>Reading Settings</summary>
+                <div class="reading-controls">
+                    <div class="control-group">
+                        <label for="text-size">Text Size:</label>
+                        <div class="button-group">
+                            <button onclick="adjustTextSize(-1)">A-</button>
+                            <span id="text-size-display">100%</span>
+                            <button onclick="adjustTextSize(1)">A+</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="line-spacing">Line Spacing:</label>
+                        <div class="button-group">
+                            <button onclick="adjustLineSpacing(-0.1)">-</button>
+                            <span id="line-spacing-display">1.6</span>
+                            <button onclick="adjustLineSpacing(0.1)">+</button>
+                        </div>
+                    </div>
+                    <button onclick="resetReadingSettings()" class="reset-button">Reset to Default</button>
+                </div>
+            </details>
+        </div>
+        
+        <div class="language-switcher">
+            <h3>Languages:</h3>
+            {% for lang in available_languages %}
+                {% if lang == current_language and not translation_missing %}
+                    <span class="current-language">{{ lang|upper }}</span>
+                {% else %}
+                    <a href="../../{{ lang }}/{{ chapter.id }}/">{{ lang|upper }}</a>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <!-- Custom Fantasy Chapter Introduction -->
+        <div class="custom-chapter-intro">
+            <strong>🌟 Chapter Introduction:</strong> Welcome to this chapter of our epic fantasy tale! 
+            This custom template showcases novel-specific styling and theming.
+        </div>
+        
+        <h1>{{ chapter_title }}</h1>
+        
+        {% if password_protected %}
+        <div class="password-protection">
+            <h2>🔒 Password Protected Content</h2>
+            <p>{{ password_hint or "This chapter requires a password to access." }}</p>
+            <div class="password-form">
+                <input type="password" id="password-input" placeholder="Enter password">
+                <button onclick="decryptContent()">Unlock Chapter</button>
+            </div>
+            <div id="decrypt-error" style="display: none; color: red; margin-top: 10px;">
+                Incorrect password. Please try again.
+            </div>
+        </div>
+        
+        <div id="encrypted-content" style="display: none;">{{ encrypted_content }}</div>
+        
+        <script>
+            function decryptContent() {
+                const password = document.getElementById('password-input').value;
+                const encryptedContent = document.getElementById('encrypted-content').textContent;
+                
+                try {
+                    const decrypted = decrypt(encryptedContent, password);
+                    if (decrypted && decrypted.trim()) {
+                        document.getElementById('chapter-content-wrapper').innerHTML = decrypted;
+                        document.querySelector('.password-protection').style.display = 'none';
+                        document.getElementById('decrypt-error').style.display = 'none';
+                    } else {
+                        document.getElementById('decrypt-error').style.display = 'block';
+                    }
+                } catch (e) {
+                    document.getElementById('decrypt-error').style.display = 'block';
+                }
+            }
+            
+            function decrypt(encryptedData, password) {
+                // Simple XOR cipher with SHA256 password hash
+                const crypto = window.crypto || window.msCrypto;
+                if (!crypto) return null;
+                
+                // Convert password to hash
+                const encoder = new TextEncoder();
+                const data = encoder.encode(password);
+                
+                return crypto.subtle.digest('SHA-256', data).then(hashBuffer => {
+                    const hashArray = new Uint8Array(hashBuffer);
+                    const encrypted = atob(encryptedData);
+                    let decrypted = '';
+                    
+                    for (let i = 0; i < encrypted.length; i++) {
+                        decrypted += String.fromCharCode(encrypted.charCodeAt(i) ^ hashArray[i % hashArray.length]);
+                    }
+                    
+                    return decrypted;
+                }).catch(() => null);
+            }
+            
+            // Allow Enter key to decrypt
+            document.getElementById('password-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    decryptContent();
+                }
+            });
+        </script>
+        {% endif %}
+        
+        <div class="chapter-metadata">
+            {% if chapter_metadata.author %}
+            <div class="metadata-item">
+                <strong>Author:</strong> 
+                {% if authors_config and authors_config.get(chapter_metadata.author) %}
+                {% set author_info = authors_config[chapter_metadata.author] %}
+                <a href="../../../authors/{{ chapter_metadata.author | replace(' ', '-') | lower }}/" class="metadata-author-link">{{ author_info.name }}</a>
+                {% else %}
+                {{ chapter_metadata.author }}
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.translator %}
+            <div class="metadata-item">
+                <strong>Translator:</strong> 
+                {% if authors_config and authors_config.get(chapter_metadata.translator) %}
+                {% set translator_info = authors_config[chapter_metadata.translator] %}
+                <a href="../../../authors/{{ chapter_metadata.translator | replace(' ', '-') | lower }}/" class="metadata-author-link">{{ translator_info.name }}</a>
+                {% else %}
+                {{ chapter_metadata.translator }}
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.published %}
+            <div class="metadata-item">
+                <strong>Published:</strong> {{ chapter_metadata.published }}
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.tags %}
+            <div class="metadata-item">
+                <strong>Tags:</strong>
+                <div class="tags">
+                    {% for tag in chapter_metadata.tags %}
+                    <a href="../tags/{{ tag|slugify_tag }}/" class="tag">{{ tag }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if chapter_metadata.translation_notes %}
+            <div class="metadata-item translation-notes">
+                <strong>Translation Notes:</strong>
+                <p>{{ chapter_metadata.translation_notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        
+    </header>
+    <main>
+        {% if not password_protected %}
+        
+        <div class="custom-fantasy-decoration">
+            ⚔️ 🏰 ⚔️
+        </div>
+        
+        <div id="chapter-content-wrapper" class="chapter-content">
+            {{ chapter_content | safe }}
+        </div>
+        
+        {% if chapter_metadata.translator_commentary %}
+        <div class="translator-commentary">
+            <h3>Translator's Commentary</h3>
+            <div class="commentary-content">
+                {{ chapter_metadata.translator_commentary | safe }}
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div id="chapter-content-wrapper" class="chapter-content">
+            <!-- Content will be loaded here after password verification -->
+        </div>
+        {% endif %}
+        
+        <!-- Chapter Navigation -->
+        <nav class="chapter-nav-bottom">
+            {% if prev_chapter %}
+            <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
+            {% endif %}
+            <a href="../toc/">Table of Contents</a>
+            {% if next_chapter %}
+            <a href="../{{ next_chapter.id }}/">Next Chapter</a>
+            {% endif %}
+        </nav>
+        
+        {% if comments_enabled and not password_protected %}
+        <div class="comments-section">
+            <h3>Comments</h3>
+            <div id="utterances-container" 
+                 data-repo="{{ comments_repo }}"
+                 data-issue-term="{{ comments_issue_term }}"
+                 data-label="{{ comments_label }}">
+            </div>
+        </div>
+        {% endif %}
+    </main>
+    <footer>
+        <nav>
+            {% if prev_chapter %}
+            <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
+            {% endif %}
+            <a href="../toc/">Table of Contents</a>
+            {% if next_chapter %}
+            <a href="../{{ next_chapter.id }}/">Next Chapter</a>
+            {% endif %}
+        </nav>
+        <p>{{ footer_copyright }}</p>
+        {% if footer_links %}
+        <nav class="footer-links">
+            {% for link in footer_links %}
+            <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
+            {% endfor %}
+        </nav>
+        {% endif %}
+        
+        <!-- Theme Toggle -->
+        <div class="theme-toggle">
+            <span onclick="toggleTheme()" id="theme-toggle-text">
+                [ <span id="light-mode" class="theme-option">light mode</span> | <span id="dark-mode" class="theme-option">dark mode</span> ]
+            </span>
+        </div>
+    </footer>
+</body>
+</html>

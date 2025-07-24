@@ -36,7 +36,58 @@ PAGES_DIR = "./pages"
 TEMPLATES_DIR = "./templates"
 STATIC_DIR = "./static"
 
+# Global template environment (will be enhanced with novel-specific support)
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
+
+# Cache for novel-specific template environments
+_novel_template_envs = {}
+
+def get_novel_template_directories(novel_slug):
+    """Get list of template directories for a novel (novel-specific first, then defaults)"""
+    directories = []
+    
+    # Novel-specific templates directory
+    novel_templates_dir = os.path.join(CONTENT_DIR, novel_slug, "templates")
+    if os.path.exists(novel_templates_dir):
+        directories.append(novel_templates_dir)
+    
+    # Default templates directory (fallback)
+    directories.append(TEMPLATES_DIR)
+    
+    return directories
+
+def get_novel_template_env(novel_slug):
+    """Get or create a Jinja2 environment for a specific novel with template override support"""
+    if novel_slug not in _novel_template_envs:
+        template_dirs = get_novel_template_directories(novel_slug)
+        loader = FileSystemLoader(template_dirs)
+        novel_env = Environment(loader=loader)
+        
+        # Add the same filters as the global environment
+        novel_env.filters['slugify_tag'] = slugify_tag
+        novel_env.filters['find_author_username'] = find_author_username_filter
+        
+        _novel_template_envs[novel_slug] = novel_env
+    
+    return _novel_template_envs[novel_slug]
+
+def check_novel_has_custom_templates(novel_slug):
+    """Check if a novel has any custom templates"""
+    novel_templates_dir = os.path.join(CONTENT_DIR, novel_slug, "templates")
+    return os.path.exists(novel_templates_dir) and os.listdir(novel_templates_dir)
+
+def list_novel_custom_templates(novel_slug):
+    """List all custom templates for a novel"""
+    novel_templates_dir = os.path.join(CONTENT_DIR, novel_slug, "templates")
+    if not os.path.exists(novel_templates_dir):
+        return []
+    
+    custom_templates = []
+    for file in os.listdir(novel_templates_dir):
+        if file.endswith('.html'):
+            custom_templates.append(file)
+    
+    return sorted(custom_templates)
 
 def encrypt_content_with_password(content, password):
     """Encrypt content using XOR with SHA256 hash of password"""
@@ -1416,6 +1467,7 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
     # Re-generate the TOC page with download links
     with open(toc_file, "w", encoding='utf-8') as f:
         f.write(render_template("toc.html", 
+                               novel_slug=novel_slug,
                                novel=filtered_novel, 
                                current_language=lang, 
                                available_languages=available_languages,
@@ -2259,11 +2311,19 @@ def generate_page_index(site_config):
     
     print("Page index generated.")
 
-def render_template(template_name, **kwargs):
-    template = env.get_template(template_name)
+def render_template(template_name, novel_slug=None, **kwargs):
+    """Render a template with optional novel-specific override support"""
+    if novel_slug:
+        # Use novel-specific template environment if novel_slug is provided
+        novel_env = get_novel_template_env(novel_slug)
+        template = novel_env.get_template(template_name)
+    else:
+        # Use global template environment for non-novel-specific templates
+        template = env.get_template(template_name)
+    
     return template.render(**kwargs)
 
-def build_site(include_drafts=False, no_epub=False, optimize_images=False):
+def build_site(include_drafts=False, no_epub=False, optimize_images=False, serve_mode=False, serve_port=8000):
     global INCLUDE_DRAFTS
     INCLUDE_DRAFTS = include_drafts
     
@@ -2505,6 +2565,7 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
             
             with open(os.path.join(toc_dir, "index.html"), "w", encoding='utf-8') as f:
                 f.write(render_template("toc.html", 
+                                       novel_slug=novel_slug,
                                        novel=filtered_novel, 
                                        current_language=lang, 
                                        available_languages=available_languages,
@@ -2630,18 +2691,24 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
                         # Filter out hidden chapters for chapter dropdown
                         filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
                         f.write(render_template("chapter.html", 
+                                                novel_slug=novel_slug,
                                                 novel=filtered_novel,
+                                                novel_title=novel['title'],
+                                                arcs=novel['arcs'],
                                                 chapter=chapter,
+                                                chapter_id=chapter_id,
                                                 chapter_title=display_title,
                                                 chapter_content=chapter_content_html,
                                                 chapter_metadata=chapter_metadata,
                                                 prev_chapter=prev_chapter,
                                                 next_chapter=next_chapter,
+                                                language=lang,
                                                 current_language=lang,
                                                 available_languages=available_languages,
                                                 show_tags=show_tags,
                                                 show_metadata=show_metadata,
                                                 show_translation_notes=show_translation_notes,
+                                                password_protected=is_password_protected,
                                                 is_password_protected=is_password_protected,
                                                 encrypted_content=encrypted_content,
                                                 password_hash=password_hash,
@@ -2656,12 +2723,16 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
                                                 seo_keywords=chapter_social_meta.get('keywords'),
                                                 allow_indexing=chapter_seo_meta.get('allow_indexing', True),
                                                 twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                                footer_copyright=footer_data['copyright'],
+                                                footer_links=footer_data['links'],
                                                 footer_data=footer_data,
                                                 comments_enabled=comments_enabled,
                                                 comments_repo=comments_config['repo'],
                                                 comments_issue_term=comments_config['issue_term'],
                                                 comments_label=comments_config['label'],
-                                                comments_theme=comments_config['theme']))
+                                                comments_theme=comments_config['theme'],
+                                                is_serve_mode=serve_mode,
+                                                serve_port=serve_port if serve_mode else None))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
@@ -2752,13 +2823,18 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
                         # Filter out hidden chapters for chapter dropdown
                         filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
                         f.write(render_template("chapter.html", 
+                                                novel_slug=novel_slug,
                                                 novel=filtered_novel,
+                                                novel_title=novel['title'],
+                                                arcs=novel['arcs'],
                                                 chapter=chapter,
+                                                chapter_id=chapter_id,
                                                 chapter_title=display_title,
                                                 chapter_content=chapter_content_html,
                                                 chapter_metadata=chapter_metadata,
                                                 prev_chapter=prev_chapter,
                                                 next_chapter=next_chapter,
+                                                language=lang,
                                                 current_language=lang,
                                                 primary_language=primary_lang,
                                                 requested_language=lang,
@@ -2767,6 +2843,7 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
                                                 show_tags=show_tags,
                                                 show_metadata=show_metadata,
                                                 show_translation_notes=show_translation_notes,
+                                                password_protected=is_password_protected,
                                                 is_password_protected=is_password_protected,
                                                 encrypted_content=encrypted_content,
                                                 password_hash=password_hash,
@@ -2781,12 +2858,16 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
                                                 seo_keywords=chapter_social_meta.get('keywords'),
                                                 allow_indexing=chapter_seo_meta.get('allow_indexing', True),
                                                 twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                                footer_copyright=footer_data['copyright'],
+                                                footer_links=footer_data['links'],
                                                 footer_data=footer_data,
                                                 comments_enabled=comments_enabled,
                                                 comments_repo=comments_config['repo'],
                                                 comments_issue_term=comments_config['issue_term'],
                                                 comments_label=comments_config['label'],
-                                                comments_theme=comments_config['theme']))
+                                                comments_theme=comments_config['theme'],
+                                                is_serve_mode=serve_mode,
+                                                serve_port=serve_port if serve_mode else None))
 
         # Generate tag pages for this language (after all chapters are processed)
         for lang in available_languages:
@@ -2803,6 +2884,7 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
                 # Generate main tags index page
                 with open(os.path.join(tags_dir, "index.html"), "w", encoding='utf-8') as f:
                     f.write(render_template("tags_index.html",
+                                            novel_slug=novel_slug,
                                             novel=novel,
                                             tags_data=tags_data,
                                             tag_slug_map=tag_slug_map,
@@ -2827,6 +2909,7 @@ def build_site(include_drafts=False, no_epub=False, optimize_images=False):
                     
                     with open(os.path.join(tag_page_dir, "index.html"), "w", encoding='utf-8') as f:
                         f.write(render_template("tag_page.html",
+                                                novel_slug=novel_slug,
                                                 novel=novel,
                                                 tag_name=tag,
                                                 tag_slug=tag_slug,
@@ -3414,6 +3497,32 @@ def generate_stats_report():
     print(f"\n[INFO] Statistics report written to: {report_path}")
     print_stats_summary(stats)
 
+def collect_template_override_stats():
+    """Collect statistics about template overrides across all novels"""
+    template_stats = {
+        'novels_with_overrides': 0,
+        'total_custom_templates': 0,
+        'override_details': []
+    }
+    
+    all_novels_data = load_all_novels_data()
+    for novel in all_novels_data:
+        novel_slug = novel['slug']
+        
+        if check_novel_has_custom_templates(novel_slug):
+            template_stats['novels_with_overrides'] += 1
+            custom_templates = list_novel_custom_templates(novel_slug)
+            template_stats['total_custom_templates'] += len(custom_templates)
+            
+            template_stats['override_details'].append({
+                'novel_slug': novel_slug,
+                'novel_title': novel.get('title', novel_slug),
+                'custom_templates': custom_templates,
+                'template_count': len(custom_templates)
+            })
+    
+    return template_stats
+
 def collect_site_statistics():
     """Collect comprehensive statistics about the generated site"""
     stats = {
@@ -3464,6 +3573,10 @@ def collect_site_statistics():
         stats['build_files'] = len(list(build_dir.rglob("*.*")))
     
     stats['languages'] = sorted(list(stats['languages']))
+    
+    # Add template override statistics
+    stats['template_overrides'] = collect_template_override_stats()
+    
     return stats
 
 def collect_novel_statistics(novel_slug, novel_config):
@@ -3594,6 +3707,24 @@ def write_stats_report(report_file, stats):
         for tag, count in sorted_tags[:20]:  # Top 20 tags
             report_file.write(f"| {tag} | {count} |\n")
         report_file.write("\n")
+    
+    # Template Overrides section
+    template_stats = stats.get('template_overrides', {})
+    if template_stats.get('novels_with_overrides', 0) > 0:
+        report_file.write("## Template Overrides\n\n")
+        report_file.write("| Metric | Value |\n")
+        report_file.write("|--------|-------|\n")
+        report_file.write(f"| Novels with Custom Templates | {template_stats['novels_with_overrides']} |\n")
+        report_file.write(f"| Total Custom Templates | {template_stats['total_custom_templates']} |\n\n")
+        
+        report_file.write("### Novels with Custom Templates\n\n")
+        for detail in template_stats['override_details']:
+            report_file.write(f"**{detail['novel_title']}** (`{detail['novel_slug']}`)\n")
+            report_file.write(f"- Custom templates: {detail['template_count']}\n")
+            report_file.write(f"- Templates: {', '.join(detail['custom_templates'])}\n\n")
+    else:
+        report_file.write("## Template Overrides\n\n")
+        report_file.write("No novels are using custom template overrides.\n\n")
 
 def print_stats_summary(stats):
     """Print a summary of the statistics to console"""
@@ -3619,7 +3750,16 @@ def determine_rebuild_scope(changed_file_path):
     
     # Template changes require full rebuild
     if 'templates/' in changed_file_path and changed_file_path.endswith('.html'):
-        return {'type': 'full', 'reason': 'Template changed'}
+        return {'type': 'full', 'reason': 'Global template changed'}
+    
+    # Novel-specific template changes
+    if 'content/' in changed_file_path and 'templates/' in changed_file_path and changed_file_path.endswith('.html'):
+        # Extract novel slug from path (e.g., content/novel-slug/templates/chapter.html)
+        parts = changed_file_path.split('/')
+        if len(parts) >= 4 and parts[0] == 'content' and parts[2] == 'templates':
+            novel_slug = parts[1]
+            template_name = parts[3]
+            return {'type': 'novel_template', 'novel': novel_slug, 'template': template_name, 'reason': f'Novel template {template_name} changed'}
     
     # Static file changes (CSS, JS, images)
     if 'static/' in changed_file_path:
@@ -3896,6 +4036,7 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
         
         # Render chapter  
         chapter_html = render_template("chapter.html",
+                                     novel_slug=novel_slug,
                                      novel=novel_for_template,
                                      chapter=chapter_info,
                                      chapter_title=chapter_metadata.get('title', chapter_info['title']),
@@ -3977,6 +4118,19 @@ def perform_incremental_rebuild(rebuild_info, include_drafts=False):
         print(f"Novel rebuild needed: {rebuild_info['reason']}")
         # For novel config changes, we need to rebuild the entire novel
         # This is complex, so for now fall back to full rebuild
+        os.makedirs(BUILD_DIR, exist_ok=True)
+        build_site(include_drafts=include_drafts, no_epub=True, optimize_images=False)
+        return True
+        
+    elif rebuild_type == 'novel_template':
+        print(f"Novel template rebuild needed: {rebuild_info['reason']}")
+        # Clear the template cache for this novel to force reload
+        novel_slug = rebuild_info['novel']
+        if novel_slug in _novel_template_envs:
+            del _novel_template_envs[novel_slug]
+        
+        # For template changes, we need to rebuild the entire novel since 
+        # we don't know which pages use this template
         os.makedirs(BUILD_DIR, exist_ok=True)
         build_site(include_drafts=include_drafts, no_epub=True, optimize_images=False)
         return True
