@@ -42,7 +42,7 @@
 </head>
 <body>
     <header>
-        <nav class="breadcrumbs">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="../../">Home</a>
             <span class="breadcrumb-separator">></span>
             <a href="../">Authors</a>
@@ -118,7 +118,7 @@
     <footer>
         <p>{{ footer_data.copyright }}</p>
         {% if footer_data.links %}
-        <nav class="footer-links">
+        <nav class="footer-links" aria-label="Footer links">
             {% for link in footer_data.links %}
             <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
             {% endfor %}

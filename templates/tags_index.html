@@ -11,10 +11,10 @@
 </head>
 <body>
     <header>
-        <nav><a href="../toc/">← Back to Table of Contents</a></nav>
+        <nav aria-label="Tags index navigation"><a href="../toc/">← Back to Table of Contents</a></nav>
         <h1>{{ novel.title }}</h1>
         {% if available_languages and available_languages|length > 1 %}
-        <div class="language-switcher">
+        <div class="language-switcher" role="group" aria-label="Language selection">
             <h3>Languages:</h3>
             {% for lang in available_languages %}
                 {% if lang == current_language %}

@@ -96,6 +96,23 @@ new_chapter_tags:
   # Chapters published within this many days will show (NEW!) tag
   threshold_days: 7
 
+# Accessibility features configuration
+accessibility:
+  # Enable accessibility features and validation
+  enabled: true
+  
+  # Require alt text for all images (warns about missing ones)
+  enforce_alt_text: true
+  
+  # Automatically add ARIA labels to navigation elements
+  auto_aria_labels: true
+  
+  # Enhance keyboard navigation support
+  keyboard_navigation: true
+  
+  # Generate accessibility reports during build
+  build_reports: true
+
 # Footer configuration
 footer:
   # Default copyright text

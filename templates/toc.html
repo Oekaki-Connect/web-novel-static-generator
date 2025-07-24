@@ -94,7 +94,7 @@
 </head>
 <body>
     <header>
-        <nav class="breadcrumbs">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="../../../">Home</a>
             <span class="breadcrumb-separator">></span>
             <span class="current-page">{{ novel.title }}</span>
@@ -128,19 +128,19 @@
         </div>
         {% endif %}
         {% if available_languages and available_languages|length > 1 %}
-        <div class="language-switcher">
+        <div class="language-switcher" role="group" aria-label="Language selection">
             <h3>Languages:</h3>
             {% for lang in available_languages %}
                 {% if lang == current_language %}
-                    <span class="current-language">{{ lang|upper }}</span>
+                    <span class="current-language" aria-current="page">{{ lang|upper }}</span>
                 {% else %}
-                    <a href="../../{{ lang }}/toc/">{{ lang|upper }}</a>
+                    <a href="../../{{ lang }}/toc/" aria-label="Switch to {{ lang|upper }} language">{{ lang|upper }}</a>
                 {% endif %}
             {% endfor %}
         </div>
         {% endif %}
         <h2>Table of Contents</h2>
-        <nav class="toc-nav">
+        <nav class="toc-nav" aria-label="Story navigation">
             <a href="../tags/" class="tags-link">Browse by Tags</a>
         </nav>
     </header>
@@ -154,14 +154,14 @@
             {% endif %}
             <div class="arc-content">
                 <h3>{{ arc.title }}</h3>
-                <ul>
+                <ul aria-label="Chapters in {{ arc.title }}">
                     {% for chapter in arc.chapters %}
                     <li>
-                        <a href="../{{ chapter.id }}/">{{ chapter.title }}</a>
+                        <a href="../{{ chapter.id }}/" aria-label="Read {{ chapter.title }}">{{ chapter.title }}</a>
                         {% if chapter.published %}
-                        <span class="chapter-date">
+                        <span class="chapter-date" aria-label="Published on {{ chapter.published | format_date_for_display }}">
                             {% if chapter.published | is_chapter_new %}
-                            <span class="chapter-new">(NEW!) </span>
+                            <span class="chapter-new" aria-label="Recently published">(NEW!) </span>
                             {% endif %}
                             {{ chapter.published | format_date_for_display }}
                         </span>

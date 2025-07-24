@@ -3370,6 +3370,160 @@ def check_broken_links():
         
         return True
 
+def check_accessibility_issues(site_config):
+    """Check for accessibility issues in the generated site"""
+    if not site_config.get('accessibility', {}).get('enabled', True):
+        return True
+    
+    accessibility_config = site_config.get('accessibility', {})
+    enforce_alt_text = accessibility_config.get('enforce_alt_text', True)
+    build_reports = accessibility_config.get('build_reports', True)
+    
+    # Skip report generation in GitHub Actions unless explicitly enabled
+    is_github_actions = os.environ.get('GITHUB_ACTIONS') == 'true'
+    if is_github_actions and not build_reports:
+        print("[INFO] Skipping accessibility report generation (GitHub Actions detected)")
+        return True
+    
+    print("\n" + "="*50)
+    print("ACCESSIBILITY CHECK")
+    print("="*50)
+    
+    accessibility_issues = []
+    
+    if enforce_alt_text:
+        alt_text_issues = check_missing_alt_text()
+        accessibility_issues.extend(alt_text_issues)
+    
+    # Future: Add more accessibility checks here
+    # - ARIA label validation
+    # - Keyboard navigation checks
+    # - Color contrast validation
+    # - Heading hierarchy validation
+    
+    if accessibility_issues:
+        print(f"\n[WARNING] Found {len(accessibility_issues)} accessibility issue(s)")
+        
+        if build_reports and not is_github_actions:
+            generate_accessibility_report(accessibility_issues)
+        
+        return False
+    else:
+        print("\n[SUCCESS] No accessibility issues found!")
+        print("[PASSED] Accessibility check PASSED!")
+        
+        # Remove any existing accessibility report if no issues
+        report_path = os.path.join(os.path.dirname(BUILD_DIR), "images_missing_alt_text_report.md")
+        if os.path.exists(report_path):
+            os.remove(report_path)
+            print(f"[INFO] Removed old accessibility report: {report_path}")
+        
+        return True
+
+def check_missing_alt_text():
+    """Check for images missing alt text in the generated site"""
+    missing_alt_issues = []
+    build_dir = Path(BUILD_DIR)
+    
+    if not build_dir.exists():
+        print("[ERROR] Build directory not found. Run a build first.")
+        return missing_alt_issues
+    
+    # Find all HTML files
+    html_files = list(build_dir.glob("**/*.html"))
+    print(f"[INFO] Checking {len(html_files)} HTML files for images missing alt text...")
+    
+    for html_file in html_files:
+        try:
+            with open(html_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            soup = BeautifulSoup(content, 'html.parser')
+            images = soup.find_all('img')
+            
+            for img in images:
+                src = img.get('src', '')
+                alt = img.get('alt', '').strip()
+                
+                # Skip if no src
+                if not src:
+                    continue
+                
+                # Check if alt text is missing or empty
+                if not alt:
+                    # Get relative path from build directory
+                    relative_html_path = html_file.relative_to(build_dir)
+                    
+                    missing_alt_issues.append({
+                        'file': str(relative_html_path),
+                        'image_src': src,
+                        'issue': 'Missing alt text',
+                        'severity': 'warning'
+                    })
+                    
+                    print(f"[WARNING] Missing alt text: {src} in {relative_html_path}")
+        
+        except Exception as e:
+            print(f"[ERROR] Could not parse {html_file}: {e}")
+    
+    return missing_alt_issues
+
+def generate_accessibility_report(issues):
+    """Generate a markdown report of accessibility issues"""
+    report_path = os.path.join(os.path.dirname(BUILD_DIR), "images_missing_alt_text_report.md")
+    
+    # Group issues by type
+    alt_text_issues = [issue for issue in issues if 'alt text' in issue['issue']]
+    
+    report_content = []
+    report_content.append("# Accessibility Issues Report")
+    report_content.append("")
+    report_content.append(f"Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    report_content.append("")
+    
+    if alt_text_issues:
+        report_content.append("## Images Missing Alt Text")
+        report_content.append("")
+        report_content.append("Images without alt text are inaccessible to screen readers and assistive technologies.")
+        report_content.append("")
+        report_content.append("| File | Image Source | Issue |")
+        report_content.append("|------|-------------|-------|")
+        
+        for issue in alt_text_issues:
+            report_content.append(f"| {issue['file']} | {issue['image_src']} | {issue['issue']} |")
+        
+        report_content.append("")
+        report_content.append("### How to Fix")
+        report_content.append("Add meaningful alt text to images in your markdown files:")
+        report_content.append("```markdown")
+        report_content.append("![Description of image](image.jpg \"Optional title\")")
+        report_content.append("```")
+        report_content.append("")
+    
+    # Add summary
+    report_content.append("## Summary")
+    report_content.append("")
+    report_content.append(f"- **Total Issues**: {len(issues)}")
+    report_content.append(f"- **Missing Alt Text**: {len(alt_text_issues)}")
+    
+    if len(issues) > 0:
+        report_content.append("")
+        report_content.append("### Recommendations")
+        report_content.append("1. Add descriptive alt text to all images")
+        report_content.append("2. Use empty alt text (`alt=\"\"`) for decorative images")
+        report_content.append("3. Ensure alt text describes the content and function of the image")
+        report_content.append("4. Keep alt text concise but informative")
+    
+    # Write report
+    try:
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(report_content))
+        
+        print(f"[INFO] Accessibility report generated: {report_path}")
+        
+    except Exception as e:
+        print(f"[ERROR] Could not generate accessibility report: {e}")
+
 def is_internal_link(url):
     """Check if a URL is an internal link (not external or data/mailto/etc)"""
     if not url:
@@ -4688,6 +4842,8 @@ if __name__ == "__main__":
                         help='Include chapters with future publish dates in the generated site')
     parser.add_argument('--check-links', action='store_true',
                         help='Check for broken internal links after site generation')
+    parser.add_argument('--check-accessibility', action='store_true',
+                        help='Check for accessibility issues after site generation')
     parser.add_argument('--clean', action='store_true',
                         help='Delete build directory before generating')
     parser.add_argument('--no-epub', action='store_true',
@@ -4746,5 +4902,11 @@ if __name__ == "__main__":
     # Check for broken links if requested
     if args.check_links:
         check_broken_links()
+    
+    # Check for accessibility issues if requested
+    if args.check_accessibility:
+        # Load site config for accessibility check
+        site_config = load_site_config()
+        check_accessibility_issues(site_config)
 
 

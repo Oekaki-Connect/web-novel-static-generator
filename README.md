@@ -37,6 +37,7 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Story Length Statistics**: Display word counts with language-specific units
 - **Story Publishing Status**: Show "ongoing" or "complete" badges
 - **Story Genre Tags**: Categorize stories by theme and genre
+- **Accessibility Features**: ARIA labels, keyboard navigation, and alt text validation
 
 ## Project Structure
 
@@ -125,6 +126,23 @@ epub:
 new_chapter_tags:
   enabled: true        # Show (NEW!) tags on recently published chapters
   threshold_days: 7    # Days to consider a chapter "new"
+
+# Accessibility features configuration
+accessibility:
+  # Enable accessibility features and validation
+  enabled: true
+  
+  # Require alt text for all images (warns about missing ones)
+  enforce_alt_text: true
+  
+  # Automatically add ARIA labels to navigation elements
+  auto_aria_labels: true
+  
+  # Enhance keyboard navigation support
+  keyboard_navigation: true
+  
+  # Generate accessibility reports during build
+  build_reports: true
 ```
 
 ### 3. Configure Your Novel
@@ -360,6 +378,14 @@ VALIDATION RESULTS
 - Checks social media preview images (og:image, twitter:image)
 - Verifies CSS and JavaScript file references
 - Should be run before deployment
+
+#### `python generate.py --check-accessibility`
+**Check accessibility compliance**
+- Validates all images have alt text attributes
+- Creates `images_missing_alt_text_report.md` if issues are found
+- Skips report generation in GitHub Actions (detected automatically)
+- Part of comprehensive accessibility feature set
+- Helps ensure content is accessible to screen readers
 
 ### Performance Commands
 
@@ -995,6 +1021,60 @@ tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
 - Non-clickable genre tags displayed on TOC page
 - Clean tag styling with dark mode support
 - Helps readers understand story themes at a glance
+
+### Accessibility Features
+
+Comprehensive accessibility support for improved usability and compliance:
+
+**ARIA Labels:**
+- Semantic navigation labeling for screen readers
+- Breadcrumb navigation: `aria-label="Breadcrumb"`
+- Chapter navigation: `aria-label="Chapter navigation"`
+- Language switchers: `role="group" aria-label="Language selection"`
+- Reading settings: `role="group" aria-label="Reading settings"`
+- Footer links: `aria-label="Footer links"`
+
+**Keyboard Navigation:**
+- **Navigation shortcuts**: `←/h` (previous chapter), `→/l` (next chapter), `t` (table of contents)
+- **Scrolling shortcuts**: `↑/k` (scroll up), `↓/j` (scroll down), `Home/g` (go to top), `End/G` (go to bottom)
+- **Reading controls**: `+/=` (increase text size), `-` (decrease text size), `0` (reset settings)
+- **Help system**: `?` (show keyboard shortcuts modal), `Esc` (close modals)
+- Smart detection to avoid conflicts with form inputs
+- Comprehensive help modal with organized shortcut display
+
+**Alt Text Validation:**
+- Automated checking of all generated HTML files
+- Detects images missing alt attributes using BeautifulSoup4
+- Generates `images_missing_alt_text_report.md` for local builds
+- Skips report generation in GitHub Actions (detected automatically)
+- Configurable enforcement levels
+
+**Configuration:**
+```yaml
+# In site_config.yaml
+accessibility:
+  enabled: true              # Enable all accessibility features
+  enforce_alt_text: true     # Validate alt text on images
+  auto_aria_labels: true     # Add ARIA labels to navigation
+  keyboard_navigation: true  # Enable keyboard shortcuts
+  build_reports: true        # Generate accessibility reports
+```
+
+**Features:**
+- Works across both main templates and story-specific template overrides
+- Respects site theme preferences (light/dark mode support)
+- Mobile-responsive keyboard help modal
+- No conflicts with existing JavaScript functionality
+- Comprehensive accessibility reporting
+
+**Usage:**
+```bash
+# Check accessibility compliance
+python generate.py --check-accessibility
+
+# Standard build includes accessibility checks if enabled
+python generate.py
+```
 
 ### EPUB Downloads
 

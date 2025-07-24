@@ -75,7 +75,7 @@
     <footer>
         <p>{{ footer_data.copyright }}</p>
         {% if footer_data.links %}
-        <nav class="footer-links">
+        <nav class="footer-links" aria-label="Footer links">
             {% for link in footer_data.links %}
             <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
             {% endfor %}

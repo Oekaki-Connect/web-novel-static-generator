@@ -256,6 +256,190 @@
         
         // Initialize reading progress tracking
         document.addEventListener('DOMContentLoaded', initReadingProgress);
+        
+        // Keyboard navigation support
+        function initKeyboardNavigation() {
+            document.addEventListener('keydown', function(e) {
+                // Skip if user is typing in an input field
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                    return;
+                }
+                
+                // Skip if any modifier keys are pressed (except Shift for some cases)
+                if (e.ctrlKey || e.metaKey || e.altKey) {
+                    return;
+                }
+                
+                switch(e.key) {
+                    case 'ArrowLeft':
+                    case 'h':
+                        // Previous chapter
+                        {% if prev_chapter %}
+                        const prevLink = document.querySelector('nav.chapter-nav a[href*="{{ prev_chapter.id }}"]');
+                        if (prevLink) {
+                            window.location.href = prevLink.href;
+                        }
+                        {% endif %}
+                        e.preventDefault();
+                        break;
+                        
+                    case 'ArrowRight':
+                    case 'l':
+                        // Next chapter
+                        {% if next_chapter %}
+                        const nextLink = document.querySelector('nav.chapter-nav a[href*="{{ next_chapter.id }}"]');
+                        if (nextLink) {
+                            window.location.href = nextLink.href;
+                        }
+                        {% endif %}
+                        e.preventDefault();
+                        break;
+                        
+                    case 'ArrowUp':
+                    case 'k':
+                        // Scroll up
+                        window.scrollBy(0, -100);
+                        e.preventDefault();
+                        break;
+                        
+                    case 'ArrowDown':
+                    case 'j':
+                        // Scroll down
+                        window.scrollBy(0, 100);
+                        e.preventDefault();
+                        break;
+                        
+                    case 'Home':
+                    case 'g':
+                        // Go to top
+                        window.scrollTo(0, 0);
+                        e.preventDefault();
+                        break;
+                        
+                    case 'End':
+                    case 'G':
+                        // Go to bottom
+                        window.scrollTo(0, document.body.scrollHeight);
+                        e.preventDefault();
+                        break;
+                        
+                    case 't':
+                        // Go to table of contents
+                        const tocLink = document.querySelector('nav.chapter-nav a[href*="toc"]');
+                        if (tocLink) {
+                            window.location.href = tocLink.href;
+                        }
+                        e.preventDefault();
+                        break;
+                        
+                    case '=':
+                    case '+':
+                        // Increase text size
+                        adjustTextSize(1);
+                        e.preventDefault();
+                        break;
+                        
+                    case '-':
+                        // Decrease text size
+                        adjustTextSize(-1);
+                        e.preventDefault();
+                        break;
+                        
+                    case '0':
+                        // Reset reading settings
+                        resetReadingSettings();
+                        e.preventDefault();
+                        break;
+                        
+                    case '?':
+                        // Show help modal
+                        showKeyboardHelp();
+                        e.preventDefault();
+                        break;
+                }
+            });
+        }
+        
+        function showKeyboardHelp() {
+            const existingModal = document.getElementById('keyboard-help-modal');
+            if (existingModal) {
+                existingModal.style.display = 'flex';
+                existingModal.querySelector('.help-close').focus();
+                return;
+            }
+            
+            const modal = document.createElement('div');
+            modal.id = 'keyboard-help-modal';
+            modal.className = 'keyboard-help-modal';
+            modal.innerHTML = `
+                <div class="help-content">
+                    <div class="help-header">
+                        <h3>Keyboard Shortcuts</h3>
+                        <button class="help-close" aria-label="Close help">&times;</button>
+                    </div>
+                    <div class="help-body">
+                        <div class="help-section">
+                            <h4>Navigation</h4>
+                            <ul>
+                                <li><kbd>←</kbd> or <kbd>h</kbd> - Previous chapter</li>
+                                <li><kbd>→</kbd> or <kbd>l</kbd> - Next chapter</li>
+                                <li><kbd>t</kbd> - Table of contents</li>
+                            </ul>
+                        </div>
+                        <div class="help-section">
+                            <h4>Scrolling</h4>
+                            <ul>
+                                <li><kbd>↑</kbd> or <kbd>k</kbd> - Scroll up</li>
+                                <li><kbd>↓</kbd> or <kbd>j</kbd> - Scroll down</li>
+                                <li><kbd>Home</kbd> or <kbd>g</kbd> - Go to top</li>
+                                <li><kbd>End</kbd> or <kbd>G</kbd> - Go to bottom</li>
+                            </ul>
+                        </div>
+                        <div class="help-section">
+                            <h4>Reading Settings</h4>
+                            <ul>
+                                <li><kbd>+</kbd> or <kbd>=</kbd> - Increase text size</li>
+                                <li><kbd>-</kbd> - Decrease text size</li>
+                                <li><kbd>0</kbd> - Reset all settings</li>
+                            </ul>
+                        </div>
+                        <div class="help-section">
+                            <h4>Help</h4>
+                            <ul>
+                                <li><kbd>?</kbd> - Show this help</li>
+                                <li><kbd>Esc</kbd> - Close help/modals</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="help-overlay"></div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Focus the close button
+            const closeBtn = modal.querySelector('.help-close');
+            closeBtn.focus();
+            
+            // Close handlers
+            closeBtn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            modal.querySelector('.help-overlay').addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            document.addEventListener('keydown', function escHandler(e) {
+                if (e.key === 'Escape') {
+                    document.body.removeChild(modal);
+                    document.removeEventListener('keydown', escHandler);
+                }
+            });
+        }
+        
+        // Initialize keyboard navigation
+        document.addEventListener('DOMContentLoaded', initKeyboardNavigation);
     </script>
     
     {% if is_serve_mode %}
@@ -290,14 +474,14 @@
     </div>
     
     <header>
-        <nav class="breadcrumbs">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
             <a href="../../../">Home</a>
             <span class="breadcrumb-separator">></span>
             <a href="../toc/">{{ novel_title }}</a>
             <span class="breadcrumb-separator">></span>
             <span class="current-page">{{ chapter_title }}</span>
         </nav>
-        <nav class="chapter-nav">
+        <nav class="chapter-nav" aria-label="Chapter navigation">
             {% if prev_chapter %}
             <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
             {% endif %}
@@ -307,9 +491,9 @@
             {% endif %}
         </nav>
         
-        <div class="chapter-dropdown">
+        <div class="chapter-dropdown" role="group" aria-label="Chapter selection">
             <label for="chapter-select">Jump to Chapter:</label>
-            <select id="chapter-select" onchange="jumpToChapter()">
+            <select id="chapter-select" onchange="jumpToChapter()" aria-label="Jump to chapter">
                 <option value="">Select a chapter...</option>
                 {% for arc in arcs %}
                     <optgroup label="{{ arc.title }}">
@@ -325,7 +509,7 @@
             </select>
         </div>
         
-        <div class="reading-config">
+        <div class="reading-config" role="group" aria-label="Reading settings">
             <details>
                 <summary>Reading Settings</summary>
                 <div class="reading-controls">
@@ -350,7 +534,7 @@
             </details>
         </div>
         
-        <div class="language-switcher">
+        <div class="language-switcher" role="group" aria-label="Language selection">
             <h3>Languages:</h3>
             {% for lang in available_languages %}
                 {% if lang == current_language and not translation_missing %}
@@ -511,7 +695,7 @@
         {% endif %}
         
         <!-- Chapter Navigation -->
-        <nav class="chapter-nav-bottom">
+        <nav class="chapter-nav-bottom" aria-label="Bottom chapter navigation">
             {% if prev_chapter %}
             <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
             {% endif %}
@@ -533,7 +717,7 @@
         {% endif %}
     </main>
     <footer>
-        <nav>
+        <nav aria-label="Footer navigation">
             {% if prev_chapter %}
             <a href="../{{ prev_chapter.id }}/">Previous Chapter</a>
             {% endif %}
@@ -544,7 +728,7 @@
         </nav>
         <p>{{ footer_copyright }}</p>
         {% if footer_links %}
-        <nav class="footer-links">
+        <nav class="footer-links" aria-label="Footer links">
             {% for link in footer_links %}
             <a href="{{ link.url }}" target="_blank">{{ link.text }}</a>
             {% endfor %}
