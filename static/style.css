@@ -3180,6 +3180,51 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     border-color: #555555;
 }
 
+/* Chapter Toast Notification */
+.chapter-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: var(--color-base);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    z-index: 10000;
+    max-width: 300px;
+}
+
+.chapter-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.toast-icon {
+    font-size: 1.5rem;
+}
+
+.toast-text {
+    color: var(--color-heading);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+/* Dark mode toast */
+[data-theme="dark"] .chapter-toast {
+    background-color: var(--color-base);
+    border-color: #555555;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
 /* Mobile responsiveness for manga reader */
 @media (max-width: 768px) {
     .manga-controls {
@@ -3252,6 +3297,18 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     
     .manga-shortcuts {
         display: none; /* Hide on mobile to save space */
+    }
+    
+    /* Toast on mobile */
+    .chapter-toast {
+        right: 10px;
+        top: 10px;
+        max-width: calc(100vw - 20px);
+        padding: 0.75rem 1rem;
+    }
+    
+    .toast-text {
+        font-size: 0.85rem;
     }
 }
 

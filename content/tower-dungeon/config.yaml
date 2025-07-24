@@ -29,6 +29,8 @@ arcs:
     chapters:
       - id: "chapter-1"
         title: "Chapter 1: The Sovereign's Secret Sin"
+      - id: "chapter-2"
+        title: "Chapter 2: The Tower's First Trial"
 
 # Social media settings
 social_embeds:
