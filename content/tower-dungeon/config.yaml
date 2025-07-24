@@ -16,6 +16,10 @@ manga_defaults:
   preload_pages: 3            # Number of pages to preload
   page_turn_area: "right_half" # "left_half", "right_half", "full_page"
 
+# Image processing settings
+image_processing:
+  skip_compression: true      # Skip image compression for manga pages
+
 # Story genre/theme tags
 tags: ["manga", "adventure", "dungeon", "fantasy", "action"]
 
