@@ -955,11 +955,11 @@ footer p {
 @keyframes zoomIn {
     from { 
         opacity: 0;
-        transform: scale(0.8); 
+        transform: scale(0.8) translateZ(0); 
     }
     to { 
         opacity: 1;
-        transform: scale(1); 
+        transform: scale(1) translateZ(0); 
     }
 }
 
@@ -2544,6 +2544,7 @@ footer p {
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(4px);
+    z-index: 1; /* Behind the content */
 }
 
 .help-content {
@@ -2557,6 +2558,13 @@ footer p {
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     animation: zoomIn 0.3s ease;
+    z-index: 2; /* Above the overlay */
+    /* Improve text rendering after transform animation */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    transform: translateZ(0); /* Force hardware acceleration */
+    backface-visibility: hidden; /* Prevent blurry text after animation */
 }
 
 .help-header {
@@ -2752,13 +2760,16 @@ body:has(.manga-reader.fullscreen) {
     gap: 1rem;
 }
 
-/* Ensure settings modal appears above fullscreen manga reader */
+/* Ensure settings modal appears above fullscreen manga reader and stays centered */
 body:has(.manga-reader.fullscreen) .manga-settings-modal {
     z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0;
 }
 
-/* Improve modal alignment on small screens */
-@media (max-height: 600px) {
+/* Improve modal alignment on very small screens only */
+@media (max-height: 400px) {
     .manga-settings-modal {
         align-items: flex-start;
         padding-top: 20px;
@@ -3046,6 +3057,7 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(4px);
+    box-sizing: border-box;
 }
 
 .manga-settings-content {
@@ -3058,7 +3070,7 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    margin: auto; /* Ensure proper centering */
+    margin: 0 auto; /* Center horizontally, flexbox handles vertical */
     position: relative; /* For better positioning context */
 }
 

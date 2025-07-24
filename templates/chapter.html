@@ -953,10 +953,26 @@
             
             function toggleSettings() {
                 const modal = document.getElementById('manga-settings-modal');
-                const isVisible = modal.style.display !== 'none';
-                modal.style.display = isVisible ? 'none' : 'block';
+                const controls = document.querySelector('.manga-controls');
+                const shortcuts = document.querySelector('.manga-shortcuts');
+                const isVisible = modal.style.display !== 'none' && modal.style.display !== '';
+                
+                modal.style.display = isVisible ? 'none' : 'flex';
+                
+                // Disable/enable pointer events on controls when modal is open/closed
+                if (controls) {
+                    controls.style.pointerEvents = isVisible ? 'auto' : 'none';
+                }
+                if (shortcuts) {
+                    shortcuts.style.pointerEvents = isVisible ? 'auto' : 'none';
+                }
                 
                 if (!isVisible) {
+                    // Hide controls when opening modal in fullscreen
+                    if (isFullscreen && controls) {
+                        controls.classList.remove('show');
+                    }
+                    
                     // Update controls to current values
                     document.getElementById('view-mode').value = viewMode;
                     document.getElementById('reading-direction').value = readingDirection;
@@ -1016,9 +1032,16 @@
                             showPage(mangaData.page_count);
                             break;
                         case 'Escape':
-                            // Don't open settings if in fullscreen mode
-                            if (!isFullscreen) {
-                                toggleSettings();
+                            // Close settings modal if it's open
+                            const modal = document.getElementById('manga-settings-modal');
+                            if (modal.style.display !== 'none' && modal.style.display !== '') {
+                                modal.style.display = 'none';
+                                
+                                // Re-enable pointer events on controls
+                                const controls = document.querySelector('.manga-controls');
+                                const shortcuts = document.querySelector('.manga-shortcuts');
+                                if (controls) controls.style.pointerEvents = 'auto';
+                                if (shortcuts) shortcuts.style.pointerEvents = 'auto';
                             }
                             break;
                     }
@@ -1149,9 +1172,13 @@
             
             function handleFullscreenMouseMove(e) {
                 const controls = document.querySelector('.manga-controls');
+                const modal = document.getElementById('manga-settings-modal');
                 
-                // Show controls if mouse is near top of screen
-                if (e.clientY < 100) {
+                // Don't show controls if settings modal is open
+                const isModalOpen = modal && modal.style.display !== 'none' && modal.style.display !== '';
+                
+                // Show controls if mouse is near top of screen and modal is not open
+                if (e.clientY < 100 && !isModalOpen) {
                     showFullscreenControls();
                     
                     // Clear existing timer
