@@ -2974,6 +2974,43 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* Loading state for manga images */
+.manga-image.loading {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading-shimmer 1.5s infinite;
+    min-height: 300px; /* Prevent layout shift */
+    position: relative;
+}
+
+.manga-image.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, rgba(240,240,240,0.8) 25%, rgba(224,224,224,0.8) 50%, rgba(240,240,240,0.8) 75%);
+    background-size: 200% 100%;
+    animation: loading-shimmer 1.5s infinite;
+    pointer-events: none;
+}
+
+@keyframes loading-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+[data-theme="dark"] .manga-image.loading {
+    background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+    background-size: 200% 100%;
+}
+
+[data-theme="dark"] .manga-image.loading::after {
+    background: linear-gradient(90deg, rgba(51,51,51,0.8) 25%, rgba(68,68,68,0.8) 50%, rgba(51,51,51,0.8) 75%);
+    background-size: 200% 100%;
+}
+
 /* Manga Settings Modal */
 .manga-settings-modal {
     position: fixed;

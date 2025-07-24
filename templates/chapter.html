@@ -656,12 +656,36 @@
                 
                 const totalPages = mangaData.page_count;
                 
-                // Preload upcoming pages
+                // Preload current page first (in case it's not loaded)
+                preloadImage(currentPage);
+                
+                // Preload pages in both directions with priority
                 for (let i = 1; i <= preloadImages; i++) {
+                    // Preload next pages (higher priority)
                     const nextPage = currentPage + i;
                     if (nextPage <= totalPages) {
                         preloadImage(nextPage);
                     }
+                    
+                    // Preload previous pages (lower priority, slight delay)
+                    const prevPage = currentPage - i;
+                    if (prevPage >= 1) {
+                        // Delay previous page preloading slightly to prioritize next pages
+                        setTimeout(() => preloadImage(prevPage), i * 100);
+                    }
+                }
+                
+                // Aggressively preload more pages if user has fast connection
+                if (preloadImages >= 3) {
+                    // Preload extra pages beyond the normal range
+                    setTimeout(() => {
+                        for (let i = preloadImages + 1; i <= preloadImages + 2; i++) {
+                            const nextPage = currentPage + i;
+                            if (nextPage <= totalPages) {
+                                preloadImage(nextPage);
+                            }
+                        }
+                    }, 500);
                 }
             }
             
@@ -675,21 +699,31 @@
                 const pageData = mangaData.pages.find(p => p.page_number === pageNumber);
                 if (!pageData) return;
                 
+                // Mark as being preloaded to prevent duplicates
+                preloadedImages.set(pageKey, 'loading');
+                
                 // Create and preload the image
                 const img = new Image();
                 img.onload = () => {
                     preloadedImages.set(pageKey, img);
                     console.log(`Preloaded page ${pageNumber}`);
                     
-                    // Also update the actual img element if it exists
+                    // Immediately update the actual img element if it exists
                     const imgElement = document.querySelector(`.manga-page[data-page="${pageNumber}"] .manga-image`);
-                    if (imgElement && imgElement.src !== pageData.url) {
-                        // Pre-set the src so browser uses cached version
-                        imgElement.src = pageData.url;
+                    if (imgElement) {
+                        // Ensure clean state
+                        imgElement.classList.remove('loading');
+                        imgElement.style.opacity = '1';
+                        
+                        // Update src if needed
+                        if (imgElement.src !== pageData.url) {
+                            imgElement.src = pageData.url;
+                        }
                     }
                 };
                 img.onerror = () => {
                     console.warn(`Failed to preload page ${pageNumber}`);
+                    preloadedImages.delete(pageKey); // Remove failed preload
                 };
                 
                 // Only set crossOrigin if image is from external domain
@@ -697,6 +731,11 @@
                 if (isExternal) {
                     img.crossOrigin = 'anonymous';
                 }
+                
+                // Add loading priority hint for modern browsers
+                img.decoding = 'async';
+                img.loading = 'eager';
+                
                 img.src = pageData.url;
             }
             
@@ -704,7 +743,28 @@
                 // Update UI
                 updatePageIndicator();
                 
-                // Start preloading images for current page
+                // Set up initial clean state for all images
+                const allImages = document.querySelectorAll('.manga-image');
+                allImages.forEach(img => {
+                    // Ensure clean initial state
+                    img.style.opacity = '1';
+                    img.classList.remove('loading');
+                    
+                    // Only add loading if image truly isn't loaded
+                    if (!img.complete || img.naturalHeight === 0) {
+                        img.classList.add('loading');
+                        img.onload = function() {
+                            this.classList.remove('loading');
+                            this.style.opacity = '1';
+                        };
+                        img.onerror = function() {
+                            this.classList.remove('loading');
+                            this.style.opacity = '1';
+                        };
+                    }
+                });
+                
+                // Start aggressive preloading for current and nearby pages
                 preloadUpcomingImages();
                 
                 // Event listeners
@@ -780,6 +840,37 @@
                 // Show new page
                 const newPageEl = document.querySelector(`.manga-page[data-page="${pageNum}"]`);
                 if (newPageEl) {
+                    const imgElement = newPageEl.querySelector('.manga-image');
+                    const pageKey = `page${pageNum}`;
+                    const preloadedImg = preloadedImages.get(pageKey);
+                    
+                    // Set up image before showing page to prevent flash
+                    if (imgElement) {
+                        if (preloadedImg && preloadedImg !== 'loading') {
+                            // Use preloaded image immediately - set src BEFORE showing
+                            imgElement.src = preloadedImg.src;
+                            imgElement.classList.remove('loading');
+                            // Ensure image is ready
+                            if (imgElement.complete) {
+                                imgElement.style.opacity = '1';
+                            }
+                        } else {
+                            // For non-preloaded images, ensure loading state is clean
+                            imgElement.classList.remove('loading');
+                            imgElement.style.opacity = '1';
+                            
+                            // If image isn't loaded, show loading state briefly
+                            if (!imgElement.complete || imgElement.naturalHeight === 0) {
+                                imgElement.classList.add('loading');
+                                imgElement.onload = function() {
+                                    this.classList.remove('loading');
+                                    this.style.opacity = '1';
+                                };
+                            }
+                        }
+                    }
+                    
+                    // Now show the page with image ready
                     newPageEl.style.display = 'block';
                     currentPage = pageNum;
                     updatePageIndicator();
@@ -794,7 +885,7 @@
                     }
                     // Otherwise maintain current scroll position
                     
-                    // Preload upcoming images
+                    // Preload upcoming images immediately
                     preloadUpcomingImages();
                 }
             }
