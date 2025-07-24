@@ -4,6 +4,7 @@ from jinja2 import Environment, FileSystemLoader
 import markdown
 import yaml
 import re
+import glob
 from pathlib import Path
 import hashlib
 import base64
@@ -2120,6 +2121,84 @@ def process_chapter_images(novel_slug, chapter_id, language, markdown_content):
     
     return updated_content
 
+def process_manga_pages(novel_slug, chapter_id, language, chapter_metadata, novel_config):
+    """Process manga pages for a manga chapter and return page data"""
+    # Determine chapter source directory
+    if language == 'en':
+        chapter_source_dir = os.path.join(CONTENT_DIR, novel_slug, "chapters")
+    else:
+        chapter_source_dir = os.path.join(CONTENT_DIR, novel_slug, "chapters", language)
+    
+    # Look for page images in the chapter directory
+    page_pattern = os.path.join(chapter_source_dir, "page*.png")
+    page_files = []
+    
+    # Scan for page files
+    for ext in ['png', 'jpg', 'jpeg', 'webp']:
+        pattern = os.path.join(chapter_source_dir, f"page*.{ext}")
+        page_files.extend(glob.glob(pattern))
+    
+    if not page_files:
+        print(f"    Warning: No manga pages found for {chapter_id}")
+        return {}
+    
+    # Sort pages naturally (page01, page02, etc.)
+    page_files.sort(key=lambda x: os.path.basename(x))
+    
+    # Create images directory in build
+    build_images_dir = os.path.normpath(os.path.join(BUILD_DIR, "images", novel_slug, chapter_id))
+    os.makedirs(build_images_dir, exist_ok=True)
+    
+    # Process each page
+    pages_data = []
+    for i, page_file in enumerate(page_files):
+        page_filename = os.path.basename(page_file)
+        dest_image_path = os.path.join(build_images_dir, page_filename)
+        
+        # Copy image to build directory
+        shutil.copy2(page_file, dest_image_path)
+        
+        # Build page data
+        page_number = i + 1
+        page_path = f"../../../images/{novel_slug}/{chapter_id}/{page_filename}"
+        
+        # Generate alt text from pattern or use default
+        alt_pattern = chapter_metadata.get('page_alt_pattern', '{story_title} Chapter {chapter_number}, Page {page}')
+        story_title = novel_config.get('title', 'Manga')
+        chapter_number = chapter_metadata.get('chapter_number', '?')
+        alt_text = alt_pattern.format(
+            story_title=story_title,
+            chapter_number=chapter_number,
+            page=page_number
+        )
+        
+        page_data = {
+            'number': page_number,
+            'filename': page_filename,
+            'path': page_path,
+            'alt_text': alt_text
+        }
+        pages_data.append(page_data)
+    
+    # Get manga configuration
+    manga_config = {
+        'reading_direction': chapter_metadata.get('reading_direction', novel_config.get('reading_direction', 'ltr')),
+        'cover_separate': chapter_metadata.get('cover_separate', novel_config.get('manga_defaults', {}).get('cover_separate', True)),
+        'view_mode': novel_config.get('manga_defaults', {}).get('view_mode', 'single'),
+        'image_scaling': novel_config.get('manga_defaults', {}).get('image_scaling', 'fit_screen'),
+        'zoom_level': novel_config.get('manga_defaults', {}).get('zoom_level', 100),
+        'preload_pages': novel_config.get('manga_defaults', {}).get('preload_pages', 3),
+        'page_turn_area': novel_config.get('manga_defaults', {}).get('page_turn_area', 'right_half')
+    }
+    
+    print(f"    Processed {len(pages_data)} manga pages for {chapter_id}")
+    
+    return {
+        'pages': pages_data,
+        'page_count': len(pages_data),
+        'config': manga_config
+    }
+
 # Add the slugify_tag function as a Jinja2 filter
 env.filters['slugify_tag'] = slugify_tag
 
@@ -2796,8 +2875,28 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                             print(f"      Skipping chapter: {chapter_id} - {safe_title}")
                         continue
                     
-                    # Process chapter images and update markdown
-                    chapter_content_md = process_chapter_images(novel_slug, chapter_id, lang, chapter_content_md)
+                    # Determine if this is a manga chapter
+                    story_chapter_type = novel_config.get('chapter_type')
+                    chapter_type = chapter_metadata.get('type', story_chapter_type)
+                    is_manga_chapter = chapter_type == 'manga'
+                    
+                    # Initialize manga data
+                    manga_data = None
+                    
+                    if is_manga_chapter:
+                        # Process manga pages instead of regular content
+                        print(f"      Processing manga chapter: {chapter_id}")
+                        manga_data = process_manga_pages(novel_slug, chapter_id, lang, chapter_metadata, novel_config)
+                        
+                        if not manga_data:
+                            print(f"      Error: No manga pages found for {chapter_id}, skipping...")
+                            continue
+                        
+                        # For manga chapters, we don't process markdown content
+                        chapter_content_html = ""
+                    else:
+                        # Process regular chapter images and update markdown
+                        chapter_content_md = process_chapter_images(novel_slug, chapter_id, lang, chapter_content_md)
                     
                     # Handle password protection
                     is_password_protected = 'password' in chapter_metadata and chapter_metadata['password']
@@ -2806,8 +2905,12 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                     password_hint = None
                     
                     if is_password_protected:
-                        # Convert markdown to HTML first
-                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        if not is_manga_chapter:
+                            # Convert markdown to HTML first for regular chapters
+                            chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        else:
+                            # For manga chapters, we'll handle this in the template
+                            chapter_content_html = ""
                         
                         # Build the complete content to be encrypted including comments
                         complete_content = f'<div class="chapter-content">\n{chapter_content_html}\n</div>'
@@ -2846,7 +2949,9 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                         # Set content to placeholder for password-protected chapters
                         chapter_content_html = '<div id="password-protected-content" style="text-align: center; padding: 2rem;"><p>This chapter is password protected.</p></div>'
                     else:
-                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        if not is_manga_chapter:
+                            # Only convert markdown for non-manga chapters
+                            chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     # Use navigation function to skip hidden chapters
                     prev_chapter, next_chapter = get_navigation_chapters(novel_slug, all_chapters, chapter_id, lang)
@@ -2918,7 +3023,9 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                                 comments_label=comments_config['label'],
                                                 comments_theme=comments_config['theme'],
                                                 is_serve_mode=serve_mode,
-                                                serve_port=serve_port if serve_mode else None))
+                                                serve_port=serve_port if serve_mode else None,
+                                                is_manga_chapter=is_manga_chapter,
+                                                manga_data=manga_data))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
@@ -2936,8 +3043,28 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                             print(f"      Skipping chapter: {chapter_id} - {safe_title}")
                         continue
                     
-                    # Process chapter images and update markdown (using primary language)
-                    chapter_content_md = process_chapter_images(novel_slug, chapter_id, primary_lang, chapter_content_md)
+                    # Determine if this is a manga chapter
+                    story_chapter_type = novel_config.get('chapter_type')
+                    chapter_type = chapter_metadata.get('type', story_chapter_type)
+                    is_manga_chapter = chapter_type == 'manga'
+                    
+                    # Initialize manga data
+                    manga_data = None
+                    
+                    if is_manga_chapter:
+                        # Process manga pages instead of regular content (using primary language)
+                        print(f"      Processing manga chapter (untranslated): {chapter_id}")
+                        manga_data = process_manga_pages(novel_slug, chapter_id, primary_lang, chapter_metadata, novel_config)
+                        
+                        if not manga_data:
+                            print(f"      Error: No manga pages found for {chapter_id}, skipping...")
+                            continue
+                        
+                        # For manga chapters, we don't process markdown content
+                        chapter_content_html = ""
+                    else:
+                        # Process regular chapter images and update markdown (using primary language)
+                        chapter_content_md = process_chapter_images(novel_slug, chapter_id, primary_lang, chapter_content_md)
                     
                     # Handle password protection (same as above)
                     is_password_protected = 'password' in chapter_metadata and chapter_metadata['password']
@@ -2946,8 +3073,12 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                     password_hint = None
                     
                     if is_password_protected:
-                        # Convert markdown to HTML first
-                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        if not is_manga_chapter:
+                            # Convert markdown to HTML first for regular chapters
+                            chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        else:
+                            # For manga chapters, we'll handle this in the template
+                            chapter_content_html = ""
                         
                         # Build the complete content to be encrypted including comments
                         complete_content = f'<div class="chapter-content">\n{chapter_content_html}\n</div>'
@@ -2986,7 +3117,9 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                         # Set content to placeholder for password-protected chapters
                         chapter_content_html = '<div id="password-protected-content" style="text-align: center; padding: 2rem;"><p>This chapter is password protected.</p></div>'
                     else:
-                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
+                        if not is_manga_chapter:
+                            # Only convert markdown for non-manga chapters
+                            chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     
                     # Use navigation function to skip hidden chapters
                     prev_chapter, next_chapter = get_navigation_chapters(novel_slug, all_chapters, chapter_id, lang)
@@ -3061,7 +3194,9 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                                 comments_label=comments_config['label'],
                                                 comments_theme=comments_config['theme'],
                                                 is_serve_mode=serve_mode,
-                                                serve_port=serve_port if serve_mode else None))
+                                                serve_port=serve_port if serve_mode else None,
+                                                is_manga_chapter=is_manga_chapter,
+                                                manga_data=manga_data))
 
         # Generate tag pages for this language (after all chapters are processed)
         for lang in available_languages:

@@ -1,0 +1,52 @@
+title: "Tower Dungeon"
+description: "A thrilling manga about adventurers exploring a mysterious tower dungeon"
+primary_language: "en"
+status: "ongoing"
+
+# Manga-specific configuration
+chapter_type: "manga"  # Sets all chapters as manga by default
+reading_direction: "ltr"  # "ltr" (left-to-right) or "rtl" (right-to-left)
+
+# Manga reader defaults
+manga_defaults:
+  view_mode: "single"          # "single", "double", or "scroll"
+  cover_separate: true         # First page shown separately in double mode
+  image_scaling: "fit_screen"  # "fit_screen", "fit_width", "original"
+  zoom_level: 100             # Default zoom percentage
+  preload_pages: 3            # Number of pages to preload
+  page_turn_area: "right_half" # "left_half", "right_half", "full_page"
+
+# Story genre/theme tags
+tags: ["manga", "adventure", "dungeon", "fantasy", "action"]
+
+# Story arcs and chapters
+arcs:
+  - title: "Volume 1: The Tower's Secret"
+    chapters:
+      - id: "chapter-1"
+        title: "Chapter 1: The Sovereign's Secret Sin"
+
+# Social media settings
+social_embeds:
+  image: "/static/images/tower-dungeon-social.jpg"
+  description: "Follow the epic adventure in this dungeon-crawling manga"
+  keywords: ["manga", "adventure", "dungeon", "fantasy", "webcomic"]
+
+# SEO settings
+seo:
+  allow_indexing: true
+  meta_description: "Read Tower Dungeon - an epic fantasy manga about mysterious tower exploration"
+
+# Downloads configuration  
+downloads:
+  epub_enabled: false    # Manga chapters don't work well as EPUB
+  include_arcs: false
+
+# Footer for this story
+footer:
+  copyright: "© 2025 Tower Dungeon - Original work by Manga Artist"
+  links:
+    - text: "Support the Artist"
+      url: "https://ko-fi.com/mangaartist"
+    - text: "Original Source"
+      url: "https://example.com/tower-dungeon"
