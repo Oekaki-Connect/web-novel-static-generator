@@ -1324,29 +1324,49 @@
                 // Apply view mode
                 applyViewMode();
                 
-                // Apply scaling
-                images.forEach(img => {
-                    img.style.transform = `scale(${zoomLevel / 100})`;
+                // Apply scaling with proper container adjustment
+                images.forEach((img, index) => {
+                    const page = img.closest('.manga-page');
+                    const zoomFactor = zoomLevel / 100;
+                    
+                    // Reset transform first
+                    img.style.transform = 'none';
                     
                     switch(imageScaling) {
                         case 'fit_screen':
-                            img.style.maxWidth = '100vw';
-                            img.style.maxHeight = '100vh';
-                            img.style.width = 'auto';
+                            // Calculate max dimensions that fit in viewport
+                            const maxWidth = Math.min(100, 100 / zoomFactor);
+                            const maxHeight = Math.min(100, 100 / zoomFactor);
+                            img.style.maxWidth = `${maxWidth}vw`;
+                            img.style.maxHeight = `${maxHeight}vh`;
+                            img.style.width = `${100 * zoomFactor}%`;
                             img.style.height = 'auto';
                             break;
                         case 'fit_width':
-                            img.style.maxWidth = '100%';
+                            // Ensure width never exceeds viewport, scale proportionally
+                            const effectiveWidth = Math.min(100, 100 / zoomFactor);
+                            img.style.maxWidth = `${effectiveWidth}vw`;
                             img.style.maxHeight = 'none';
-                            img.style.width = '100%';
+                            img.style.width = `${100 * zoomFactor}%`;
                             img.style.height = 'auto';
                             break;
                         case 'original':
-                            img.style.maxWidth = 'none';
+                            // Original size but prevent viewport overflow
+                            img.style.maxWidth = `${100 / zoomFactor}vw`;
                             img.style.maxHeight = 'none';
-                            img.style.width = 'auto';
+                            img.style.width = `${100 * zoomFactor}%`;
                             img.style.height = 'auto';
                             break;
+                    }
+                    
+                    // Adjust page container to fit scaled content
+                    if (page) {
+                        page.style.overflow = 'visible';
+                        // In scroll mode, ensure pages don't create horizontal overflow
+                        if (viewMode === 'scroll') {
+                            page.style.maxWidth = '100vw';
+                            page.style.overflowX = 'hidden';
+                        }
                     }
                 });
             }
@@ -1493,21 +1513,32 @@
                 const currentImage = document.querySelector(`.manga-page[data-page="${currentPage}"] .manga-image`);
                 
                 if (currentImage) {
-                    // Temporarily reset zoom and get base image size
-                    const originalTransform = currentImage.style.transform;
-                    currentImage.style.transform = 'scale(1)';
+                    // Temporarily reset styles to get natural dimensions
+                    const originalStyles = {
+                        width: currentImage.style.width,
+                        height: currentImage.style.height,
+                        maxWidth: currentImage.style.maxWidth,
+                        maxHeight: currentImage.style.maxHeight,
+                        transform: currentImage.style.transform
+                    };
+                    
+                    currentImage.style.width = 'auto';
+                    currentImage.style.height = 'auto';
+                    currentImage.style.maxWidth = 'none';
+                    currentImage.style.maxHeight = 'none';
+                    currentImage.style.transform = 'none';
                     
                     // Force reflow to get accurate measurements
                     currentImage.offsetHeight;
                     
-                    // Get the natural displayed height at 100% zoom with current scaling mode
-                    const baseHeight = currentImage.getBoundingClientRect().height;
+                    // Get the natural image dimensions
+                    const naturalHeight = currentImage.getBoundingClientRect().height;
                     
-                    // Restore original transform temporarily
-                    currentImage.style.transform = originalTransform;
+                    // Restore original styles
+                    Object.assign(currentImage.style, originalStyles);
                     
                     // Calculate zoom to fit viewport height
-                    const targetZoom = Math.floor((viewportHeight / baseHeight) * 100);
+                    const targetZoom = Math.floor((viewportHeight / naturalHeight) * 100);
                     
                     zoomLevel = Math.max(50, Math.min(300, targetZoom));
                     

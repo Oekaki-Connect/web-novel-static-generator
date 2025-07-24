@@ -2904,6 +2904,12 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     position: relative;
     background-color: var(--color-base);
     overflow: hidden; /* Prevent horizontal scrollbars */
+    /* Prevent selection on the entire viewer */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Single page mode */
@@ -2914,6 +2920,10 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     align-items: center;
     min-height: 70vh;
     background-color: var(--color-base);
+    /* Prevent selection on page containers */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* Double page mode */
@@ -2954,14 +2964,27 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
 
 /* Vertical scroll mode */
 .manga-viewer.scroll-mode {
-    overflow-y: auto;
-    max-height: 80vh;
+    overflow-y: visible; /* Remove internal scroll, let page handle scrolling */
+    max-height: none; /* Remove height constraint */
+    height: auto; /* Let content determine height */
 }
 
 .manga-viewer.scroll-mode .manga-page {
     display: block !important;
-    margin-bottom: 1rem;
+    margin-bottom: 0; /* No gap between pages for continuous reading */
+    margin-top: 0; /* Remove any top margin too */
+    padding: 0; /* Remove any padding */
     min-height: auto;
+    /* Ensure seamless connection between pages */
+    line-height: 0; /* Remove any line height gaps */
+}
+
+/* Ensure images in scroll mode have no spacing */
+.manga-viewer.scroll-mode .manga-image {
+    display: block;
+    margin: 0; /* Remove all margins */
+    padding: 0; /* Remove all padding */
+    vertical-align: top; /* Prevent baseline spacing */
 }
 
 .manga-image {
@@ -2970,11 +2993,20 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     height: auto;
     cursor: pointer;
     object-fit: contain;
+    /* Prevent selection and dragging on all platforms */
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     -webkit-user-drag: none;
+    -khtml-user-select: none;
+    /* Prevent tap highlights and selection on mobile */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    /* Prevent context menu on long press */
+    -webkit-contextmenu: none;
+    /* Additional mobile fixes */
+    pointer-events: auto;
     -khtml-user-drag: none;
     -moz-user-drag: none;
     -o-user-drag: none;
