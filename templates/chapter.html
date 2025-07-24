@@ -636,6 +636,107 @@
         </div>
         {% endif %}
     </header>
+    
+    {% if is_manga_chapter and manga_data %}
+    <!-- Manga Reader (outside main for better width control) -->
+    <div id="manga-reader" class="manga-reader">
+        <div class="manga-controls">
+            <div class="manga-controls-left">
+                <span class="page-indicator">
+                    Page <span id="current-page">1</span> of <span id="total-pages">{{ manga_data.page_count }}</span>
+                </span>
+            </div>
+            
+            <div class="manga-controls-center">
+                <button id="prev-page" class="manga-btn" aria-label="Previous page" title="Previous page (← or A)">
+                    <span>◀</span>
+                </button>
+                <button id="next-page" class="manga-btn" aria-label="Next page" title="Next page (→ or D)">
+                    <span>▶</span>
+                </button>
+            </div>
+            
+            <div class="manga-controls-right">
+                <button id="zoom-fit-btn" class="manga-btn" aria-label="Zoom to fit viewport" title="Fit to viewport height">
+                    <span>⤢</span>
+                </button>
+                <button id="fullscreen-btn" class="manga-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen (F)">
+                    <span>⛶</span>
+                </button>
+                <button id="manga-settings-btn" class="manga-btn" aria-label="Reader settings" title="Reader settings (ESC)">
+                    <span>⚙</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="manga-viewer" id="manga-viewer">
+            {% for page in manga_data.pages %}
+            <div class="manga-page" data-page="{{ page.number }}" {% if page.number != 1 %}style="display: none;"{% endif %}>
+                <img src="{{ page.path }}" alt="{{ page.alt_text }}" class="manga-image" loading="lazy">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Manga Settings Modal -->
+    <div id="manga-settings-modal" class="manga-settings-modal" style="display: none;">
+        <div class="manga-settings-content">
+            <h3>Manga Reader Settings</h3>
+            
+            <div class="setting-group">
+                <label for="view-mode">View Mode:</label>
+                <select id="view-mode">
+                    <option value="single">Single Page</option>
+                    <option value="double">Double Page</option>
+                    <option value="scroll">Vertical Scroll</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="reading-direction">Reading Direction:</label>
+                <select id="reading-direction">
+                    <option value="ltr">Left to Right</option>
+                    <option value="rtl">Right to Left</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="image-scaling">Image Scaling:</label>
+                <select id="image-scaling">
+                    <option value="fit_screen">Fit Screen</option>
+                    <option value="fit_width">Fit Width</option>
+                    <option value="original">Original Size</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="zoom-level">Zoom: <span id="zoom-display">100%</span></label>
+                <input type="range" id="zoom-level" min="50" max="300" step="10" value="100">
+            </div>
+            
+            <div class="setting-group">
+                <label for="preload-images">Image Preloading:</label>
+                <select id="preload-images">
+                    <option value="0">Disabled</option>
+                    <option value="1">1 Image</option>
+                    <option value="2">2 Images</option>
+                    <option value="3" selected>3 Images</option>
+                    <option value="4">4 Images</option>
+                    <option value="5">5 Images</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <button id="reset-settings" class="manga-btn">Reset to Defaults</button>
+            </div>
+            
+            <div class="setting-group">
+                <button id="close-settings" class="manga-btn manga-btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <main>
         {% if translation_missing %}
         <div class="translation-notice">
@@ -1557,106 +1658,6 @@
         </div>
         {% endif %}
     </main>
-    
-    {% if is_manga_chapter and manga_data %}
-    <!-- Manga Reader (outside main for better width control) -->
-    <div id="manga-reader" class="manga-reader">
-        <div class="manga-controls">
-            <div class="manga-controls-left">
-                <span class="page-indicator">
-                    Page <span id="current-page">1</span> of <span id="total-pages">{{ manga_data.page_count }}</span>
-                </span>
-            </div>
-            
-            <div class="manga-controls-center">
-                <button id="prev-page" class="manga-btn" aria-label="Previous page" title="Previous page (← or A)">
-                    <span>◀</span>
-                </button>
-                <button id="next-page" class="manga-btn" aria-label="Next page" title="Next page (→ or D)">
-                    <span>▶</span>
-                </button>
-            </div>
-            
-            <div class="manga-controls-right">
-                <button id="zoom-fit-btn" class="manga-btn" aria-label="Zoom to fit viewport" title="Fit to viewport height">
-                    <span>⤢</span>
-                </button>
-                <button id="fullscreen-btn" class="manga-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen (F)">
-                    <span>⛶</span>
-                </button>
-                <button id="manga-settings-btn" class="manga-btn" aria-label="Reader settings" title="Reader settings (ESC)">
-                    <span>⚙</span>
-                </button>
-            </div>
-        </div>
-        
-        <div class="manga-viewer" id="manga-viewer">
-            {% for page in manga_data.pages %}
-            <div class="manga-page" data-page="{{ page.number }}" {% if page.number != 1 %}style="display: none;"{% endif %}>
-                <img src="{{ page.path }}" alt="{{ page.alt_text }}" class="manga-image" loading="lazy">
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    
-    <!-- Manga Settings Modal -->
-    <div id="manga-settings-modal" class="manga-settings-modal" style="display: none;">
-        <div class="manga-settings-content">
-            <h3>Manga Reader Settings</h3>
-            
-            <div class="setting-group">
-                <label for="view-mode">View Mode:</label>
-                <select id="view-mode">
-                    <option value="single">Single Page</option>
-                    <option value="double">Double Page</option>
-                    <option value="scroll">Vertical Scroll</option>
-                </select>
-            </div>
-            
-            <div class="setting-group">
-                <label for="reading-direction">Reading Direction:</label>
-                <select id="reading-direction">
-                    <option value="ltr">Left to Right</option>
-                    <option value="rtl">Right to Left</option>
-                </select>
-            </div>
-            
-            <div class="setting-group">
-                <label for="image-scaling">Image Scaling:</label>
-                <select id="image-scaling">
-                    <option value="fit_screen">Fit Screen</option>
-                    <option value="fit_width">Fit Width</option>
-                    <option value="original">Original Size</option>
-                </select>
-            </div>
-            
-            <div class="setting-group">
-                <label for="zoom-level">Zoom: <span id="zoom-display">100%</span></label>
-                <input type="range" id="zoom-level" min="50" max="300" step="10" value="100">
-            </div>
-            
-            <div class="setting-group">
-                <label for="preload-images">Image Preloading:</label>
-                <select id="preload-images">
-                    <option value="0">Disabled</option>
-                    <option value="1">1 Image</option>
-                    <option value="2">2 Images</option>
-                    <option value="3" selected>3 Images</option>
-                    <option value="4">4 Images</option>
-                    <option value="5">5 Images</option>
-                </select>
-            </div>
-            
-            <div class="setting-group">
-                <button id="reset-settings" class="manga-btn">Reset to Defaults</button>
-            </div>
-            
-            <div class="setting-group">
-                <button id="close-settings" class="manga-btn manga-btn-primary">Close</button>
-            </div>
-        </div>
-    </div>
-    {% endif %}
     
     <footer>
         <nav aria-label="Footer navigation">
