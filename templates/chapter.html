@@ -1134,28 +1134,67 @@
             
             function toggleFullscreen() {
                 const reader = document.getElementById('manga-reader');
-                isFullscreen = !isFullscreen;
                 
-                if (isFullscreen) {
-                    reader.classList.add('fullscreen');
-                    document.body.style.overflow = 'hidden'; // Prevent scrolling
-                    setupFullscreenMouseEvents();
-                    hideFullscreenControls();
+                if (!isFullscreen) {
+                    // Enter fullscreen mode
+                    if (reader.requestFullscreen) {
+                        reader.requestFullscreen();
+                    } else if (reader.webkitRequestFullscreen) { // Safari
+                        reader.webkitRequestFullscreen();
+                    } else if (reader.msRequestFullscreen) { // IE/Edge
+                        reader.msRequestFullscreen();
+                    } else if (reader.mozRequestFullScreen) { // Firefox
+                        reader.mozRequestFullScreen();
+                    }
                 } else {
-                    reader.classList.remove('fullscreen');
-                    document.body.style.overflow = ''; // Restore scrolling
-                    showFullscreenControls();
-                    cleanupFullscreenMouseEvents();
+                    // Exit fullscreen mode
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.webkitExitFullscreen) { // Safari
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) { // IE/Edge
+                        document.msExitFullscreen();
+                    } else if (document.mozCancelFullScreen) { // Firefox
+                        document.mozCancelFullScreen();
+                    }
                 }
             }
             
             function setupFullscreenMode() {
+                // Listen for fullscreen changes
+                document.addEventListener('fullscreenchange', handleFullscreenChange);
+                document.addEventListener('webkitfullscreenchange', handleFullscreenChange); // Safari
+                document.addEventListener('mozfullscreenchange', handleFullscreenChange); // Firefox
+                document.addEventListener('MSFullscreenChange', handleFullscreenChange); // IE/Edge
+                
                 // ESC key handler for fullscreen
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape' && isFullscreen) {
                         toggleFullscreen();
                     }
                 });
+            }
+            
+            function handleFullscreenChange() {
+                const reader = document.getElementById('manga-reader');
+                const isCurrentlyFullscreen = !!(document.fullscreenElement || 
+                                                document.webkitFullscreenElement || 
+                                                document.mozFullScreenElement || 
+                                                document.msFullscreenElement);
+                
+                isFullscreen = isCurrentlyFullscreen;
+                
+                if (isFullscreen) {
+                    reader.classList.add('fullscreen');
+                    document.body.style.overflow = 'hidden';
+                    setupFullscreenMouseEvents();
+                    hideFullscreenControls();
+                } else {
+                    reader.classList.remove('fullscreen');
+                    document.body.style.overflow = '';
+                    showFullscreenControls();
+                    cleanupFullscreenMouseEvents();
+                }
             }
             
             function setupFullscreenMouseEvents() {

@@ -205,7 +205,7 @@ footer:
   copyright: "© 2025 Your Awesome Novel - Original work by Author Name"
   links:
     - text: "Support the Author"
-      url: "https://ko-fi.com/author"
+      url: "https://ko-fi.com/pyramid"
     - text: "Original Source"
       url: "https://example.com/original"
 
@@ -866,7 +866,7 @@ footer:
   copyright: "© 2025 Story Title - Original work by Author"
   links:
     - text: "Support the Author"
-      url: "https://ko-fi.com/author"
+      url: "https://ko-fi.com/pyramid"
 ```
 
 ### Chapter Front Matter
