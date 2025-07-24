@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Site Pages | {{ site_name }}</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="static/{{ 'style.css' | asset_url }}">
     
     <!-- SEO Meta Tags -->
     <meta name="description" content="Browse all pages available on {{ site_name }}">
@@ -31,7 +31,7 @@
     <link rel="canonical" href="{{ site_url }}/pages/">
     
     <!-- Theme Toggle Script -->
-    <script src="static/theme-toggle.js"></script>
+    <script src="static/{{ 'theme-toggle.js' | asset_url }}"></script>
 </head>
 <body>
     <header>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ site_name }}</title>
-    <link rel="stylesheet" href="static/style.css">
+    <link rel="stylesheet" href="static/{{ 'style.css' | asset_url }}">
     
     <!-- SEO Meta Tags -->
     {% if seo_meta_description %}
@@ -38,7 +38,7 @@
     <link rel="canonical" href="{{ social_url }}">
     
     <!-- Theme Toggle Script -->
-    <script src="static/theme-toggle.js"></script>
+    <script src="static/{{ 'theme-toggle.js' | asset_url }}"></script>
 </head>
 <body>
     <header>

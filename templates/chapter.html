@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ chapter_title }}</title>
-    <link rel="stylesheet" href="../../../static/style.css">
+    <link rel="stylesheet" href="../../../static/{{ 'style.css' | asset_url }}">
     
     <!-- SEO Meta Tags -->
     {% if seo_meta_description %}
@@ -50,7 +50,7 @@
     <link rel="canonical" href="{{ social_url }}">
     
     <!-- Theme Toggle Script -->
-    <script src="../../../static/theme-toggle.js"></script>
+    <script src="../../../static/{{ 'theme-toggle.js' | asset_url }}"></script>
     
     <!-- Chapter Navigation Script -->
     <script>
@@ -628,97 +628,6 @@
         </div>
         {% endif %}
         
-        {% if is_manga_chapter and manga_data %}
-        <!-- Manga Reader -->
-        <div id="manga-reader" class="manga-reader">
-            <div class="manga-controls">
-                <div class="manga-controls-left">
-                    <span class="page-indicator">
-                        Page <span id="current-page">1</span> of <span id="total-pages">{{ manga_data.page_count }}</span>
-                    </span>
-                </div>
-                
-                <div class="manga-controls-center">
-                    <button id="prev-page" class="manga-btn" aria-label="Previous page">
-                        <span>◀</span>
-                    </button>
-                    <button id="next-page" class="manga-btn" aria-label="Next page">
-                        <span>▶</span>
-                    </button>
-                </div>
-                
-                <div class="manga-controls-right">
-                    <button id="zoom-fit-btn" class="manga-btn" aria-label="Zoom to fit viewport">
-                        <span>⤢</span>
-                    </button>
-                    <button id="fullscreen-btn" class="manga-btn" aria-label="Toggle fullscreen">
-                        <span>⛶</span>
-                    </button>
-                    <button id="manga-settings-btn" class="manga-btn" aria-label="Reader settings">
-                        <span>⚙</span>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="manga-viewer" id="manga-viewer">
-                {% for page in manga_data.pages %}
-                <div class="manga-page" data-page="{{ page.number }}" {% if page.number != 1 %}style="display: none;"{% endif %}>
-                    <img src="{{ page.path }}" alt="{{ page.alt_text }}" class="manga-image" loading="lazy">
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        
-        <!-- Manga Settings Modal -->
-        <div id="manga-settings-modal" class="manga-settings-modal" style="display: none;">
-            <div class="manga-settings-content">
-                <h3>Reader Settings</h3>
-                
-                <div class="setting-group">
-                    <label for="view-mode">View Mode:</label>
-                    <select id="view-mode">
-                        <option value="single">Single Page</option>
-                        <option value="double">Double Page</option>
-                        <option value="scroll">Vertical Scroll</option>
-                    </select>
-                </div>
-                
-                <div class="setting-group">
-                    <label for="image-scaling">Image Scaling:</label>
-                    <select id="image-scaling">
-                        <option value="fit_screen">Fit Screen</option>
-                        <option value="fit_width">Fit Width</option>
-                        <option value="original">Original Size</option>
-                    </select>
-                </div>
-                
-                <div class="setting-group">
-                    <label for="zoom-level">Zoom: <span id="zoom-display">100%</span></label>
-                    <input type="range" id="zoom-level" min="50" max="300" step="20" value="100">
-                </div>
-                
-                <div class="setting-group">
-                    <label for="preload-images">Image Preloading:</label>
-                    <select id="preload-images">
-                        <option value="0">Disabled</option>
-                        <option value="1">1 Image</option>
-                        <option value="2">2 Images</option>
-                        <option value="3" selected>3 Images</option>
-                        <option value="4">4 Images</option>
-                        <option value="5">5 Images</option>
-                    </select>
-                </div>
-                
-                <div class="setting-group">
-                    <button id="reset-settings" class="manga-btn">Reset to Defaults</button>
-                </div>
-                
-                <div class="setting-group">
-                    <button id="close-settings" class="manga-btn manga-btn-primary">Close</button>
-                </div>
-            </div>
-        </div>
-        
         <script>
             // Manga reader functionality
             const mangaData = {{ manga_data | tojson }};
@@ -726,7 +635,8 @@
             let viewMode = '{{ manga_data.config.view_mode }}';
             let imageScaling = '{{ manga_data.config.image_scaling }}';
             let zoomLevel = {{ manga_data.config.zoom_level }};
-            let readingDirection = '{{ manga_data.config.reading_direction }}';
+            // Use chapter-level reading direction if available, otherwise use story default
+            let readingDirection = '{{ chapter_metadata.reading_direction if chapter_metadata.reading_direction else manga_data.config.reading_direction }}';
             let preloadImages = 3; // Default to 3 images
             let isFullscreen = false;
             let mouseTimer = null;
@@ -770,11 +680,23 @@
                 img.onload = () => {
                     preloadedImages.set(pageKey, img);
                     console.log(`Preloaded page ${pageNumber}`);
+                    
+                    // Also update the actual img element if it exists
+                    const imgElement = document.querySelector(`.manga-page[data-page="${pageNumber}"] .manga-image`);
+                    if (imgElement && imgElement.src !== pageData.url) {
+                        // Pre-set the src so browser uses cached version
+                        imgElement.src = pageData.url;
+                    }
                 };
                 img.onerror = () => {
                     console.warn(`Failed to preload page ${pageNumber}`);
                 };
                 
+                // Only set crossOrigin if image is from external domain
+                const isExternal = pageData.url.startsWith('http://') || pageData.url.startsWith('https://');
+                if (isExternal) {
+                    img.crossOrigin = 'anonymous';
+                }
                 img.src = pageData.url;
             }
             
@@ -798,6 +720,12 @@
                     viewMode = e.target.value;
                     saveMangaSettings();
                     applyMangaSettings();
+                });
+                
+                document.getElementById('reading-direction').addEventListener('change', (e) => {
+                    readingDirection = e.target.value;
+                    saveMangaSettings();
+                    applyMangaSettings();  // Reapply view mode for RTL ordering
                 });
                 
                 document.getElementById('image-scaling').addEventListener('change', (e) => {
@@ -837,6 +765,12 @@
             }
             
             function showPage(pageNum) {
+                // Save current scroll position
+                const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const mangaReader = document.getElementById('manga-reader');
+                const readerTop = mangaReader.offsetTop;
+                const relativeScroll = currentScrollTop - readerTop;
+                
                 // Hide current page
                 const currentPageEl = document.querySelector(`.manga-page[data-page="${currentPage}"]`);
                 if (currentPageEl) {
@@ -850,8 +784,15 @@
                     currentPage = pageNum;
                     updatePageIndicator();
                     
-                    // Scroll to top of page
-                    newPageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Maintain scroll position relative to manga reader
+                    // Only scroll if user is too far below the manga controls
+                    if (relativeScroll > 100) {
+                        // Scroll to just below controls
+                        const controls = document.querySelector('.manga-controls');
+                        const targetScroll = readerTop + controls.offsetHeight + 20;
+                        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                    }
+                    // Otherwise maintain current scroll position
                     
                     // Preload upcoming images
                     preloadUpcomingImages();
@@ -875,6 +816,7 @@
                 if (!isVisible) {
                     // Update controls to current values
                     document.getElementById('view-mode').value = viewMode;
+                    document.getElementById('reading-direction').value = readingDirection;
                     document.getElementById('image-scaling').value = imageScaling;
                     document.getElementById('zoom-level').value = zoomLevel;
                     document.getElementById('zoom-display').textContent = zoomLevel + '%';
@@ -887,14 +829,20 @@
                 const clickX = e.clientX - rect.left;
                 const width = rect.width;
                 
-                if (clickX < width * 0.3) {
-                    // Left third - previous page
-                    changePage(-1);
-                } else if (clickX > width * 0.7) {
-                    // Right third - next page
-                    changePage(1);
+                // Use 50% halves for navigation
+                const isLeftHalf = clickX < width * 0.5;
+                const isRightHalf = clickX >= width * 0.5;
+                
+                // Check reading direction (default to LTR if not set)
+                const isRTL = readingDirection === 'rtl';
+                
+                if (isLeftHalf) {
+                    // Left half - previous page (LTR) or next page (RTL)
+                    changePage(isRTL ? 1 : -1);
+                } else if (isRightHalf) {
+                    // Right half - next page (LTR) or previous page (RTL)
+                    changePage(isRTL ? -1 : 1);
                 }
-                // Middle third - no action (for UI controls)
             }
             
             function setupMangaKeyboardControls() {
@@ -925,7 +873,10 @@
                             showPage(mangaData.page_count);
                             break;
                         case 'Escape':
-                            toggleSettings();
+                            // Don't open settings if in fullscreen mode
+                            if (!isFullscreen) {
+                                toggleSettings();
+                            }
                             break;
                     }
                 });
@@ -939,6 +890,10 @@
                     imageScaling = settings.imageScaling || imageScaling;
                     zoomLevel = settings.zoomLevel || zoomLevel;
                     preloadImages = settings.preloadImages !== undefined ? settings.preloadImages : preloadImages;
+                    // Only override reading direction if saved (allow chapter-level override)
+                    if (settings.readingDirection) {
+                        readingDirection = settings.readingDirection;
+                    }
                 }
             }
             
@@ -947,7 +902,8 @@
                     viewMode,
                     imageScaling,
                     zoomLevel,
-                    preloadImages
+                    preloadImages,
+                    readingDirection
                 };
                 localStorage.setItem('manga-reader-settings', JSON.stringify(settings));
             }
@@ -955,6 +911,9 @@
             function applyMangaSettings() {
                 const viewer = document.getElementById('manga-viewer');
                 const images = viewer.querySelectorAll('.manga-image');
+                
+                // Set reading direction data attribute for CSS
+                viewer.setAttribute('data-reading-direction', readingDirection);
                 
                 // Apply view mode
                 applyViewMode();
@@ -1013,10 +972,12 @@
                 
                 if (isFullscreen) {
                     reader.classList.add('fullscreen');
+                    document.body.style.overflow = 'hidden'; // Prevent scrolling
                     setupFullscreenMouseEvents();
                     hideFullscreenControls();
                 } else {
                     reader.classList.remove('fullscreen');
+                    document.body.style.overflow = ''; // Restore scrolling
                     showFullscreenControls();
                     cleanupFullscreenMouseEvents();
                 }
@@ -1079,13 +1040,25 @@
             }
             
             function zoomToFit() {
-                const viewportHeight = window.innerHeight;
+                const viewportHeight = window.innerHeight * 0.9; // Leave some margin
                 const currentImage = document.querySelector(`.manga-page[data-page="${currentPage}"] .manga-image`);
                 
                 if (currentImage) {
+                    // Temporarily reset zoom and get base image size
+                    const originalTransform = currentImage.style.transform;
+                    currentImage.style.transform = 'scale(1)';
+                    
+                    // Force reflow to get accurate measurements
+                    currentImage.offsetHeight;
+                    
+                    // Get the natural displayed height at 100% zoom with current scaling mode
+                    const baseHeight = currentImage.getBoundingClientRect().height;
+                    
+                    // Restore original transform temporarily
+                    currentImage.style.transform = originalTransform;
+                    
                     // Calculate zoom to fit viewport height
-                    const imageHeight = currentImage.naturalHeight;
-                    const targetZoom = Math.floor((viewportHeight * 0.9 / imageHeight) * 100);
+                    const targetZoom = Math.floor((viewportHeight / baseHeight) * 100);
                     
                     zoomLevel = Math.max(50, Math.min(300, targetZoom));
                     
@@ -1095,8 +1068,28 @@
                     saveMangaSettings();
                     applyMangaSettings();
                     
-                    // Scroll to center the image
-                    currentImage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Scroll to top of manga reader
+                    const mangaReader = document.getElementById('manga-reader');
+                    mangaReader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+            
+            function markChapterCompleted(novelSlug, chapterId) {
+                const visitedKey = `visited_${novelSlug}`;
+                let visitedChapters = JSON.parse(localStorage.getItem(visitedKey) || '{}');
+                
+                if (visitedChapters[chapterId]) {
+                    visitedChapters[chapterId].completed = true;
+                    visitedChapters[chapterId].completedAt = new Date().toISOString();
+                    localStorage.setItem(visitedKey, JSON.stringify(visitedChapters));
+                    
+                    // Update latest chapter read
+                    const latestKey = `latest_${novelSlug}`;
+                    localStorage.setItem(latestKey, JSON.stringify({
+                        chapterId: chapterId,
+                        title: visitedChapters[chapterId].title,
+                        completedAt: visitedChapters[chapterId].completedAt
+                    }));
                 }
             }
             
@@ -1190,9 +1183,10 @@
                 });
             }
         </script>
-        {% else %}
-        <!-- Regular Chapter Content -->
-        <div id="chapter-content-wrapper" class="chapter-content">
+        
+        <!-- Show chapter content below manga pages -->
+        {% if chapter_content %}
+        <div id="chapter-content-wrapper" class="chapter-content manga-chapter-text">
             {{ chapter_content | safe }}
         </div>
         {% endif %}
@@ -1227,7 +1221,115 @@
             </div>
         </div>
         {% endif %}
+        
+        {% if not is_manga_chapter %}
+        <!-- Regular Chapter Content -->
+        <div id="chapter-content-wrapper" class="chapter-content">
+            {{ chapter_content | safe }}
+        </div>
+        {% endif %}
     </main>
+    
+    {% if is_manga_chapter and manga_data %}
+    <!-- Manga Reader (outside main for better width control) -->
+    <div id="manga-reader" class="manga-reader">
+        <div class="manga-controls">
+            <div class="manga-controls-left">
+                <span class="page-indicator">
+                    Page <span id="current-page">1</span> of <span id="total-pages">{{ manga_data.page_count }}</span>
+                </span>
+            </div>
+            
+            <div class="manga-controls-center">
+                <button id="prev-page" class="manga-btn" aria-label="Previous page" title="Previous page (← or A)">
+                    <span>◀</span>
+                </button>
+                <button id="next-page" class="manga-btn" aria-label="Next page" title="Next page (→ or D)">
+                    <span>▶</span>
+                </button>
+            </div>
+            
+            <div class="manga-controls-right">
+                <button id="zoom-fit-btn" class="manga-btn" aria-label="Zoom to fit viewport" title="Fit to viewport height">
+                    <span>⤢</span>
+                </button>
+                <button id="fullscreen-btn" class="manga-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen (F)">
+                    <span>⛶</span>
+                </button>
+                <button id="manga-settings-btn" class="manga-btn" aria-label="Reader settings" title="Reader settings (ESC)">
+                    <span>⚙</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="manga-viewer" id="manga-viewer">
+            {% for page in manga_data.pages %}
+            <div class="manga-page" data-page="{{ page.number }}" {% if page.number != 1 %}style="display: none;"{% endif %}>
+                <img src="{{ page.path }}" alt="{{ page.alt_text }}" class="manga-image" loading="lazy">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Manga Settings Modal -->
+    <div id="manga-settings-modal" class="manga-settings-modal" style="display: none;">
+        <div class="manga-settings-content">
+            <h3>Manga Reader Settings</h3>
+            
+            <div class="setting-group">
+                <label for="view-mode">View Mode:</label>
+                <select id="view-mode">
+                    <option value="single">Single Page</option>
+                    <option value="double">Double Page</option>
+                    <option value="scroll">Vertical Scroll</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="reading-direction">Reading Direction:</label>
+                <select id="reading-direction">
+                    <option value="ltr">Left to Right</option>
+                    <option value="rtl">Right to Left</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="image-scaling">Image Scaling:</label>
+                <select id="image-scaling">
+                    <option value="fit_screen">Fit Screen</option>
+                    <option value="fit_width">Fit Width</option>
+                    <option value="original">Original Size</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <label for="zoom-level">Zoom: <span id="zoom-display">100%</span></label>
+                <input type="range" id="zoom-level" min="50" max="300" step="10" value="100">
+            </div>
+            
+            <div class="setting-group">
+                <label for="preload-images">Image Preloading:</label>
+                <select id="preload-images">
+                    <option value="0">Disabled</option>
+                    <option value="1">1 Image</option>
+                    <option value="2">2 Images</option>
+                    <option value="3" selected>3 Images</option>
+                    <option value="4">4 Images</option>
+                    <option value="5">5 Images</option>
+                </select>
+            </div>
+            
+            <div class="setting-group">
+                <button id="reset-settings" class="manga-btn">Reset to Defaults</button>
+            </div>
+            
+            <div class="setting-group">
+                <button id="close-settings" class="manga-btn manga-btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <footer>
         <nav aria-label="Footer navigation">
             {% if prev_chapter %}

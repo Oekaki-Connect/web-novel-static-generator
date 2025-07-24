@@ -2705,14 +2705,20 @@ footer p {
     height: 100vh;
     background-color: var(--color-base);
     z-index: 9999;
+    overflow: hidden;
+}
+
+/* Prevent body scrolling when in fullscreen */
+body:has(.manga-reader.fullscreen) {
+    overflow: hidden;
 }
 
 .manga-reader.fullscreen .manga-controls {
     position: fixed;
-    top: 0;
+    top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    margin: 1rem auto;
+    margin: 0;
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -2721,6 +2727,35 @@ footer p {
 .manga-reader.fullscreen .manga-controls.show {
     opacity: 1;
     pointer-events: all;
+}
+
+/* Hide fit to viewport button in fullscreen mode */
+.manga-reader.fullscreen #zoom-fit-btn {
+    display: none;
+}
+
+/* Increase spacing between fullscreen controls */
+.manga-reader.fullscreen .manga-controls-left,
+.manga-reader.fullscreen .manga-controls-center,
+.manga-reader.fullscreen .manga-controls-right {
+    gap: 1rem;
+}
+
+.manga-reader.fullscreen .manga-controls {
+    padding: 1rem 1.5rem;
+}
+
+/* Ensure settings modal appears above fullscreen manga reader */
+body:has(.manga-reader.fullscreen) .manga-settings-modal {
+    z-index: 10000;
+}
+
+/* Improve modal alignment on small screens */
+@media (max-height: 600px) {
+    .manga-settings-modal {
+        align-items: flex-start;
+        padding-top: 20px;
+    }
 }
 
 .manga-reader.fullscreen .manga-viewer {
@@ -2844,17 +2879,39 @@ footer p {
 }
 
 /* Double page mode */
+.manga-viewer.double-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
 .manga-viewer.double-page .manga-page {
     display: none;
+    flex: 0 0 auto;
+    width: auto;
+    min-height: auto;
 }
 
 .manga-viewer.double-page .manga-page.active {
     display: flex;
-    gap: 1rem;
+    justify-content: center;
+    align-items: center;
 }
 
 .manga-viewer.double-page .manga-page.active.single-cover {
-    justify-content: center;
+    width: 100%;
+}
+
+/* Adjust image sizes in double page mode */
+.manga-viewer.double-page .manga-image {
+    max-width: 45vw;
+    max-height: 85vh;
+}
+
+/* RTL double page mode - reverse the page order */
+.manga-viewer.double-page[data-reading-direction="rtl"] {
+    flex-direction: row-reverse;
 }
 
 /* Vertical scroll mode */
@@ -2878,12 +2935,24 @@ footer p {
     transition: transform 0.3s ease;
     cursor: pointer;
     object-fit: contain;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
 }
 
 /* Original size mode - allow overflow */
 .manga-viewer.original-size {
     overflow: auto;
     max-width: 100vw;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
 }
 
 .manga-viewer.original-size .manga-image {
@@ -2891,6 +2960,14 @@ footer p {
     max-height: none;
     width: auto;
     height: auto;
+}
+
+/* Break out of container constraints for original size */
+.manga-reader:has(.manga-viewer.original-size) {
+    max-width: 100vw;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-right: calc(-50vw + 50%);
 }
 
 .manga-image:hover {
@@ -2922,8 +2999,8 @@ footer p {
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    position: relative;
-    margin: auto;
+    margin: auto; /* Ensure proper centering */
+    position: relative; /* For better positioning context */
 }
 
 .manga-settings-content h3 {
@@ -3088,5 +3165,12 @@ footer p {
         height: 48px;
         touch-action: manipulation;
     }
+}
+
+/* Manga chapter text styling */
+.manga-chapter-text {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 2px solid var(--color-border);
 }
 

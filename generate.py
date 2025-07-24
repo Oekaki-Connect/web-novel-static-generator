@@ -41,6 +41,16 @@ STATIC_DIR = "./static"
 # Global template environment (will be enhanced with novel-specific support)
 env = Environment(loader=FileSystemLoader(TEMPLATES_DIR))
 
+# Global asset map for cache busting
+ASSET_MAP = {}
+
+def asset_url(filename):
+    """Convert asset filename to cache-busted version if available"""
+    return ASSET_MAP.get(filename, filename)
+
+# Register the asset_url filter
+env.filters['asset_url'] = asset_url
+
 # Cache for novel-specific template environments
 _novel_template_envs = {}
 
@@ -69,6 +79,7 @@ def get_novel_template_env(novel_slug):
         novel_env.filters['slugify_tag'] = slugify_tag
         novel_env.filters['format_date_for_display'] = format_date_for_display
         novel_env.filters['find_author_username'] = find_author_username_filter
+        novel_env.filters['asset_url'] = asset_url
         
         # Note: is_chapter_new filter will be set per render with proper config
         
@@ -2301,10 +2312,51 @@ def convert_markdown_to_html(md_content):
     # Convert Markdown to HTML. This will also handle image paths.
     return markdown.markdown(md_content)
 
+def calculate_file_hash(filepath, length=8):
+    """Calculate a partial hash of a file for cache busting"""
+    hasher = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        buf = f.read()
+        hasher.update(buf)
+    return hasher.hexdigest()[:length]
+
 def copy_static_assets():
+    """Copy static assets with cache-busting hashed filenames"""
+    asset_map = {}  # Map original names to hashed names
+    
     if os.path.exists(STATIC_DIR):
         target_static_dir = os.path.normpath(os.path.join(BUILD_DIR, "static"))
-        shutil.copytree(STATIC_DIR, target_static_dir, dirs_exist_ok=True)
+        os.makedirs(target_static_dir, exist_ok=True)
+        
+        # Files to add cache busting
+        cache_bust_files = ['style.css', 'theme-toggle.js']
+        
+        for root, dirs, files in os.walk(STATIC_DIR):
+            rel_dir = os.path.relpath(root, STATIC_DIR)
+            target_dir = os.path.join(target_static_dir, rel_dir) if rel_dir != '.' else target_static_dir
+            
+            if not os.path.exists(target_dir):
+                os.makedirs(target_dir)
+            
+            for file in files:
+                src_file = os.path.join(root, file)
+                
+                if file in cache_bust_files:
+                    # Generate hashed filename
+                    file_hash = calculate_file_hash(src_file)
+                    name, ext = os.path.splitext(file)
+                    hashed_filename = f"{name}-{file_hash}{ext}"
+                    dst_file = os.path.join(target_dir, hashed_filename)
+                    
+                    # Store mapping
+                    asset_map[file] = hashed_filename
+                else:
+                    # Copy without modification
+                    dst_file = os.path.join(target_dir, file)
+                
+                shutil.copy2(src_file, dst_file)
+    
+    return asset_map
 
 def generate_static_pages(site_config):
     """Generate all static pages"""
@@ -2556,7 +2608,7 @@ def generate_page_index(site_config):
     
     print("Page index generated.")
 
-def render_template(template_name, novel_slug=None, site_config=None, novel_config=None, **kwargs):
+def render_template(template_name, novel_slug=None, site_config=None, novel_config=None, asset_map=None, **kwargs):
     """Render a template with optional novel-specific override support"""
     template_env = None
     
@@ -2575,12 +2627,17 @@ def render_template(template_name, novel_slug=None, site_config=None, novel_conf
         is_chapter_new_filter = create_is_chapter_new_filter(site_config, novel_config)
         template_env.filters['is_chapter_new'] = is_chapter_new_filter
     
+    # Add asset map to kwargs
+    if asset_map:
+        kwargs['asset_map'] = asset_map
+    
     return template.render(**kwargs)
 
 def build_site(include_drafts=False, include_scheduled=False, no_epub=False, optimize_images=False, serve_mode=False, serve_port=8000):
-    global INCLUDE_DRAFTS, INCLUDE_SCHEDULED
+    global INCLUDE_DRAFTS, INCLUDE_SCHEDULED, ASSET_MAP
     INCLUDE_DRAFTS = include_drafts
     INCLUDE_SCHEDULED = include_scheduled
+    ASSET_MAP = {}
     
     print("Building site...")
     if os.path.exists(BUILD_DIR):
@@ -2609,7 +2666,7 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             else:
                 raise e
 
-    copy_static_assets()
+    ASSET_MAP = copy_static_assets()
     
     # Load site configuration
     site_config = load_site_config()
@@ -2892,8 +2949,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                             print(f"      Error: No manga pages found for {chapter_id}, skipping...")
                             continue
                         
-                        # For manga chapters, we don't process markdown content
-                        chapter_content_html = ""
+                        # For manga chapters, still process the markdown content for display below images
+                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     else:
                         # Process regular chapter images and update markdown
                         chapter_content_md = process_chapter_images(novel_slug, chapter_id, lang, chapter_content_md)
@@ -3060,8 +3117,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                             print(f"      Error: No manga pages found for {chapter_id}, skipping...")
                             continue
                         
-                        # For manga chapters, we don't process markdown content
-                        chapter_content_html = ""
+                        # For manga chapters, still process the markdown content for display below images
+                        chapter_content_html = convert_markdown_to_html(chapter_content_md)
                     else:
                         # Process regular chapter images and update markdown (using primary language)
                         chapter_content_md = process_chapter_images(novel_slug, chapter_id, primary_lang, chapter_content_md)
@@ -4630,6 +4687,8 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
         import websockets
         import threading
         import time
+        import signal
+        import sys
         from http.server import HTTPServer, SimpleHTTPRequestHandler
         from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
@@ -4849,8 +4908,54 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
         websocket_thread = threading.Thread(target=run_websocket_server, daemon=True)
         websocket_thread.start()
         
+        # Store thread reference for cleanup
+        cleanup_threads = [websocket_thread]
+        
         # Start HTTP server
         httpd = HTTPServer(("localhost", port), LiveReloadHandler)
+        
+        # Set up proper signal handling for graceful shutdown
+        def signal_handler(signum, frame):
+            print("\nShutting down server...")
+            
+            # Set up a hard timeout to force exit
+            def force_exit():
+                time.sleep(2)  # Give 2 seconds for graceful shutdown
+                print("Force exiting...")
+                os._exit(1)
+            
+            timeout_thread = threading.Thread(target=force_exit, daemon=True)
+            timeout_thread.start()
+            
+            try:
+                # Stop file watcher immediately
+                observer.stop()
+                
+                # Shutdown HTTP server
+                httpd.shutdown()
+                httpd.server_close()
+                
+                # Force stop WebSocket server (don't wait)
+                if websocket_loop:
+                    try:
+                        websocket_loop.call_soon_threadsafe(websocket_loop.stop)
+                    except Exception:
+                        pass  # Ignore errors, we're shutting down anyway
+                
+                print("Server shutdown complete.")
+                
+            except Exception as e:
+                print(f"Error during shutdown: {e}")
+            finally:
+                # Force exit immediately - don't wait for threads
+                import threading
+                print(f"Active threads: {threading.active_count()}")
+                os._exit(0)
+        
+        # Register signal handlers for Ctrl+C
+        signal.signal(signal.SIGINT, signal_handler)
+        if hasattr(signal, 'SIGTERM'):
+            signal.signal(signal.SIGTERM, signal_handler)
         
         print(f"Development server running at http://localhost:{port}/")
         print("Press Ctrl+C to stop the server")
@@ -4858,10 +4963,16 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
-            print("\nShutting down server...")
-            observer.stop()
-            httpd.shutdown()
-            observer.join()
+            signal_handler(signal.SIGINT, None)
+        finally:
+            # Ensure cleanup happens even if signal handler fails
+            try:
+                observer.stop()
+                httpd.shutdown()
+                httpd.server_close()
+            except:
+                pass
+            os._exit(0)
             
     except ImportError as e:
         print(f"[ERROR] Missing dependencies for development server: {e}")
