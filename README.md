@@ -51,7 +51,7 @@ You can see our version of it live on: https://www.ocwn.net/
 - **Story Genre Tags**: Categorize stories by theme and genre
 - **Accessibility Features**: ARIA labels, keyboard navigation, and alt text validation
 - **Manga Features**: Supports comic / manga / manhwa too, though could still use some improvement
-- **AND MORE!!!**: There are some additional undocumented features...
+- **AND MORE!!!**: There are some additional undocumented features... check the examples!
 
 ## Project Structure
 
@@ -646,9 +646,9 @@ Chapters are displayed in the order they appear in the `chapters` array within e
 ]
 ```
 
-## Advanced Features
-
 ### Password Protection
+
+If you use password protection, you should not have your main repo public. This static generator wants you to have two different github repos one for the source code and your project files, and another which you publish to. Although you're not required to publish to a github repo. It's a static site generator, you can upload the static files to any server.
 
 Secure premium or beta content with client-side encryption:
 
@@ -745,6 +745,8 @@ published: "2025-08-01T14:30:00-05:00"     # With timezone offset
 ```
 
 **GitHub Actions Automation:**
+
+You can remove these files if you only intend to update when you push changes / you do not want future scheduled releases.
 
 1. **Daily Scheduled Rebuild** (`.github/workflows/scheduled-rebuild.yml`):
    - Runs daily at midnight UTC
@@ -881,14 +883,19 @@ webring:
   
   sites:
     - name: "Fantasy Author A"
-      url: "https://example.com/novel/"
-      rss: "https://example.com/novel/rss.xml" 
+      url: "http://www.ocwn.net/novel/"
+      rss: "http://www.ocwn.net/novel/rss.xml" 
       description: "Epic fantasy adventure series"
     
     - name: "Sci-Fi Author B"
-      url: "https://scifi-site.com/"
-      rss: "https://scifi-site.com/rss.xml"
+      url: "http://www.ocwn.net/"
+      rss: "http://www.ocwn.net/rss.xml"
       description: "Space opera with great characters"
+
+You can see an example of a site RSS here: https://oekaki-connect.github.io/web-novel/rss.xml
+And a story RSS here: https://oekaki-connect.github.io/web-novel/my-awesome-web-novel/rss.xml
+
+If you want to promote an entire site of someone else you can, otherwise you can promote a specific story.
 
 # Display customization
 display:
@@ -1300,3 +1307,4 @@ Feel free to extend this generator with additional features:
 - Chapter bookmarking (using localStorage)
 - Improve the manga reader (better page transitions, double vertical scroll)
 - Break the current monolith generate.py into sub dependencies
+- Maybe convert the webring feature into something dynamic done when someone visits front pages
