@@ -1097,10 +1097,30 @@
                 
                 // Settings controls
                 document.getElementById('view-mode').addEventListener('change', (e) => {
+                    const oldViewMode = viewMode;
                     viewMode = e.target.value;
-                    saveMangaSettings();
-                    applyMangaSettings();
-                    updateFullscreenButtonState();
+                    
+                    // Reset page when switching from scroll modes to page modes
+                    if ((oldViewMode === 'scroll' || oldViewMode === 'scroll_double') && 
+                        (viewMode === 'single' || viewMode === 'double')) {
+                        if (viewMode === 'double') {
+                            // For double page mode, start at page 2 if there are at least 2 pages
+                            currentPage = mangaData.page_count >= 2 ? 2 : 1;
+                        } else {
+                            // For single page mode, start at page 1
+                            currentPage = 1;
+                        }
+                        
+                        // Apply settings first, then show the page to update the indicator
+                        saveMangaSettings();
+                        applyMangaSettings();
+                        updateFullscreenButtonState();
+                        showPage(currentPage);
+                    } else {
+                        saveMangaSettings();
+                        applyMangaSettings();
+                        updateFullscreenButtonState();
+                    }
                 });
                 
                 document.getElementById('reading-direction').addEventListener('change', (e) => {
@@ -1179,6 +1199,12 @@
             }
             
             function changePage(direction) {
+                // Special handling for vertical scroll modes
+                if (viewMode === 'scroll' || viewMode === 'scroll_double') {
+                    handleScrollModeNavigation(direction);
+                    return;
+                }
+                
                 // Special handling for manga chapter boundaries
                 if (direction === 1 && currentPage >= mangaData.page_count) {
                     // Already on last page, check if we should navigate to next chapter
@@ -1241,6 +1267,76 @@
                     // If we would overshoot, just go to the last page
                     showPage(mangaData.page_count);
                 }
+            }
+            
+            function handleScrollModeNavigation(direction) {
+                // Get the current page in scroll view
+                const currentPageInView = getCurrentPageInScrollView();
+                
+                if (direction === 1) {
+                    // Moving forward
+                    if (currentPageInView >= mangaData.page_count) {
+                        // On final page - check if properly positioned for chapter navigation
+                        if (isScrollPageProperlyPositioned(currentPageInView)) {
+                            navigateToNextChapter();
+                        } else {
+                            scrollToPage(currentPageInView);
+                        }
+                        return;
+                    }
+                    
+                    // Not on final page - advance to next page/pair
+                    if (viewMode === 'scroll_double') {
+                        const nextPagePair = getNextPagePairNumber(currentPageInView);
+                        scrollToPage(nextPagePair);
+                    } else {
+                        scrollToPage(currentPageInView + 1);
+                    }
+                } else {
+                    // Moving backward
+                    if (currentPageInView <= 1) {
+                        // On first page - check if properly positioned for chapter navigation
+                        if (isScrollPageProperlyPositioned(currentPageInView)) {
+                            navigateToPreviousChapter();
+                        } else {
+                            scrollToPage(currentPageInView);
+                        }
+                        return;
+                    }
+                    
+                    // Not on first page - go to previous page/pair
+                    if (viewMode === 'scroll_double') {
+                        const prevPagePair = getPreviousPagePairNumber(currentPageInView);
+                        scrollToPage(prevPagePair);
+                    } else {
+                        scrollToPage(currentPageInView - 1);
+                    }
+                }
+            }
+            
+            function getPreviousPagePairNumber(currentPageNum) {
+                if (viewMode !== 'scroll_double') {
+                    return currentPageNum - 1;
+                }
+                
+                // Find which pair the current page is in and return the first page of the previous pair
+                const pagePairs = document.querySelectorAll('.page-pair');
+                let pageNumber = 1;
+                
+                for (let pair of pagePairs) {
+                    const pagesInPair = pair.querySelectorAll('.manga-page').length;
+                    const pairStart = pageNumber;
+                    const pairEnd = pageNumber + pagesInPair - 1;
+                    
+                    if (currentPageNum >= pairStart && currentPageNum <= pairEnd) {
+                        // Found current pair, return start of previous pair
+                        return Math.max(1, pairStart - pagesInPair);
+                    }
+                    
+                    pageNumber += pagesInPair;
+                }
+                
+                return Math.max(1, currentPageNum - 2);
             }
             
             function navigateToPreviousChapter() {
