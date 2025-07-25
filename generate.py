@@ -2934,6 +2934,12 @@ def render_template(template_name, novel_slug=None, site_config=None, novel_conf
     if asset_map:
         kwargs['asset_map'] = asset_map
     
+    # Add site_config and novel_config to template variables
+    if site_config is not None:
+        kwargs['site_config'] = site_config
+    if novel_config is not None:
+        kwargs['novel_config'] = novel_config
+    
     return template.render(**kwargs)
 
 def build_site(include_drafts=False, include_scheduled=False, no_epub=False, optimize_images=False, serve_mode=False, serve_port=8000, no_minify=False):
@@ -3449,6 +3455,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                         filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
                         f.write(render_template("chapter.html", 
                                                 novel_slug=novel_slug,
+                                                site_config=site_config,
+                                                novel_config=novel_config,
                                                 novel=filtered_novel,
                                                 novel_title=novel['title'],
                                                 arcs=novel['arcs'],
@@ -3492,7 +3500,7 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                                 serve_port=serve_port if serve_mode else None,
                                                 is_manga_chapter=is_manga_chapter,
                                                 manga_data=manga_data,
-                                                site_config=site_config))
+                                                ))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
@@ -3618,6 +3626,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                         filtered_novel = filter_hidden_chapters_from_novel(novel, novel_slug, lang)
                         f.write(render_template("chapter.html", 
                                                 novel_slug=novel_slug,
+                                                site_config=site_config,
+                                                novel_config=novel_config,
                                                 novel=filtered_novel,
                                                 novel_title=novel['title'],
                                                 arcs=novel['arcs'],
@@ -3664,7 +3674,7 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                                 serve_port=serve_port if serve_mode else None,
                                                 is_manga_chapter=is_manga_chapter,
                                                 manga_data=manga_data,
-                                                site_config=site_config))
+                                                ))
 
         # Generate tag pages for this language (after all chapters are processed)
         for lang in available_languages:
@@ -4988,6 +4998,8 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
         # Render chapter  
         chapter_html = render_template("chapter.html",
                                      novel_slug=novel_slug,
+                                     site_config=site_config,
+                                     novel_config=novel_config,
                                      novel=novel_for_template,
                                      chapter=chapter_info,
                                      chapter_title=chapter_metadata.get('title', chapter_info['title']),
@@ -5019,8 +5031,7 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
                                      comments_issue_term=comments_config['issue_term'],
                                      comments_label=comments_config['label'],
                                      comments_theme=comments_config['theme'],
-                                     authors_config=authors_config,
-                                     site_config=site_config)
+                                     authors_config=authors_config)
         
         # Write chapter file
         with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
