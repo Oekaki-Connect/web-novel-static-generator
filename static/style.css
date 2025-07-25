@@ -2935,6 +2935,45 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* Seamless navigation stacking for single page mode */
+.manga-viewer.seamless-mode {
+    position: relative;
+    min-height: 70vh; /* Ensure consistent height */
+}
+
+.manga-viewer.seamless-mode .manga-page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity var(--manga-transition-duration, 0s) ease-in-out;
+    pointer-events: none; /* Prevent interaction with hidden pages */
+}
+
+.manga-viewer.seamless-mode .manga-page.current {
+    opacity: 1;
+    z-index: 2;
+    pointer-events: auto; /* Enable interaction for current page */
+}
+
+.manga-viewer.seamless-mode .manga-page.next {
+    opacity: 0;
+    z-index: 1;
+}
+
+.manga-viewer.seamless-mode .manga-page.prev {
+    opacity: 0;
+    z-index: 0;
+}
+
+/* Ensure images in seamless mode are immediately ready */
+.manga-viewer.seamless-mode .manga-page.next .manga-image,
+.manga-viewer.seamless-mode .manga-page.prev .manga-image {
+    opacity: 1; /* Keep next/prev images ready but page is hidden */
+}
+
 /* Double page mode */
 .manga-viewer.double-page {
     display: flex;

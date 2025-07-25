@@ -784,6 +784,16 @@
             let mouseTimer = null;
             const preloadedImages = new Map(); // Cache for preloaded images
             
+            // Seamless transition configuration from site config
+            const seamlessConfig = {{ (site_config|default({})).get('manga', {}).get('seamless_transitions', {'enabled': False, 'duration': 0.15}) | tojson }};
+            
+            // Set CSS custom property for transition duration
+            if (seamlessConfig.enabled) {
+                document.documentElement.style.setProperty('--manga-transition-duration', seamlessConfig.duration + 's');
+            } else {
+                document.documentElement.style.setProperty('--manga-transition-duration', '0s');
+            }
+            
             document.addEventListener('DOMContentLoaded', function() {
                 // Handle URL parameters for seamless navigation
                 handleUrlParameters();
@@ -1115,7 +1125,14 @@
                 currentPage = pageNum;
                 updatePageIndicator();
                 
-                // Preload the image for the new page
+                // Check if we're in seamless single page mode
+                const viewer = document.getElementById('manga-viewer');
+                if (viewMode === 'single' && seamlessConfig.enabled && viewer.classList.contains('seamless-mode')) {
+                    showPageSeamless(pageNum);
+                    return;
+                }
+                
+                // Preload the image for the new page (legacy non-seamless mode)
                 const newPageEl = document.querySelector(`.manga-page[data-page="${pageNum}"]`);
                 if (newPageEl) {
                     const imgElement = newPageEl.querySelector('.manga-image');
@@ -1172,6 +1189,84 @@
                 preloadUpcomingImages();
                 
                 // Check for manga completion
+                if (window.mangaCompletionCheck) {
+                    window.mangaCompletionCheck(pageNum);
+                }
+            }
+            
+            function showPageSeamless(pageNum) {
+                const pages = document.querySelectorAll('.manga-page');
+                const totalPages = mangaData.page_count;
+                
+                // Clear all current classes
+                pages.forEach(page => {
+                    page.classList.remove('current', 'next', 'prev');
+                });
+                
+                // Set up the new page arrangement
+                pages.forEach((page, index) => {
+                    const thisPageNum = index + 1;
+                    
+                    if (thisPageNum === pageNum) {
+                        // Current page - make it visible
+                        page.classList.add('current');
+                        
+                        // Ensure image is properly loaded
+                        const imgElement = page.querySelector('.manga-image');
+                        const pageKey = `page${pageNum}`;
+                        const preloadedImg = preloadedImages.get(pageKey);
+                        
+                        if (imgElement && preloadedImg && preloadedImg !== 'loading') {
+                            imgElement.src = preloadedImg.src;
+                            imgElement.classList.remove('loading');
+                            imgElement.style.opacity = '1';
+                        }
+                        
+                    } else if (thisPageNum === pageNum + 1 && pageNum < totalPages) {
+                        // Next page - preload and stack behind
+                        page.classList.add('next');
+                        
+                        // Ensure next image is loaded and ready
+                        const nextImgElement = page.querySelector('.manga-image');
+                        const nextPageKey = `page${thisPageNum}`;
+                        const nextPreloadedImg = preloadedImages.get(nextPageKey);
+                        
+                        if (nextImgElement && nextPreloadedImg && nextPreloadedImg !== 'loading') {
+                            nextImgElement.src = nextPreloadedImg.src;
+                            nextImgElement.classList.remove('loading');
+                            nextImgElement.style.opacity = '1';
+                        } else {
+                            preloadImage(thisPageNum);
+                        }
+                        
+                    } else if (thisPageNum === pageNum - 1 && pageNum > 1) {
+                        // Previous page - keep for backward navigation
+                        page.classList.add('prev');
+                        
+                        // Ensure prev image is loaded and ready
+                        const prevImgElement = page.querySelector('.manga-image');
+                        const prevPageKey = `page${thisPageNum}`;
+                        const prevPreloadedImg = preloadedImages.get(prevPageKey);
+                        
+                        if (prevImgElement && prevPreloadedImg && prevPreloadedImg !== 'loading') {
+                            prevImgElement.src = prevPreloadedImg.src;
+                            prevImgElement.classList.remove('loading');
+                            prevImgElement.style.opacity = '1';
+                        } else {
+                            preloadImage(thisPageNum);
+                        }
+                    }
+                });
+                
+                // Preload additional pages for better experience
+                if (pageNum + 2 <= totalPages) {
+                    preloadImage(pageNum + 2);
+                }
+                if (pageNum - 2 >= 1) {
+                    preloadImage(pageNum - 2);
+                }
+                
+                // Trigger completion check for manga chapters
                 if (window.mangaCompletionCheck) {
                     window.mangaCompletionCheck(pageNum);
                 }
@@ -1651,8 +1746,16 @@
                 const viewer = document.getElementById('manga-viewer');
                 const pages = viewer.querySelectorAll('.manga-page');
                 
-                // Remove all view mode classes
-                viewer.classList.remove('double-page', 'scroll-mode', 'original-size');
+                // Remove all view mode classes including seamless mode
+                viewer.classList.remove('double-page', 'scroll-mode', 'original-size', 'seamless-mode');
+                
+                // Clean up page classes from seamless mode
+                pages.forEach(page => {
+                    page.classList.remove('current', 'next', 'prev');
+                    page.style.position = '';
+                    page.style.opacity = '';
+                    page.style.zIndex = '';
+                });
                 
                 switch(viewMode) {
                     case 'double':
@@ -1674,11 +1777,40 @@
             }
             
             function setupSinglePage() {
+                const viewer = document.getElementById('manga-viewer');
                 const pages = document.querySelectorAll('.manga-page');
-                pages.forEach((page, index) => {
-                    page.style.display = (index + 1 === currentPage) ? 'block' : 'none';
-                    page.classList.remove('active', 'single-cover');
-                });
+                
+                // Enable seamless mode for single page viewing (if enabled in config)
+                if (seamlessConfig.enabled) {
+                    viewer.classList.add('seamless-mode');
+                } else {
+                    viewer.classList.remove('seamless-mode');
+                }
+                
+                if (seamlessConfig.enabled) {
+                    // Initialize seamless stacking
+                    pages.forEach((page, index) => {
+                        const pageNum = index + 1;
+                        page.style.display = 'flex'; // Always show for stacking
+                        page.classList.remove('active', 'single-cover', 'current', 'next', 'prev');
+                        
+                        if (pageNum === currentPage) {
+                            page.classList.add('current');
+                        } else if (pageNum === currentPage + 1) {
+                            page.classList.add('next');
+                            // Preload next image
+                            preloadImage(pageNum);
+                        } else if (pageNum === currentPage - 1) {
+                            page.classList.add('prev');
+                        }
+                    });
+                } else {
+                    // Traditional single page mode (show/hide)
+                    pages.forEach((page, index) => {
+                        page.style.display = (index + 1 === currentPage) ? 'flex' : 'none';
+                        page.classList.remove('active', 'single-cover', 'current', 'next', 'prev');
+                    });
+                }
             }
             
             function setupDoublePage() {

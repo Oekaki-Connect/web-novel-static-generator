@@ -3491,7 +3491,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                                 is_serve_mode=serve_mode,
                                                 serve_port=serve_port if serve_mode else None,
                                                 is_manga_chapter=is_manga_chapter,
-                                                manga_data=manga_data))
+                                                manga_data=manga_data,
+                                                site_config=site_config))
                 else:
                     # Generate chapter page showing "not translated" message in primary language
                     chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
@@ -3662,7 +3663,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                                 is_serve_mode=serve_mode,
                                                 serve_port=serve_port if serve_mode else None,
                                                 is_manga_chapter=is_manga_chapter,
-                                                manga_data=manga_data))
+                                                manga_data=manga_data,
+                                                site_config=site_config))
 
         # Generate tag pages for this language (after all chapters are processed)
         for lang in available_languages:
@@ -5017,7 +5019,8 @@ def incremental_rebuild_chapter(novel_slug, chapter_id, language='en'):
                                      comments_issue_term=comments_config['issue_term'],
                                      comments_label=comments_config['label'],
                                      comments_theme=comments_config['theme'],
-                                     authors_config=authors_config)
+                                     authors_config=authors_config,
+                                     site_config=site_config)
         
         # Write chapter file
         with open(os.path.join(chapter_dir, "index.html"), "w", encoding='utf-8') as f:
