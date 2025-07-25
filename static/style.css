@@ -3035,6 +3035,60 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     vertical-align: top; /* Prevent baseline spacing */
 }
 
+/* Vertical Scroll Double mode - combines scroll and double page features */
+.manga-viewer.scroll-double-mode {
+    overflow-y: visible; /* Remove internal scroll, let page handle scrolling */
+    max-height: none; /* Remove height constraint */
+    height: auto; /* Let content determine height */
+    display: block;
+}
+
+.manga-viewer.scroll-double-mode .page-pair {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin-bottom: 0; /* No gap between page pairs for continuous reading */
+    margin-top: 0;
+    padding: 0;
+    gap: 0; /* No gap between pages in a pair for book-like experience */
+    line-height: 0; /* Remove any line height gaps */
+}
+
+.manga-viewer.scroll-double-mode .page-pair.single-page {
+    justify-content: center; /* Center single pages (cover or last odd page) */
+}
+
+.manga-viewer.scroll-double-mode .manga-page {
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    flex: 0 0 auto;
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+}
+
+.manga-viewer.scroll-double-mode .manga-image {
+    max-width: 45vw; /* Similar to double page mode */
+    max-height: 85vh;
+    display: block;
+    margin: 0;
+    padding: 0;
+    vertical-align: top;
+}
+
+/* Single page in scroll double mode (cover or last page) */
+.manga-viewer.scroll-double-mode .page-pair.single-page .manga-image {
+    max-width: 90vw; /* Wider for single pages to maintain readability */
+    max-height: 90vh;
+}
+
+/* RTL scroll double mode - reverse the page order within pairs */
+.manga-viewer.scroll-double-mode[data-reading-direction="rtl"] .page-pair {
+    flex-direction: row-reverse;
+}
+
 .manga-image {
     max-width: 100%;
     max-height: 90vh;

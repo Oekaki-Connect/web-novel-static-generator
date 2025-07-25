@@ -118,7 +118,7 @@ manga:
   # Seamless page transitions for single page mode
   seamless_transitions:
     enabled: true  # Disabled by default for instant page changes
-    duration: 0.01  # Transition duration in seconds
+    duration: 0.15  # Transition duration in seconds (0.1-1.0)
 
 # Front page configuration
 front_page:

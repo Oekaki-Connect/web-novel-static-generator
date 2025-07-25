@@ -9,8 +9,8 @@ reading_direction: "ltr"  # "ltr" (left-to-right) or "rtl" (right-to-left)
 
 # Manga reader defaults
 manga_defaults:
-  view_mode: "single"          # "single", "double", or "scroll"
-  cover_separate: true         # First page shown separately in double mode
+  view_mode: "single"          # "single", "double", "scroll", or "scroll_double"
+  cover_separate: true         # First page shown separately in double/scroll_double modes
   image_scaling: "fit_screen"  # "fit_screen", "fit_width", "original"
   zoom_level: 100             # Default zoom percentage
   preload_pages: 3            # Number of pages to preload

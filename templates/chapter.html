@@ -689,6 +689,7 @@
                     <option value="single">Single Page</option>
                     <option value="double">Double Page</option>
                     <option value="scroll">Vertical Scroll</option>
+                    <option value="scroll_double">Vertical Scroll Double</option>
                 </select>
             </div>
             
@@ -1316,9 +1317,14 @@
             function handleViewerClick(e) {
                 const viewer = document.getElementById('manga-viewer');
                 
-                // Special behavior for vertical scroll mode
+                // Special behavior for vertical scroll modes
                 if (viewer.classList.contains('scroll-mode')) {
                     handleScrollModeClick(e);
+                    return;
+                }
+                
+                if (viewer.classList.contains('scroll-double-mode')) {
+                    handleScrollModeClick(e); // Use same behavior as scroll mode
                     return;
                 }
                 
@@ -1358,46 +1364,103 @@
             }
             
             function getCurrentPageInScrollView() {
-                const pages = document.querySelectorAll('.manga-page');
+                const viewer = document.getElementById('manga-viewer');
                 const viewportTop = window.pageYOffset;
                 const viewportMiddle = viewportTop + (window.innerHeight / 2);
                 
-                // Find which page is in the middle of the viewport
-                for (let i = 0; i < pages.length; i++) {
-                    const page = pages[i];
-                    const pageTop = page.getBoundingClientRect().top + viewportTop;
-                    const pageBottom = pageTop + page.offsetHeight;
+                if (viewer.classList.contains('scroll-double-mode')) {
+                    // For scroll double mode, work with page pairs
+                    const pagePairs = document.querySelectorAll('.page-pair');
+                    let currentPageNumber = 1;
                     
-                    if (viewportMiddle >= pageTop && viewportMiddle <= pageBottom) {
-                        return i + 1; // Pages are 1-indexed
+                    for (let i = 0; i < pagePairs.length; i++) {
+                        const pair = pagePairs[i];
+                        const pairTop = pair.getBoundingClientRect().top + viewportTop;
+                        const pairBottom = pairTop + pair.offsetHeight;
+                        
+                        if (viewportMiddle >= pairTop && viewportMiddle <= pairBottom) {
+                            // Get the number of pages in this pair
+                            const pagesInPair = pair.querySelectorAll('.manga-page');
+                            return currentPageNumber + pagesInPair.length - 1; // Return last page number in pair
+                        }
+                        
+                        // Count pages in this pair for next iteration
+                        currentPageNumber += pair.querySelectorAll('.manga-page').length;
                     }
-                }
-                
-                // Fallback: return the last visible page
-                for (let i = pages.length - 1; i >= 0; i--) {
-                    const page = pages[i];
-                    const pageTop = page.getBoundingClientRect().top + viewportTop;
                     
-                    if (pageTop <= viewportMiddle) {
-                        return i + 1;
+                    return mangaData.page_count; // Default to last page
+                } else {
+                    // Original logic for regular scroll mode
+                    const pages = document.querySelectorAll('.manga-page');
+                    
+                    // Find which page is in the middle of the viewport
+                    for (let i = 0; i < pages.length; i++) {
+                        const page = pages[i];
+                        const pageTop = page.getBoundingClientRect().top + viewportTop;
+                        const pageBottom = pageTop + page.offsetHeight;
+                        
+                        if (viewportMiddle >= pageTop && viewportMiddle <= pageBottom) {
+                            return i + 1; // Pages are 1-indexed
+                        }
                     }
+                    
+                    // Fallback: return the last visible page
+                    for (let i = pages.length - 1; i >= 0; i--) {
+                        const page = pages[i];
+                        const pageTop = page.getBoundingClientRect().top + viewportTop;
+                        
+                        if (pageTop <= viewportMiddle) {
+                            return i + 1;
+                        }
+                    }
+                    
+                    return 1; // Default to first page
                 }
-                
-                return 1; // Default to first page
             }
             
             function scrollToPage(pageNumber) {
-                const targetPage = document.querySelector(`.manga-page[data-page="${pageNumber}"]`);
-                if (targetPage) {
-                    // Smooth scroll to the target page
-                    targetPage.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                const viewer = document.getElementById('manga-viewer');
+                
+                if (viewer.classList.contains('scroll-double-mode')) {
+                    // For scroll double mode, find the page pair containing the target page
+                    const pagePairs = document.querySelectorAll('.page-pair');
+                    let currentPageNum = 1;
                     
-                    // Update current page tracker
-                    currentPage = pageNumber;
-                    updatePageIndicator();
+                    for (let i = 0; i < pagePairs.length; i++) {
+                        const pair = pagePairs[i];
+                        const pagesInPair = pair.querySelectorAll('.manga-page');
+                        const pairStartPage = currentPageNum;
+                        const pairEndPage = currentPageNum + pagesInPair.length - 1;
+                        
+                        if (pageNumber >= pairStartPage && pageNumber <= pairEndPage) {
+                            // Target page is in this pair
+                            pair.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                            
+                            // Update current page tracker
+                            currentPage = pageNumber;
+                            updatePageIndicator();
+                            return;
+                        }
+                        
+                        currentPageNum += pagesInPair.length;
+                    }
+                } else {
+                    // Original logic for regular scroll mode
+                    const targetPage = document.querySelector(`.manga-page[data-page="${pageNumber}"]`);
+                    if (targetPage) {
+                        // Smooth scroll to the target page
+                        targetPage.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                        
+                        // Update current page tracker
+                        currentPage = pageNumber;
+                        updatePageIndicator();
+                    }
                 }
             }
             
@@ -1471,15 +1534,9 @@
                 localStorage.setItem('manga-reader-settings', JSON.stringify(settings));
             }
             
-            function applyMangaSettings() {
+            function applyImageScaling() {
                 const viewer = document.getElementById('manga-viewer');
                 const images = viewer.querySelectorAll('.manga-image');
-                
-                // Set reading direction data attribute for CSS
-                viewer.setAttribute('data-reading-direction', readingDirection);
-                
-                // Apply view mode
-                applyViewMode();
                 
                 // Apply scaling with proper container adjustment
                 images.forEach((img, index) => {
@@ -1526,6 +1583,19 @@
                         }
                     }
                 });
+            }
+
+            function applyMangaSettings() {
+                const viewer = document.getElementById('manga-viewer');
+                
+                // Set reading direction data attribute for CSS
+                viewer.setAttribute('data-reading-direction', readingDirection);
+                
+                // Apply view mode
+                applyViewMode();
+                
+                // Apply image scaling
+                applyImageScaling();
             }
             
             function resetMangaSettings() {
@@ -1747,7 +1817,7 @@
                 const pages = viewer.querySelectorAll('.manga-page');
                 
                 // Remove all view mode classes including seamless mode
-                viewer.classList.remove('double-page', 'scroll-mode', 'original-size', 'seamless-mode');
+                viewer.classList.remove('double-page', 'scroll-mode', 'scroll-double-mode', 'original-size', 'seamless-mode');
                 
                 // Clean up page classes from seamless mode
                 pages.forEach(page => {
@@ -1765,6 +1835,10 @@
                     case 'scroll':
                         viewer.classList.add('scroll-mode');
                         setupScrollMode();
+                        break;
+                    case 'scroll_double':
+                        viewer.classList.add('scroll-double-mode');
+                        setupScrollDoublePage();
                         break;
                     default:
                         setupSinglePage();
@@ -1888,6 +1962,66 @@
                     page.style.display = 'block';
                     page.classList.remove('active', 'single-cover');
                 });
+            }
+            
+            function setupScrollDoublePage() {
+                const viewer = document.getElementById('manga-viewer');
+                const pages = document.querySelectorAll('.manga-page');
+                const coverSeparate = {{ manga_data.config.cover_separate | tojson }};
+                const totalPages = pages.length;
+                
+                // Clear existing structure
+                viewer.innerHTML = '';
+                
+                let pageIndex = 0;
+                
+                // Handle cover page if separate
+                if (coverSeparate && totalPages > 0) {
+                    const coverPair = document.createElement('div');
+                    coverPair.className = 'page-pair single-page';
+                    
+                    const coverPage = pages[0].cloneNode(true);
+                    coverPage.classList.remove('active', 'single-cover');
+                    coverPair.appendChild(coverPage);
+                    viewer.appendChild(coverPair);
+                    
+                    pageIndex = 1; // Start pairing from second page
+                }
+                
+                // Create page pairs from remaining pages
+                while (pageIndex < totalPages) {
+                    const pair = document.createElement('div');
+                    pair.className = 'page-pair';
+                    
+                    // Add first page of pair
+                    if (pageIndex < totalPages) {
+                        const page1 = pages[pageIndex].cloneNode(true);
+                        page1.classList.remove('active', 'single-cover');
+                        pair.appendChild(page1);
+                        pageIndex++;
+                    }
+                    
+                    // Add second page of pair if available
+                    if (pageIndex < totalPages) {
+                        const page2 = pages[pageIndex].cloneNode(true);
+                        page2.classList.remove('active', 'single-cover');
+                        pair.appendChild(page2);
+                        pageIndex++;
+                    } else {
+                        // Odd number of pages - this pair only has one page
+                        pair.classList.add('single-page');
+                    }
+                    
+                    viewer.appendChild(pair);
+                }
+                
+                // Set reading direction
+                viewer.setAttribute('data-reading-direction', readingDirection);
+                
+                // Apply image scaling to the new structure (without calling full applyMangaSettings)
+                setTimeout(() => {
+                    applyImageScaling();
+                }, 10);
             }
         </script>
         
