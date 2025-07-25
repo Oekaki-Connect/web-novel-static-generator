@@ -202,7 +202,13 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                 published_date = chapter_metadata.get('published')
                 if published_date:
                     try:
-                        pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
+                        # Handle both string and date object formats
+                        if isinstance(published_date, str):
+                            pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
+                        else:
+                            # Assume it's already a date object, convert to datetime
+                            pub_datetime = datetime.combine(published_date, datetime.min.time())
+                        
                         chapter_items.append({
                             'id': chapter_id,
                             'title': chapter_metadata.get('title', chapter['title']),
@@ -261,7 +267,13 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                     published_date = chapter_metadata.get('published')
                     if published_date:
                         try:
-                            pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
+                            # Handle both string and date object formats
+                            if isinstance(published_date, str):
+                                pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
+                            else:
+                                # Assume it's already a date object, convert to datetime
+                                pub_datetime = datetime.combine(published_date, datetime.min.time())
+                            
                             all_chapter_items.append({
                                 'id': chapter_id,
                                 'title': f"{novel.get('title', '')}: {chapter_metadata.get('title', chapter['title'])}",
