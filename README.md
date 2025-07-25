@@ -1200,3 +1200,5 @@ python generate.py --validate
 Feel free to extend this generator with additional features:
 - Search functionality
 - Chapter bookmarking
+- Improve the manga reader (better page transitions, double vertical scroll
+- RSS based webring support to feature new chapters from friends on your own site front page

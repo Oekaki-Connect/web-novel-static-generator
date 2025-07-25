@@ -2140,14 +2140,22 @@ def process_manga_pages(novel_slug, chapter_id, language, chapter_metadata, nove
     else:
         chapter_source_dir = os.path.join(CONTENT_DIR, novel_slug, "chapters", language)
     
-    # Look for page images in the chapter directory
-    page_pattern = os.path.join(chapter_source_dir, "page*.png")
+    # Look for page images in the chapter directory and chapter subfolder
     page_files = []
     
-    # Scan for page files
-    for ext in ['png', 'jpg', 'jpeg', 'webp']:
-        pattern = os.path.join(chapter_source_dir, f"page*.{ext}")
-        page_files.extend(glob.glob(pattern))
+    # First, try to find pages in a subfolder named after the chapter_id
+    chapter_subfolder = os.path.join(chapter_source_dir, chapter_id)
+    if os.path.exists(chapter_subfolder):
+        # Scan for page files in the subfolder
+        for ext in ['png', 'jpg', 'jpeg', 'webp']:
+            pattern = os.path.join(chapter_subfolder, f"page*.{ext}")
+            page_files.extend(glob.glob(pattern))
+    
+    # If no pages found in subfolder, try the main chapter directory
+    if not page_files:
+        for ext in ['png', 'jpg', 'jpeg', 'webp']:
+            pattern = os.path.join(chapter_source_dir, f"page*.{ext}")
+            page_files.extend(glob.glob(pattern))
     
     if not page_files:
         print(f"    Warning: No manga pages found for {chapter_id}")
