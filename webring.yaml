@@ -1,0 +1,29 @@
+# Webring Configuration
+# List of friendly sites to cross-promote on the front page
+# RSS feeds will be fetched at build time to show recent chapters
+
+webring:
+  enabled: true
+  max_items: 20  # Maximum number of recent items to display
+  cache_duration: 3600  # Cache RSS feeds for 1 hour (in seconds)
+  
+  # List of sites in your webring
+  sites:
+    - name: "OCWN"
+      url: "https://oekaki-connect.github.io/web-novel/"
+      rss: "https://oekaki-connect.github.io/web-novel/rss.xml"
+      description: "Example web novel site for testing"
+      
+    # Add more sites here:
+    # - name: "Friend's Novel Site"
+    #   url: "https://example.com/novel/"
+    #   rss: "https://example.com/novel/rss.xml"
+    #   description: "A great fantasy novel series"
+
+# Display settings for the webring section
+display:
+  title: "Recent Updates from the Webring"
+  subtitle: "Check out recent chapters from fellow authors we recommend"
+  show_descriptions: true
+  show_dates: true
+  date_format: "%B %d, %Y"  # Format: January 15, 2025

@@ -71,6 +71,34 @@
         {% else %}
             <p>No novels found. Add some novels to the content directory to get started.</p>
         {% endif %}
+        
+        {% if webring_data and webring_data|length > 0 %}
+        <section class="webring-section">
+            <h2>{{ webring_title or "Recent Updates from the Webring" }}</h2>
+            {% if webring_subtitle %}
+            <p class="webring-subtitle">{{ webring_subtitle }}</p>
+            {% endif %}
+            
+            <div class="webring-items">
+                {% for item in webring_data %}
+                <article class="webring-item">
+                    <span class="webring-site-name">
+                        <a href="{{ item.site_url }}" target="_blank" rel="noopener">{{ item.site_name }}</a>
+                    </span>
+                    <h3 class="webring-item-title">
+                        <a href="{{ item.link }}" target="_blank" rel="noopener">{{ item.title }}</a>
+                    </h3>
+                    {% if webring_show_dates and item.formatted_date %}
+                    <span class="webring-date">{{ item.formatted_date }}</span>
+                    {% endif %}
+                    {% if webring_show_descriptions and item.description %}
+                    <p class="webring-item-description">{{ item.description }}</p>
+                    {% endif %}
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
     </main>
     <footer>
         <p>{{ footer_data.copyright }}</p>

@@ -3457,3 +3457,127 @@ dd {
     text-rendering: optimizeLegibility;
 }
 
+/* Webring Section Styling - Torrent Tracker Inspired */
+.webring-section {
+    margin: 2rem 0 1rem 0;
+    padding: 1rem 0;
+    border-top: 1px solid var(--color-accent);
+}
+
+.webring-section h2 {
+    color: var(--color-heading);
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    font-family: monospace;
+}
+
+.webring-subtitle {
+    color: var(--color-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    font-family: monospace;
+}
+
+.webring-items {
+    display: block;
+    font-family: monospace;
+    font-size: 0.9rem;
+    line-height: 1.3;
+}
+
+.webring-item {
+    display: flex;
+    align-items: center;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid transparent;
+    transition: background-color 0.1s ease;
+}
+
+.webring-item:hover {
+    background-color: var(--color-accent);
+}
+
+.webring-item:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="dark"] .webring-item:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.webring-site-name {
+    font-size: 0.8rem;
+    padding: 0.1rem 0.4rem;
+    background: var(--color-primary);
+    color: var(--color-base);
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+}
+
+.webring-item-title {
+    flex: 1;
+    margin: 0;
+    font-size: inherit;
+    font-weight: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 0.75rem;
+}
+
+.webring-item-title a {
+    color: var(--color-contrast);
+    text-decoration: none;
+}
+
+.webring-item-title a:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.webring-site-name a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.webring-date {
+    font-size: 0.85rem;
+    color: var(--color-secondary);
+    min-width: 5rem;
+    text-align: right;
+}
+
+.webring-item-description {
+    display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .webring-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0.4rem 0;
+    }
+    
+    .webring-site-name {
+        margin-right: 0;
+        margin-bottom: 0.2rem;
+    }
+    
+    .webring-item-title {
+        padding-right: 0;
+        margin-bottom: 0.2rem;
+    }
+    
+    .webring-date {
+        min-width: auto;
+        text-align: left;
+        font-size: 0.8rem;
+    }
+}
+

@@ -12,6 +12,8 @@ import json
 import datetime
 import argparse
 from urllib.parse import urljoin, urlparse
+from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 from bs4 import BeautifulSoup
 # Lazy import for optional dependencies
 EBOOKLIB_AVAILABLE = False
@@ -988,6 +990,125 @@ def build_page_navigation(site_config, current_language='en', current_page_slug=
         navigation[placement] = nav_items[placement]
     
     return navigation
+
+def load_webring_config():
+    """Load webring configuration from webring.yaml"""
+    webring_file = os.path.join(os.getcwd(), "webring.yaml")
+    if os.path.exists(webring_file):
+        with open(webring_file, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            return config.get('webring', {})
+    return {}
+
+def fetch_rss_feed(url, timeout=10):
+    """Fetch and parse RSS feed from URL"""
+    try:
+        with urlopen(url, timeout=timeout) as response:
+            content = response.read().decode('utf-8')
+            soup = BeautifulSoup(content, 'xml')
+            return soup
+    except (URLError, HTTPError, UnicodeDecodeError) as e:
+        print(f"    Warning: Failed to fetch RSS feed from {url}: {e}")
+        return None
+
+def parse_rss_items(rss_soup, site_name, site_url):
+    """Parse RSS feed and extract items"""
+    if not rss_soup:
+        return []
+    
+    items = []
+    for item in rss_soup.find_all('item'):
+        title_elem = item.find('title')
+        link_elem = item.find('link')
+        pub_date_elem = item.find('pubDate')
+        description_elem = item.find('description')
+        
+        if title_elem and link_elem:
+            title = title_elem.get_text(strip=True)
+            link = link_elem.get_text(strip=True)
+            
+            # Parse publication date
+            pub_date = None
+            if pub_date_elem:
+                try:
+                    date_str = pub_date_elem.get_text(strip=True)
+                    # Try to parse common RSS date formats
+                    for fmt in ['%a, %d %b %Y %H:%M:%S %z', '%a, %d %b %Y %H:%M:%S %Z', '%Y-%m-%dT%H:%M:%S%z']:
+                        try:
+                            pub_date = datetime.datetime.strptime(date_str, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    if not pub_date:
+                        # Fallback: try parsing without timezone
+                        try:
+                            pub_date = datetime.datetime.strptime(date_str[:25], '%a, %d %b %Y %H:%M:%S')
+                        except ValueError:
+                            pass
+                except Exception:
+                    pass
+            
+            # Extract description
+            description = ""
+            if description_elem:
+                desc_text = description_elem.get_text(strip=True)
+                # Limit description length
+                if len(desc_text) > 150:
+                    description = desc_text[:147] + "..."
+                else:
+                    description = desc_text
+            
+            items.append({
+                'title': title,
+                'link': link,
+                'pub_date': pub_date,
+                'description': description,
+                'site_name': site_name,
+                'site_url': site_url
+            })
+    
+    return items
+
+def generate_webring_data(webring_config, display_config):
+    """Generate webring data by fetching and parsing RSS feeds"""
+    if not webring_config.get('enabled', False):
+        return []
+    
+    all_items = []
+    max_items = webring_config.get('max_items', 20)
+    
+    print("Fetching webring RSS feeds...")
+    
+    for site in webring_config.get('sites', []):
+        site_name = site.get('name', 'Unknown Site')
+        site_url = site.get('url', '')
+        rss_url = site.get('rss', '')
+        
+        if not rss_url:
+            continue
+            
+        print(f"    Fetching RSS from {site_name}...")
+        rss_soup = fetch_rss_feed(rss_url)
+        items = parse_rss_items(rss_soup, site_name, site_url)
+        all_items.extend(items)
+    
+    # Sort by publication date (newest first)
+    all_items.sort(key=lambda x: x['pub_date'] or datetime.datetime.min, reverse=True)
+    
+    # Limit to max_items
+    limited_items = all_items[:max_items]
+    
+    # Format dates for display
+    date_format = display_config.get('date_format', '%B %d, %Y')
+    for item in limited_items:
+        if item['pub_date']:
+            item['formatted_date'] = item['pub_date'].strftime(date_format)
+        else:
+            item['formatted_date'] = 'Unknown date'
+    
+    print(f"    Generated webring with {len(limited_items)} items from {len(webring_config.get('sites', []))} sites")
+    
+    return limited_items
 
 
 def generate_story_epub(novel_slug, novel_config, site_config, novel_data=None, language='en'):
@@ -2744,6 +2865,16 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
     # Build footer data for front page
     footer_data = build_footer_content(site_config, page_type='site')
 
+    # Generate webring data
+    webring_config = load_webring_config()
+    display_config = {}
+    if os.path.exists(os.path.join(os.getcwd(), "webring.yaml")):
+        with open(os.path.join(os.getcwd(), "webring.yaml"), 'r', encoding='utf-8') as f:
+            full_config = yaml.safe_load(f)
+            display_config = full_config.get('display', {})
+    
+    webring_data = generate_webring_data(webring_config, display_config)
+
     # Render front page with novels that should be displayed
     with open(os.path.join(BUILD_DIR, "index.html"), "w", encoding='utf-8') as f:
         f.write(render_template("index.html", 
@@ -2757,7 +2888,12 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                seo_keywords=social_meta.get('keywords'),
                                allow_indexing=seo_meta.get('allow_indexing', True),
                                twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
-                               footer_data=footer_data))
+                               footer_data=footer_data,
+                               webring_data=webring_data,
+                               webring_title=display_config.get('title'),
+                               webring_subtitle=display_config.get('subtitle'),
+                               webring_show_dates=display_config.get('show_dates', True),
+                               webring_show_descriptions=display_config.get('show_descriptions', True)))
 
     # Generate author pages
     authors_config = load_authors_config()
