@@ -242,6 +242,11 @@
         // Keyboard navigation support
         function initKeyboardNavigation() {
             document.addEventListener('keydown', function(e) {
+                // Skip keyboard navigation for manga chapters - they have their own handlers
+                {% if manga_data %}
+                return; // This is a manga chapter, don't use text navigation
+                {% endif %}
+                
                 // Skip if user is typing in an input field
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
                     return;
@@ -657,9 +662,9 @@
             </div>
             
             <div class="manga-controls-right">
-                <button id="zoom-fit-btn" class="manga-btn" aria-label="Zoom to fit viewport" title="Fit to viewport height">
+                <!-- <button id="zoom-fit-btn" class="manga-btn" aria-label="Zoom to fit viewport" title="Fit to viewport height">
                     <span>⤢</span>
-                </button>
+                </button> -->
                 <button id="fullscreen-btn" class="manga-btn" aria-label="Toggle fullscreen" title="Toggle fullscreen (F)">
                     <span>⛶</span>
                 </button>
@@ -706,14 +711,14 @@
                 <select id="image-scaling">
                     <option value="fit_screen">Fit Screen</option>
                     <option value="fit_width">Fit Width</option>
-                    <option value="original">Original Size</option>
+                    <!-- <option value="original">Original Size</option> -->
                 </select>
             </div>
             
-            <div class="setting-group">
+            <!-- <div class="setting-group">
                 <label for="zoom-level">Zoom: <span id="zoom-display">100%</span></label>
                 <input type="range" id="zoom-level" min="50" max="300" step="10" value="100">
-            </div>
+            </div> -->
             
             <div class="setting-group">
                 <label for="preload-images">Image Preloading:</label>
@@ -782,6 +787,7 @@
             let readingDirection = '{{ chapter_metadata.reading_direction if chapter_metadata.reading_direction else manga_data.config.reading_direction }}';
             let preloadImages = 3; // Default to 3 images
             let isFullscreen = false;
+            let isScrolling = false; // Prevent navigation during scroll
             let mouseTimer = null;
             const preloadedImages = new Map(); // Cache for preloaded images
             
@@ -988,9 +994,21 @@
                 preloadUpcomingImages();
                 
                 // Event listeners
-                document.getElementById('prev-page').addEventListener('click', () => changePage(-1));
-                document.getElementById('next-page').addEventListener('click', () => changePage(1));
-                document.getElementById('zoom-fit-btn').addEventListener('click', zoomToFit);
+                document.getElementById('prev-page').addEventListener('click', () => {
+                    if (currentPage <= 1) {
+                        navigateToPreviousChapter();
+                    } else {
+                        changePage(-1);
+                    }
+                });
+                document.getElementById('next-page').addEventListener('click', () => {
+                    if (currentPage >= mangaData.page_count) {
+                        navigateToNextChapter();
+                    } else {
+                        changePage(1);
+                    }
+                });
+                // document.getElementById('zoom-fit-btn').addEventListener('click', zoomToFit);
                 document.getElementById('fullscreen-btn').addEventListener('click', toggleFullscreen);
                 document.getElementById('manga-settings-btn').addEventListener('click', toggleSettings);
                 document.getElementById('close-settings').addEventListener('click', toggleSettings);
@@ -1014,12 +1032,12 @@
                     applyMangaSettings();
                 });
                 
-                document.getElementById('zoom-level').addEventListener('input', (e) => {
-                    zoomLevel = parseInt(e.target.value);
-                    document.getElementById('zoom-display').textContent = zoomLevel + '%';
-                    saveMangaSettings();
-                    applyMangaSettings();
-                });
+                // document.getElementById('zoom-level').addEventListener('input', (e) => {
+                //     zoomLevel = parseInt(e.target.value);
+                //     document.getElementById('zoom-display').textContent = zoomLevel + '%';
+                //     saveMangaSettings();
+                //     applyMangaSettings();
+                // });
                 
                 document.getElementById('preload-images').addEventListener('change', (e) => {
                     preloadImages = parseInt(e.target.value);
@@ -1037,7 +1055,72 @@
                 viewer.addEventListener('click', handleViewerClick);
             }
             
+            function isPageProperlyPositioned() {
+                const mangaReader = document.getElementById('manga-reader');
+                const controls = document.querySelector('.manga-controls');
+                const controlsHeight = controls ? controls.offsetHeight : 0;
+                const readerTop = mangaReader.offsetTop;
+                const targetScroll = readerTop + controlsHeight + 10;
+                
+                const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+                
+                // Consider it properly positioned if within 100px of target
+                return Math.abs(currentScroll - targetScroll) <= 100;
+            }
+            
+            function scrollToCurrentPage() {
+                const mangaReader = document.getElementById('manga-reader');
+                const controls = document.querySelector('.manga-controls');
+                const controlsHeight = controls ? controls.offsetHeight : 0;
+                const readerTop = mangaReader.offsetTop;
+                const targetScroll = readerTop + controlsHeight + 10;
+                
+                isScrolling = true; // Set scrolling flag
+                window.scrollTo({ 
+                    top: targetScroll, 
+                    behavior: 'smooth' 
+                });
+                
+                // Clear scrolling flag after scroll completes
+                setTimeout(() => {
+                    isScrolling = false;
+                }, 500); // Smooth scroll usually takes ~300-400ms
+            }
+            
             function changePage(direction) {
+                // Special handling for manga chapter boundaries
+                if (direction === 1 && currentPage >= mangaData.page_count) {
+                    // Already on last page, check if we should navigate to next chapter
+                    if (!isPageProperlyPositioned()) {
+                        // Not properly positioned, just scroll
+                        scrollToCurrentPage();
+                        return;
+                    } else {
+                        // Properly positioned on last page, navigate to next chapter
+                        navigateToNextChapter();
+                        return;
+                    }
+                } else if (direction === -1 && currentPage <= 1) {
+                    // Already on first page, check if we should navigate to previous chapter
+                    if (!isPageProperlyPositioned()) {
+                        // Not properly positioned, just scroll
+                        scrollToCurrentPage();
+                        return;
+                    } else {
+                        // Properly positioned on first page, navigate to previous chapter
+                        navigateToPreviousChapter();
+                        return;
+                    }
+                }
+                
+                // Not at boundaries, proceed with normal page change
+                // But first check if current page is properly positioned
+                if (!isPageProperlyPositioned()) {
+                    // Scroll to current page instead of changing page
+                    scrollToCurrentPage();
+                    return;
+                }
+                
                 // Calculate how many pages to advance based on view mode
                 let pageStep = 1;
                 if (viewMode === 'double') {
@@ -1060,14 +1143,8 @@
                 
                 const newPage = currentPage + (direction * pageStep);
                 
-                // Check if we're trying to go beyond the current chapter
-                if (newPage < 1 && direction === -1) {
-                    // On first page, trying to go previous - navigate to previous chapter
-                    navigateToPreviousChapter();
-                } else if (newPage > mangaData.page_count && direction === 1) {
-                    // On last page, trying to go next - navigate to next chapter
-                    navigateToNextChapter();
-                } else if (newPage >= 1 && newPage <= mangaData.page_count) {
+                // Only change pages within the current chapter
+                if (newPage >= 1 && newPage <= mangaData.page_count) {
                     showPage(newPage);
                 } else if (direction === 1 && currentPage < mangaData.page_count) {
                     // If we would overshoot, just go to the last page
@@ -1326,8 +1403,8 @@
                     document.getElementById('view-mode').value = viewMode;
                     document.getElementById('reading-direction').value = readingDirection;
                     document.getElementById('image-scaling').value = imageScaling;
-                    document.getElementById('zoom-level').value = zoomLevel;
-                    document.getElementById('zoom-display').textContent = zoomLevel + '%';
+                    // document.getElementById('zoom-level').value = zoomLevel;
+                    // document.getElementById('zoom-display').textContent = zoomLevel + '%';
                     document.getElementById('preload-images').value = preloadImages;
                 }
             }
@@ -1360,10 +1437,38 @@
                 
                 if (isLeftHalf) {
                     // Left half - previous page (LTR) or next page (RTL)
-                    changePage(isRTL ? 1 : -1);
+                    if (isRTL) {
+                        // RTL: left click goes forward
+                        if (currentPage >= mangaData.page_count) {
+                            navigateToNextChapter();
+                        } else {
+                            changePage(1);
+                        }
+                    } else {
+                        // LTR: left click goes backward
+                        if (currentPage <= 1) {
+                            navigateToPreviousChapter();
+                        } else {
+                            changePage(-1);
+                        }
+                    }
                 } else if (isRightHalf) {
                     // Right half - next page (LTR) or previous page (RTL)
-                    changePage(isRTL ? -1 : 1);
+                    if (isRTL) {
+                        // RTL: right click goes backward
+                        if (currentPage <= 1) {
+                            navigateToPreviousChapter();
+                        } else {
+                            changePage(-1);
+                        }
+                    } else {
+                        // LTR: right click goes forward
+                        if (currentPage >= mangaData.page_count) {
+                            navigateToNextChapter();
+                        } else {
+                            changePage(1);
+                        }
+                    }
                 }
             }
             
@@ -1493,12 +1598,14 @@
                         case 'a':
                         case 'A':
                             e.preventDefault();
+                            if (isScrolling) return; // Don't do anything while scrolling
                             changePage(-1);
                             break;
                         case 'ArrowRight':
                         case 'd':
                         case 'D':
                             e.preventDefault();
+                            if (isScrolling) return; // Don't do anything while scrolling
                             changePage(1);
                             break;
                         case 'Home':
@@ -1632,8 +1739,8 @@
                 // Update UI
                 document.getElementById('view-mode').value = viewMode;
                 document.getElementById('image-scaling').value = imageScaling;
-                document.getElementById('zoom-level').value = zoomLevel;
-                document.getElementById('zoom-display').textContent = zoomLevel + '%';
+                // document.getElementById('zoom-level').value = zoomLevel;
+                // document.getElementById('zoom-display').textContent = zoomLevel + '%';
                 document.getElementById('preload-images').value = preloadImages;
             }
             
@@ -1787,9 +1894,9 @@
                     
                     zoomLevel = Math.max(50, Math.min(300, targetZoom));
                     
-                    // Update UI and save settings
-                    document.getElementById('zoom-level').value = zoomLevel;
-                    document.getElementById('zoom-display').textContent = zoomLevel + '%';
+                    // Update UI and save settings (commented out UI updates since controls are hidden)
+                    // document.getElementById('zoom-level').value = zoomLevel;
+                    // document.getElementById('zoom-display').textContent = zoomLevel + '%';
                     saveMangaSettings();
                     applyMangaSettings();
                     
