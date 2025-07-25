@@ -3155,7 +3155,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                      webring_title=display_config.get('title'),
                                      webring_subtitle=display_config.get('subtitle'),
                                      webring_show_dates=display_config.get('show_dates', True),
-                                     webring_show_descriptions=display_config.get('show_descriptions', True))
+                                     webring_show_descriptions=display_config.get('show_descriptions', True),
+                                     webring_open_new_window=display_config.get('open_links_in_new_window', False))
     
     write_html_file(os.path.join(BUILD_DIR, "index.html"), front_page_html, minify=enable_minification)
 

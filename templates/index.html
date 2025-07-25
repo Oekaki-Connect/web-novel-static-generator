@@ -89,10 +89,10 @@
                 {% for item in webring_data %}
                 <article class="webring-item">
                     <span class="webring-site-name">
-                        <a href="{{ item.site_url }}" target="_blank" rel="noopener">{{ item.site_name }}</a>
+                        <a href="{{ item.site_url }}"{% if webring_open_new_window %} target="_blank" rel="noopener"{% endif %}>{{ item.site_name }}</a>
                     </span>
                     <h3 class="webring-item-title">
-                        <a href="{{ item.link }}" target="_blank" rel="noopener">{{ item.title }}</a>
+                        <a href="{{ item.link }}"{% if webring_open_new_window %} target="_blank" rel="noopener"{% endif %}>{{ item.title }}</a>
                     </h3>
                     {% if webring_show_dates and item.formatted_date %}
                     <span class="webring-date">{{ item.formatted_date }}</span>

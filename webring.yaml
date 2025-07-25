@@ -27,3 +27,4 @@ display:
   show_descriptions: true
   show_dates: true
   date_format: "%B %d, %Y"  # Format: January 15, 2025
+  open_links_in_new_window: false  # Set to true to open webring links in new window/tab
