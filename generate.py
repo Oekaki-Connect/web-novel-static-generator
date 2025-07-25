@@ -5135,6 +5135,18 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
                 rebuild_extensions = {'.md', '.yaml', '.yml', '.css', '.js', '.html', '.jpg', '.jpeg', '.png', '.webp'}
                 rebuild_dirs = {'content', 'templates', 'static', 'pages'}
                 
+                # Ignore .git folder and its contents (handle both / and \ separators)
+                normalized_path = file_path.replace('/', os.sep).replace('\\', os.sep)
+                path_parts = normalized_path.split(os.sep)
+                if '.git' in path_parts or normalized_path.startswith('.git' + os.sep):
+                    return False
+                
+                # Ignore other system/build directories
+                ignore_patterns = ['__pycache__', '.vscode', 'build']
+                for pattern in ignore_patterns:
+                    if pattern in path_parts:
+                        return False
+                
                 # Check file extension
                 for ext in rebuild_extensions:
                     if file_path.endswith(ext):
@@ -5451,6 +5463,18 @@ def watch_and_rebuild(include_drafts=False, include_scheduled=False):
                 file_path = str(file_path).lower()
                 rebuild_extensions = {'.md', '.yaml', '.yml', '.css', '.js', '.html', '.jpg', '.jpeg', '.png', '.webp'}
                 rebuild_dirs = {'content', 'templates', 'static', 'pages'}
+                
+                # Ignore .git folder and its contents (handle both / and \ separators)
+                normalized_path = file_path.replace('/', os.sep).replace('\\', os.sep)
+                path_parts = normalized_path.split(os.sep)
+                if '.git' in path_parts or normalized_path.startswith('.git' + os.sep):
+                    return False
+                
+                # Ignore other system/build directories
+                ignore_patterns = ['__pycache__', '.vscode', 'build']
+                for pattern in ignore_patterns:
+                    if pattern in path_parts:
+                        return False
                 
                 # Check file extension
                 for ext in rebuild_extensions:
