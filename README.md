@@ -2,6 +2,16 @@
 
 A Python-based static website generator specifically designed for web novels, with support for GitHub Actions and GitHub Pages deployment.
 
+You can see a demo build live on: https://oekaki-connect.github.io/web-novel/
+
+You can see our version of it live on: https://www.ocwn.net/
+
+# Why?
+
+* I didn't see static site generator for web novels which already existed
+* Didn't want the baggage of trying to modifying an existing generic static site generator
+* This generator works out of box fully with github, easy to use, easy to modify
+
 ## Features
 
 - **Multi-Novel Support**: Host multiple novels from the same repository
@@ -40,6 +50,8 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Story Publishing Status**: Show "ongoing" or "complete" badges
 - **Story Genre Tags**: Categorize stories by theme and genre
 - **Accessibility Features**: ARIA labels, keyboard navigation, and alt text validation
+- **Manga Features**: Supports comic / manga / manhwa too, though could still use some improvement
+- **AND MORE!!!**: There are some additional undocumented features...
 
 ## Project Structure
 
@@ -127,8 +139,8 @@ webring:
   max_items: 20  # Maximum number of recent chapters to display
   sites:
     - name: "Friend's Novel Site"
-      url: "https://example.com/"
-      rss: "https://example.com/rss.xml"
+      url: "http://www.ocwn.net/"
+      rss: "http://www.ocwn.net/rss.xml"
       description: "A great fantasy series"
 
 # EPUB generation configuration
@@ -219,8 +231,8 @@ footer:
   links:
     - text: "Support the Author"
       url: "https://ko-fi.com/pyramid"
-    - text: "Original Source"
-      url: "https://example.com/original"
+    - text: "Source Code"
+      url: "https://github.com/Oekaki-Connect/web-novel-static-generator"
 
 # NEW! chapter tags override (optional)
 new_chapter_tags:
@@ -1189,7 +1201,7 @@ downloads:
 **Generated Files:**
 - `/static/epub/story-name.epub` - Full story download
 - `/static/epub/story-name_jp.epub` - Japanese version (if available)
-- `/static/epub/story-name-arc-1-title.epub` - Individual arc downloads
+- `/static/epub/story-name-arc-1-title.epub` - Individual arc/volume downloads
 
 ### Chapter Navigation Enhancements
 
@@ -1221,6 +1233,7 @@ Automatically track reader progress with localStorage:
 - "Continue Reading" section showing last completed chapter
 - Persists across browser sessions
 - Per-story tracking (multiple novels supported)
+- Note: Reading is only tracked per browser, not on any server
 
 ### Enhanced Navigation Structure
 
@@ -1283,6 +1296,7 @@ python generate.py --validate
 ## Contributing
 
 Feel free to extend this generator with additional features:
-- Search functionality
-- Chapter bookmarking
+- Search functionality (using offline database)
+- Chapter bookmarking (using localStorage)
 - Improve the manga reader (better page transitions, double vertical scroll)
+- Break the current monolith generate.py into sub dependencies

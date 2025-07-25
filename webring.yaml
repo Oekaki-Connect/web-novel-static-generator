@@ -16,8 +16,8 @@ webring:
       
     # Add more sites here:
     # - name: "Friend's Novel Site"
-    #   url: "https://example.com/novel/"
-    #   rss: "https://example.com/novel/rss.xml"
+    #   url: "http://www.ocwn.net/"
+    #   rss: "http://www.ocwn.net/rss.xml"
     #   description: "A great fantasy novel series"
 
 # Display settings for the webring section

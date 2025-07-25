@@ -101,8 +101,8 @@ footer:
   links:
     - text: "Support the Author"
       url: "https://ko-fi.com/pyramid"
-    - text: "Original Source" 
-      url: "https://example.com/original"
+    - text: "OCWN" 
+      url: "http://www.ocwn.net/"
 
 # Story structure
 arcs:
