@@ -852,6 +852,8 @@ Build community and cross-promote with fellow authors through RSS-based discover
 **What is a Webring?**
 A webring is a collection of websites linked together for mutual promotion and discovery. In web novel communities, webrings help authors support each other by featuring recent chapter releases from trusted authors on their front pages.
 
+You can also set this only on your own RSS to show your most recent updates!
+
 **How it Works:**
 1. Authors maintain a `webring.yaml` file listing RSS feeds of other authors they recommend
 2. At build time, the generator fetches recent chapters from these RSS feeds
