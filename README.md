@@ -784,6 +784,8 @@ This chapter won't appear in navigation but can be accessed directly.
 - Special event content
 - Author notes or behind-the-scenes content
 
+Note: If you are hosting on github on a public repo anyone can discover hidden pages easily.
+
 ### Draft Chapters
 
 Mark work-in-progress chapters as drafts to exclude them from generation:
