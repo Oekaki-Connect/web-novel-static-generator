@@ -28,6 +28,7 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Footer System**: Consistent footers with story-specific customization
 - **Dark Mode Toggle**: System-aware dark/light theme with localStorage persistence
 - **RSS Feeds**: Automatic RSS generation for site and individual stories
+- **Webring Support**: Cross-promote with fellow authors through RSS-based discovery feeds
 - **Comments System**: Integrated Utterances comments with theme switching
 - **robots.txt Generation**: Automatic SEO indexing control
 - **Sitemap Generation**: XML sitemaps for search engine optimization
@@ -63,6 +64,7 @@ web-novel-generator/
 │   └── images/                # Image assets
 ├── build/                     # Generated site (auto-created)
 ├── site_config.yaml           # Site-wide configuration
+├── webring.yaml               # Webring configuration (optional)
 ├── generate.py                # Main generator script
 ├── requirements.txt           # Python dependencies
 └── README.md                  # This file
@@ -117,6 +119,16 @@ comments:
 rss:
   enabled: true
   max_items: 20
+
+# Webring settings (cross-promotion with fellow authors)
+webring:
+  enabled: true
+  max_items: 20  # Maximum number of recent chapters to display
+  sites:
+    - name: "Friend's Novel Site"
+      url: "https://example.com/"
+      rss: "https://example.com/rss.xml"
+      description: "A great fantasy series"
 
 # EPUB generation configuration
 epub:
@@ -832,6 +844,76 @@ Automatic RSS feed generation for content syndication:
 - Automatic chapter descriptions and links
 - Story-specific feeds for targeted subscriptions
 
+### Webring Support
+
+Build community and cross-promote with fellow authors through RSS-based discovery feeds:
+
+**What is a Webring?**
+A webring is a collection of websites linked together for mutual promotion and discovery. In web novel communities, webrings help authors support each other by featuring recent chapter releases from trusted authors on their front pages.
+
+**How it Works:**
+1. Authors maintain a `webring.yaml` file listing RSS feeds of other authors they recommend
+2. At build time, the generator fetches recent chapters from these RSS feeds
+3. A clean "Recent Updates from the Webring" section appears on your front page
+4. Readers discover new content from authors you trust and recommend
+
+**Configuration (`webring.yaml`):**
+```yaml
+webring:
+  enabled: true
+  max_items: 20  # Number of recent items to display
+  cache_duration: 3600  # Cache feeds for 1 hour
+  
+  sites:
+    - name: "Fantasy Author A"
+      url: "https://example.com/novel/"
+      rss: "https://example.com/novel/rss.xml" 
+      description: "Epic fantasy adventure series"
+    
+    - name: "Sci-Fi Author B"
+      url: "https://scifi-site.com/"
+      rss: "https://scifi-site.com/rss.xml"
+      description: "Space opera with great characters"
+
+# Display customization
+display:
+  title: "Recent Updates from the Webring"
+  subtitle: "Check out recent chapters from fellow authors we recommend"
+  show_descriptions: true
+  show_dates: true
+  date_format: "%B %d, %Y"
+```
+
+**Features:**
+- **Build-time fetching**: RSS feeds are fetched during site generation for fast loading
+- **Torrent tracker inspired design**: Clean, information-dense layout showing [SITE] Chapter Title - Date
+- **Responsive layout**: Works perfectly on mobile and desktop
+- **Failure resilient**: If a feed is unavailable, other feeds still work
+- **Automatic sorting**: Recent chapters from all sites sorted by publication date
+- **Trust-based**: You control which authors appear on your site
+
+**Why Webrings Are Cool:**
+- **Community building**: Support indie authors and translators
+- **Reader discovery**: Help your readers find great content from authors you trust
+- **Reciprocal promotion**: Authors can feature each other's work
+- **Quality curation**: Only recommend authors whose work you genuinely enjoy
+- **Decentralized**: No central authority - each author controls their own webring
+- **SEO benefits**: External links and fresh content help with search rankings
+- **Nostalgic**: Brings back the community spirit of the early web
+
+**Setting Up Your Webring:**
+1. Create `webring.yaml` in your project root
+2. Add RSS feeds of authors you want to promote
+3. Rebuild your site - the webring section appears automatically
+4. Reach out to fellow authors to join their webrings too!
+
+**Best Practices:**
+- Only include authors whose work you've read and genuinely recommend
+- Keep descriptions brief and appealing
+- Update your webring periodically as you discover new authors
+- Consider genre compatibility with your audience
+- Reciprocate when other authors add you to their webrings
+
 ### robots.txt and Sitemap
 
 Automatic SEO optimization files:
@@ -1200,5 +1282,4 @@ python generate.py --validate
 Feel free to extend this generator with additional features:
 - Search functionality
 - Chapter bookmarking
-- Improve the manga reader (better page transitions, double vertical scroll
-- RSS based webring support to feature new chapters from friends on your own site front page
+- Improve the manga reader (better page transitions, double vertical scroll)

@@ -1013,14 +1013,31 @@ def load_webring_config():
     return {}
 
 def fetch_rss_feed(url, timeout=10):
-    """Fetch and parse RSS feed from URL"""
+    """Fetch and parse RSS feed from URL with comprehensive error handling"""
     try:
         with urlopen(url, timeout=timeout) as response:
+            # Check response status
+            if response.status != 200:
+                print(f"    Warning: RSS feed returned status {response.status}: {url}")
+                return None
+                
             content = response.read().decode('utf-8')
             soup = BeautifulSoup(content, 'xml')
+            
+            # Verify it's actually an RSS/XML feed
+            if not soup.find('rss') and not soup.find('feed'):
+                print(f"    Warning: URL does not appear to be a valid RSS feed: {url}")
+                return None
+                
             return soup
-    except (URLError, HTTPError, UnicodeDecodeError) as e:
-        print(f"    Warning: Failed to fetch RSS feed from {url}: {e}")
+    except (URLError, HTTPError) as e:
+        print(f"    Warning: Network error fetching RSS feed from {url}: {e}")
+        return None
+    except UnicodeDecodeError as e:
+        print(f"    Warning: Unable to decode RSS feed content from {url}: {e}")
+        return None
+    except Exception as e:
+        print(f"    Warning: Unexpected error fetching RSS feed from {url}: {e}")
         return None
 
 def parse_rss_items(rss_soup, site_name, site_url):
@@ -1088,21 +1105,41 @@ def generate_webring_data(webring_config, display_config):
     
     all_items = []
     max_items = webring_config.get('max_items', 20)
+    sites_list = webring_config.get('sites', [])
+    
+    if not sites_list:
+        print("Webring enabled but no sites configured")
+        return []
     
     print("Fetching webring RSS feeds...")
     
-    for site in webring_config.get('sites', []):
+    successful_sites = 0
+    failed_sites = 0
+    
+    for site in sites_list:
         site_name = site.get('name', 'Unknown Site')
         site_url = site.get('url', '')
         rss_url = site.get('rss', '')
         
         if not rss_url:
+            print(f"    Skipping {site_name}: No RSS URL configured")
+            failed_sites += 1
             continue
             
         print(f"    Fetching RSS from {site_name}...")
         rss_soup = fetch_rss_feed(rss_url)
-        items = parse_rss_items(rss_soup, site_name, site_url)
-        all_items.extend(items)
+        
+        if rss_soup:
+            items = parse_rss_items(rss_soup, site_name, site_url)
+            if items:
+                all_items.extend(items)
+                successful_sites += 1
+                print(f"      Success: Found {len(items)} items from {site_name}")
+            else:
+                print(f"      Warning: No valid items found in RSS feed from {site_name}")
+                failed_sites += 1
+        else:
+            failed_sites += 1
     
     # Sort by publication date (newest first)
     all_items.sort(key=lambda x: x['pub_date'] or datetime.datetime.min, reverse=True)
@@ -1118,7 +1155,9 @@ def generate_webring_data(webring_config, display_config):
         else:
             item['formatted_date'] = 'Unknown date'
     
-    print(f"    Generated webring with {len(limited_items)} items from {len(webring_config.get('sites', []))} sites")
+    print(f"    Generated webring with {len(limited_items)} items from {successful_sites}/{len(sites_list)} sites")
+    if failed_sites > 0:
+        print(f"    Note: {failed_sites} site(s) failed to load - webring will continue with available content")
     
     return limited_items
 
