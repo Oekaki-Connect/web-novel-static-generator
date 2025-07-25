@@ -17,6 +17,7 @@ from urllib.error import URLError, HTTPError
 from bs4 import BeautifulSoup
 # Lazy import for optional dependencies
 EBOOKLIB_AVAILABLE = False
+MINIFICATION_AVAILABLE = False
 
 # Global flags for chapter inclusion
 INCLUDE_DRAFTS = False
@@ -32,6 +33,18 @@ def _check_ebooklib():
         return True
     except ImportError:
         EBOOKLIB_AVAILABLE = False
+        return False
+
+def _check_minification():
+    global MINIFICATION_AVAILABLE
+    try:
+        import htmlmin
+        import rcssmin
+        import rjsmin
+        MINIFICATION_AVAILABLE = True
+        return True
+    except ImportError:
+        MINIFICATION_AVAILABLE = False
         return False
 
 BUILD_DIR = os.path.abspath("./build")
@@ -659,6 +672,70 @@ def build_seo_meta(site_config, novel_config, chapter_metadata, page_type):
         seo_meta['meta_description'] = site_config.get('site_description', '')
     
     return seo_meta
+
+def should_minify(serve_mode=False, no_minify=False):
+    """Determine if minification should be applied"""
+    # Don't minify in serve mode (development) unless explicitly enabled
+    if serve_mode:
+        return False
+    # Respect explicit --no-minify flag
+    if no_minify:
+        return False
+    # Check if minification libraries are available
+    if not _check_minification():
+        return False
+    return True
+
+def minify_html_content(html_content):
+    """Minify HTML content while preserving important formatting"""
+    if not MINIFICATION_AVAILABLE:
+        return html_content
+    
+    try:
+        import htmlmin
+        return htmlmin.minify(
+            html_content,
+            remove_comments=True,
+            remove_empty_space=True,
+            reduce_boolean_attributes=True,
+            # Preserve formatting in specific elements
+            keep_pre=True  # Preserve <pre> content
+        )
+    except Exception as e:
+        print(f"    Warning: HTML minification failed: {e}")
+        return html_content
+
+def minify_css_content(css_content):
+    """Minify CSS content"""
+    if not MINIFICATION_AVAILABLE:
+        return css_content
+    
+    try:
+        import rcssmin
+        return rcssmin.cssmin(css_content)
+    except Exception as e:
+        print(f"    Warning: CSS minification failed: {e}")
+        return css_content
+
+def minify_js_content(js_content):
+    """Minify JavaScript content"""
+    if not MINIFICATION_AVAILABLE:
+        return js_content
+    
+    try:
+        import rjsmin
+        return rjsmin.jsmin(js_content)
+    except Exception as e:
+        print(f"    Warning: JavaScript minification failed: {e}")
+        return js_content
+
+def write_html_file(file_path, html_content, minify=False):
+    """Write HTML content to file with optional minification"""
+    if minify:
+        html_content = minify_html_content(html_content)
+    
+    with open(file_path, "w", encoding='utf-8') as f:
+        f.write(html_content)
 
 def process_cover_art(novel_slug, novel_config):
     """Process cover art images by copying them to static/images with hash-based filenames"""
@@ -2507,8 +2584,8 @@ def calculate_file_hash(filepath, length=8):
         hasher.update(buf)
     return hasher.hexdigest()[:length]
 
-def copy_static_assets():
-    """Copy static assets with cache-busting hashed filenames"""
+def copy_static_assets(enable_minification=False):
+    """Copy static assets with cache-busting hashed filenames and optional minification"""
     asset_map = {}  # Map original names to hashed names
     
     if os.path.exists(STATIC_DIR):
@@ -2527,21 +2604,60 @@ def copy_static_assets():
             
             for file in files:
                 src_file = os.path.join(root, file)
+                file_ext = os.path.splitext(file)[1].lower()
+                
+                # Determine if this file should be processed for minification
+                should_process_file = enable_minification and file_ext in ['.css', '.js']
                 
                 if file in cache_bust_files:
-                    # Generate hashed filename
-                    file_hash = calculate_file_hash(src_file)
+                    # Generate hashed filename (after minification if applicable)
+                    if should_process_file:
+                        # Read, minify, then hash the processed content
+                        with open(src_file, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        
+                        if file_ext == '.css':
+                            content = minify_css_content(content)
+                        elif file_ext == '.js':
+                            content = minify_js_content(content)
+                        
+                        # Calculate hash of minified content
+                        import hashlib
+                        file_hash = hashlib.md5(content.encode('utf-8')).hexdigest()[:8]
+                    else:
+                        file_hash = calculate_file_hash(src_file)
+                    
                     name, ext = os.path.splitext(file)
                     hashed_filename = f"{name}-{file_hash}{ext}"
                     dst_file = os.path.join(target_dir, hashed_filename)
                     
                     # Store mapping
                     asset_map[file] = hashed_filename
+                    
+                    # Write the file (minified or original)
+                    if should_process_file:
+                        with open(dst_file, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                    else:
+                        shutil.copy2(src_file, dst_file)
+                        
                 else:
-                    # Copy without modification
+                    # Copy without modification (but still minify if enabled)
                     dst_file = os.path.join(target_dir, file)
-                
-                shutil.copy2(src_file, dst_file)
+                    
+                    if should_process_file:
+                        with open(src_file, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        
+                        if file_ext == '.css':
+                            content = minify_css_content(content)
+                        elif file_ext == '.js':
+                            content = minify_js_content(content)
+                        
+                        with open(dst_file, 'w', encoding='utf-8') as f:
+                            f.write(content)
+                    else:
+                        shutil.copy2(src_file, dst_file)
     
     return asset_map
 
@@ -2820,11 +2936,24 @@ def render_template(template_name, novel_slug=None, site_config=None, novel_conf
     
     return template.render(**kwargs)
 
-def build_site(include_drafts=False, include_scheduled=False, no_epub=False, optimize_images=False, serve_mode=False, serve_port=8000):
+def build_site(include_drafts=False, include_scheduled=False, no_epub=False, optimize_images=False, serve_mode=False, serve_port=8000, no_minify=False):
     global INCLUDE_DRAFTS, INCLUDE_SCHEDULED, ASSET_MAP
     INCLUDE_DRAFTS = include_drafts
     INCLUDE_SCHEDULED = include_scheduled
     ASSET_MAP = {}
+    
+    # Load site configuration early to check minification settings
+    site_config = load_site_config()
+    
+    # Determine if minification should be applied
+    # Site config can enable/disable, but command line flags override
+    site_minify_enabled = site_config.get('minification', {}).get('enabled', True)
+    if no_minify:
+        enable_minification = False
+    elif serve_mode:
+        enable_minification = False  # Never minify in serve mode
+    else:
+        enable_minification = site_minify_enabled and should_minify(serve_mode=serve_mode, no_minify=no_minify)
     
     print("Building site...")
     if os.path.exists(BUILD_DIR):
@@ -2853,10 +2982,7 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             else:
                 raise e
 
-    ASSET_MAP = copy_static_assets()
-    
-    # Load site configuration
-    site_config = load_site_config()
+    ASSET_MAP = copy_static_assets(enable_minification=enable_minification)
     
     # Generate static pages
     generate_static_pages(site_config)
@@ -2927,24 +3053,25 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
     webring_data = generate_webring_data(webring_config, display_config)
 
     # Render front page with novels that should be displayed
-    with open(os.path.join(BUILD_DIR, "index.html"), "w", encoding='utf-8') as f:
-        f.write(render_template("index.html", 
-                               novels=front_page_novels_data,
-                               site_name=site_config.get('site_name', 'Web Novel Collection'),
-                               social_title=social_meta['title'],
-                               social_description=social_meta['description'],
-                               social_image=social_meta['image'],
-                               social_url=social_meta['url'],
-                               seo_meta_description=seo_meta.get('meta_description'),
-                               seo_keywords=social_meta.get('keywords'),
-                               allow_indexing=seo_meta.get('allow_indexing', True),
-                               twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
-                               footer_data=footer_data,
-                               webring_data=webring_data,
-                               webring_title=display_config.get('title'),
-                               webring_subtitle=display_config.get('subtitle'),
-                               webring_show_dates=display_config.get('show_dates', True),
-                               webring_show_descriptions=display_config.get('show_descriptions', True)))
+    front_page_html = render_template("index.html", 
+                                     novels=front_page_novels_data,
+                                     site_name=site_config.get('site_name', 'Web Novel Collection'),
+                                     social_title=social_meta['title'],
+                                     social_description=social_meta['description'],
+                                     social_image=social_meta['image'],
+                                     social_url=social_meta['url'],
+                                     seo_meta_description=seo_meta.get('meta_description'),
+                                     seo_keywords=social_meta.get('keywords'),
+                                     allow_indexing=seo_meta.get('allow_indexing', True),
+                                     twitter_handle=site_config.get('social_embeds', {}).get('twitter_handle'),
+                                     footer_data=footer_data,
+                                     webring_data=webring_data,
+                                     webring_title=display_config.get('title'),
+                                     webring_subtitle=display_config.get('subtitle'),
+                                     webring_show_dates=display_config.get('show_dates', True),
+                                     webring_show_descriptions=display_config.get('show_descriptions', True))
+    
+    write_html_file(os.path.join(BUILD_DIR, "index.html"), front_page_html, minify=enable_minification)
 
     # Generate author pages
     authors_config = load_authors_config()
@@ -4842,7 +4969,7 @@ def perform_incremental_rebuild(rebuild_info, include_drafts=False, include_sche
         # Ensure build directory exists
         os.makedirs(BUILD_DIR, exist_ok=True)
         # Perform full rebuild
-        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False)
+        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False, serve_mode=True, no_minify=True)
         return True
         
     elif rebuild_type == 'static':
@@ -4862,7 +4989,7 @@ def perform_incremental_rebuild(rebuild_info, include_drafts=False, include_sche
         # For novel config changes, we need to rebuild the entire novel
         # This is complex, so for now fall back to full rebuild
         os.makedirs(BUILD_DIR, exist_ok=True)
-        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False)
+        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False, serve_mode=True, no_minify=True)
         return True
         
     elif rebuild_type == 'novel_template':
@@ -4875,7 +5002,7 @@ def perform_incremental_rebuild(rebuild_info, include_drafts=False, include_sche
         # For template changes, we need to rebuild the entire novel since 
         # we don't know which pages use this template
         os.makedirs(BUILD_DIR, exist_ok=True)
-        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False)
+        build_site(include_drafts=include_drafts, include_scheduled=include_scheduled, no_epub=True, optimize_images=False, serve_mode=True, no_minify=True)
         return True
         
     else:
@@ -5335,6 +5462,8 @@ if __name__ == "__main__":
                         help='Generate statistics report (stats_report.md)')
     parser.add_argument('--optimize-images', action='store_true',
                         help='Convert images to WebP format during build')
+    parser.add_argument('--no-minify', action='store_true',
+                        help='Disable asset minification (HTML/CSS/JS) for debugging')
     args = parser.parse_args()
     
     # Handle --clean flag
@@ -5370,7 +5499,8 @@ if __name__ == "__main__":
     build_site(include_drafts=args.include_drafts,
                include_scheduled=args.include_scheduled,
                no_epub=args.no_epub,
-               optimize_images=args.optimize_images)
+               optimize_images=args.optimize_images,
+               no_minify=args.no_minify)
     
     # Generate statistics report if requested
     if args.stats:

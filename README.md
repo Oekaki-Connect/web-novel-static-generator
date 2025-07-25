@@ -29,6 +29,7 @@ A Python-based static website generator specifically designed for web novels, wi
 - **Dark Mode Toggle**: System-aware dark/light theme with localStorage persistence
 - **RSS Feeds**: Automatic RSS generation for site and individual stories
 - **Webring Support**: Cross-promote with fellow authors through RSS-based discovery feeds
+- **Asset Minification**: Build-time minification of HTML, CSS, and JavaScript for faster loading
 - **Comments System**: Integrated Utterances comments with theme switching
 - **robots.txt Generation**: Automatic SEO indexing control
 - **Sitemap Generation**: XML sitemaps for search engine optimization
