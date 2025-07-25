@@ -2938,7 +2938,8 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
 /* Seamless navigation stacking for single page mode */
 .manga-viewer.seamless-mode {
     position: relative;
-    min-height: 70vh; /* Ensure consistent height */
+    /* Use normal manga-viewer min-height but allow expansion */
+    min-height: 70vh;
 }
 
 .manga-viewer.seamless-mode .manga-page {
@@ -2946,16 +2947,24 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
+    height: auto; /* Allow natural sizing based on image aspect ratio */
     opacity: 0;
     transition: opacity var(--manga-transition-duration, 0s) ease-in-out;
     pointer-events: none; /* Prevent interaction with hidden pages */
 }
 
+/* Ensure the current page sets the container height */
 .manga-viewer.seamless-mode .manga-page.current {
+    position: relative; /* Make current page contribute to container height */
     opacity: 1;
     z-index: 2;
     pointer-events: auto; /* Enable interaction for current page */
+}
+
+/* Keep next/prev pages absolutely positioned for seamless stacking */
+.manga-viewer.seamless-mode .manga-page.next,
+.manga-viewer.seamless-mode .manga-page.prev {
+    position: absolute;
 }
 
 .manga-viewer.seamless-mode .manga-page.next {
