@@ -113,6 +113,19 @@ accessibility:
   # Generate accessibility reports during build
   build_reports: true
 
+# Front page configuration
+front_page:
+  # Sort novels by most recent chapter update
+  # When true: Most recently updated novels appear first
+  # When false: Novels appear in their original order
+  sort_by_recent_update: true
+  
+  # Manual sort order for featured novels (by slug)
+  # Novels listed here will appear first in the order specified
+  # All other novels will follow after, sorted according to sort_by_recent_update
+  featured_order:
+    - tower-dungeon  # Example: tower-dungeon will always appear first
+
 # Footer configuration
 footer:
   # Default copyright text

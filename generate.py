@@ -3014,10 +3014,90 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
     
     # Filter novels for front page display
     front_page_novels_data = []
+    sort_by_recent = site_config.get('front_page', {}).get('sort_by_recent_update', False)
+    
     for novel_data in all_novels_data:
         show_on_front_page = novel_data.get('front_page', {}).get('show_on_front_page', True)
         if show_on_front_page:
+            # Only calculate most recent chapter date if we need it for sorting
+            if sort_by_recent:
+                # Find most recent chapter date for this novel (excluding future dates)
+                most_recent_date = None
+                novel_slug = novel_data['slug']
+                
+                # Check all languages for this novel
+                content_path = os.path.join(CONTENT_DIR, novel_slug)
+                if os.path.exists(content_path):
+                    for item in os.listdir(content_path):
+                        lang_path = os.path.join(content_path, item)
+                        if os.path.isdir(lang_path) and item != 'images':  # Skip images directory
+                            chapters_dir = os.path.join(lang_path, 'chapters')
+                            if os.path.exists(chapters_dir):
+                                for chapter_file in os.listdir(chapters_dir):
+                                    if chapter_file.endswith('.md'):
+                                        chapter_path = os.path.join(chapters_dir, chapter_file)
+                                        try:
+                                            with open(chapter_path, 'r', encoding='utf-8') as f:
+                                                content = f.read()
+                                                if content.startswith('---'):
+                                                    # Extract YAML front matter
+                                                    parts = content.split('---', 2)
+                                                    if len(parts) >= 3:
+                                                        chapter_metadata = yaml.safe_load(parts[1])
+                                                        if chapter_metadata:
+                                                            # Check if chapter should be published (not in future)
+                                                            if not is_chapter_scheduled(chapter_metadata, include_scheduled=False):
+                                                                published_date_str = chapter_metadata.get('published')
+                                                                if published_date_str:
+                                                                    try:
+                                                                        if isinstance(published_date_str, str):
+                                                                            chapter_date = datetime.strptime(published_date_str, '%Y-%m-%d')
+                                                                        else:
+                                                                            # Handle YAML date object
+                                                                            chapter_date = datetime.combine(published_date_str, datetime.min.time())
+                                                                        
+                                                                        if most_recent_date is None or chapter_date > most_recent_date:
+                                                                            most_recent_date = chapter_date
+                                                                    except (ValueError, TypeError):
+                                                                        pass  # Skip invalid dates
+                                        except (IOError, yaml.YAMLError):
+                                            pass  # Skip files that can't be read or parsed
+                
+                # Add the most recent date to novel data
+                novel_data['_most_recent_chapter_date'] = most_recent_date
+            
             front_page_novels_data.append(novel_data)
+    
+    # Sort novels by most recent chapter date if configured
+    if sort_by_recent:
+        # Sort by most recent chapter date (most recent first)
+        # Novels without published chapters go to the end
+        from datetime import datetime as dt_class
+        front_page_novels_data.sort(key=lambda novel: novel['_most_recent_chapter_date'] or dt_class.min, reverse=True)
+    
+    # Apply manual featured order if configured
+    featured_order = site_config.get('front_page', {}).get('featured_order', [])
+    if featured_order:
+        # Separate featured novels from non-featured
+        featured_novels = []
+        non_featured_novels = []
+        
+        # Create a map for quick lookup
+        novel_map = {novel['slug']: novel for novel in front_page_novels_data}
+        
+        # Add featured novels in the specified order
+        for slug in featured_order:
+            if slug in novel_map:
+                featured_novels.append(novel_map[slug])
+                
+        # Add all non-featured novels
+        featured_slugs = set(featured_order)
+        for novel in front_page_novels_data:
+            if novel['slug'] not in featured_slugs:
+                non_featured_novels.append(novel)
+        
+        # Combine featured first, then non-featured
+        front_page_novels_data = featured_novels + non_featured_novels
 
     # Generate robots.txt (using all novels)
     robots_txt_content = generate_robots_txt(site_config, all_novels_data)

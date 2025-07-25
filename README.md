@@ -936,6 +936,53 @@ display:
 - Consider genre compatibility with your audience
 - Reciprocate when other authors add you to their webrings
 
+### Front Page Novel Sorting
+
+Control how novels appear on your site's front page with flexible sorting options:
+
+**Configuration in `site_config.yaml`:**
+```yaml
+front_page:
+  # Sort novels by most recent chapter update
+  sort_by_recent_update: true
+  
+  # Manual sort order for featured novels (by slug)
+  featured_order:
+    - tower-dungeon     # Always appears first
+    - my-featured-novel # Always appears second
+```
+
+**Sorting Behavior:**
+1. **Featured novels** appear first in the exact order specified in `featured_order`
+2. **Non-featured novels** follow after, sorted by:
+   - Most recent chapter update (if `sort_by_recent_update: true`)
+   - Original order (if `sort_by_recent_update: false`)
+
+**Use Cases:**
+- **Feature new releases**: Pin a new novel to the top during launch period
+- **Promote completed stories**: Feature finished novels to attract new readers
+- **Activity-based discovery**: Let active stories naturally rise to the top
+- **Curated experience**: Manually control the exact order for optimal presentation
+
+**Example Configurations:**
+
+*Activity-focused site (default):*
+```yaml
+front_page:
+  sort_by_recent_update: true
+  featured_order: []  # No pinned novels
+```
+
+*Curated recommendations:*
+```yaml
+front_page:
+  sort_by_recent_update: false
+  featured_order:
+    - editors-pick-1
+    - editors-pick-2
+    - new-release
+```
+
 ### robots.txt and Sitemap
 
 Automatic SEO optimization files:
