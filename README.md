@@ -4,13 +4,20 @@ A Python-based static website generator specifically designed for web novels, wi
 
 You can see a demo build live on: https://oekaki-connect.github.io/web-novel/
 
-You can see our version of it live on: https://www.ocwn.net/
+You can see our version of it live on: https://www.ocwn.net/ (not yet live but will be soon)
 
-# Why?
+## Why?
 
-* I didn't see static site generator for web novels which already existed
+* I didn't see an existing static site generator for web novels which already existed
 * Didn't want the baggage of trying to modifying an existing generic static site generator
-* This generator works out of box fully with github, easy to use, easy to modify
+* This generator works out of box fully with github for free, it's easy to use, easy to modify
+
+## Support
+
+* You can open up issues in this repo to request features or improvements and they will be considered
+* Do not open support issues if you can't figure out how to use this, this documentation is enough
+* Do not join our discord or contact us for questions on how to set this up, read the docs
+* If you can't figure it out on your own, ask a dev friend or a friendly AI to help you
 
 ## Features
 
@@ -323,6 +330,73 @@ python generate.py --include-drafts # Include draft chapters
 ```
 
 The generated site will be in the `build/` directory.
+
+### 7. Deploy to GitHub Pages
+
+This generator includes automated deployment to GitHub Pages.
+
+Here's how to set it up:
+
+#### Using Separate Repositories
+
+This method keeps your source code (and unpublished chapters) private while publishing only the built site.
+
+Look up how to setup a domain with a github repo if you want to use a domain. We're doing this with ocwn.net!
+
+1. **Create two repositories:**
+   - **Source repository**: Your private repository with the generator code (e.g., `my-novel-source`)
+   - **Publishing repository**: Public repository for the built site (e.g., `my-novel-site`)
+
+2. **Generate a Personal Access Token:**
+   - Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+   - Click "Generate new token (classic)"
+   - Give it a descriptive name (e.g., "Novel Site Deployment")
+   - Select scopes:
+     - `repo` (Full control of private repositories)
+     - `workflow` (Update GitHub Action workflows)
+   - Generate and copy the token (you won't see it again!)
+
+3. **Add the token to your source repository:**
+   - Go to your source repository's Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `DEPLOY_TOKEN`
+   - Value: Paste your personal access token
+   - Click "Add secret"
+
+4. **Update the deployment workflow:**
+   - Edit `.github/workflows/deploy.yml` in your source repository
+   - Update the repository reference:
+   ```yaml
+   - name: Deploy to GitHub Pages
+     uses: peaceiris/actions-gh-pages@v3
+     with:
+       personal_token: ${{ secrets.DEPLOY_TOKEN }} # DO NOT HARD CODE IT HERE!
+       external_repository: your-username/my-novel-site  # Your publishing repo
+       publish_branch: main
+       publish_dir: ./build
+   ```
+
+5. **Enable GitHub Pages on the publishing repository:**
+   - Go to the publishing repository's Settings → Pages
+   - Under "Source", select "Deploy from a branch"
+   - Select "main" branch and "/ (root)" folder
+   - Save the settings
+
+6. **Push to trigger deployment:**
+   ```bash
+   git add .
+   git commit -m "Setup deployment"
+   git push origin main
+   ```
+
+Your site will be built in the source repository and deployed to: `https://your-username.github.io/my-novel-site/`
+
+#### Troubleshooting Deployment
+
+- **403 Forbidden errors**: Check that your DEPLOY_TOKEN has the correct permissions
+- **404 Not Found**: Ensure GitHub Pages is enabled and using the correct branch
+- **Build failures**: Check the Actions tab for error logs
+- **Token issues**: Regenerate the token if it expired or wasn't copied correctly
 
 ## Command-Line Reference
 
