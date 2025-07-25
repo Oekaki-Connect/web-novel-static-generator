@@ -1019,6 +1019,7 @@
                     viewMode = e.target.value;
                     saveMangaSettings();
                     applyMangaSettings();
+                    updateFullscreenButtonState();
                 });
                 
                 document.getElementById('reading-direction').addEventListener('change', (e) => {
@@ -1054,9 +1055,17 @@
                 // Click areas for page turning
                 const viewer = document.getElementById('manga-viewer');
                 viewer.addEventListener('click', handleViewerClick);
+                
+                // Initialize fullscreen button state
+                updateFullscreenButtonState();
             }
             
             function isPageProperlyPositioned() {
+                // In fullscreen mode, pages are always properly positioned
+                if (isFullscreen) {
+                    return true;
+                }
+                
                 const mangaReader = document.getElementById('manga-reader');
                 const controls = document.querySelector('.manga-controls');
                 const controlsHeight = controls ? controls.offsetHeight : 0;
@@ -1591,6 +1600,11 @@
             }
             
             function isScrollPageProperlyPositioned(pageNum) {
+                // In fullscreen mode, pages are always properly positioned
+                if (isFullscreen) {
+                    return true;
+                }
+                
                 const viewer = document.getElementById('manga-viewer');
                 const viewportTop = window.pageYOffset;
                 const viewportHeight = window.innerHeight;
@@ -1864,6 +1878,26 @@
                 
                 // Apply image scaling
                 applyImageScaling();
+                
+                // Update fullscreen button state
+                updateFullscreenButtonState();
+            }
+            
+            function updateFullscreenButtonState() {
+                const fullscreenBtn = document.getElementById('fullscreen-btn');
+                if (fullscreenBtn) {
+                    const isScrollMode = viewMode === 'scroll' || viewMode === 'scroll_double';
+                    
+                    if (isScrollMode) {
+                        fullscreenBtn.disabled = true;
+                        fullscreenBtn.title = 'Fullscreen is not available in vertical scroll modes';
+                        fullscreenBtn.setAttribute('aria-label', 'Fullscreen disabled in scroll modes');
+                    } else {
+                        fullscreenBtn.disabled = false;
+                        fullscreenBtn.title = 'Toggle fullscreen (F)';
+                        fullscreenBtn.setAttribute('aria-label', 'Toggle fullscreen');
+                    }
+                }
             }
             
             function resetMangaSettings() {

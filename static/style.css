@@ -2888,6 +2888,13 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     opacity: 0.6;
 }
 
+/* Specific styling for disabled fullscreen button */
+#fullscreen-btn:disabled {
+    opacity: 0.6;
+    color: var(--color-muted);
+    border-color: var(--color-secondary);
+}
+
 .manga-btn-primary {
     background-color: #111111;
     color: white;
