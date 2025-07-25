@@ -1799,11 +1799,17 @@
                 if (isFullscreen) {
                     reader.classList.add('fullscreen');
                     document.body.style.overflow = 'hidden';
+                    // Add fallback class for Firefox without :has() support
+                    if (!CSS.supports('selector(:has(*))')) {
+                        document.body.classList.add('manga-fullscreen-active');
+                    }
                     setupFullscreenMouseEvents();
                     hideFullscreenControls();
                 } else {
                     reader.classList.remove('fullscreen');
                     document.body.style.overflow = '';
+                    // Remove fallback class
+                    document.body.classList.remove('manga-fullscreen-active');
                     showFullscreenControls();
                     cleanupFullscreenMouseEvents();
                 }

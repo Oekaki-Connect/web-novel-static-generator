@@ -3470,6 +3470,156 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     }
 }
 
+/* Firefox-specific manga CSS fixes */
+@-moz-document url-prefix() {
+    /* Fix for Firefox flexbox rendering in double page mode */
+    .manga-viewer.double-page {
+        display: -moz-box;
+        display: flex;
+        -moz-box-orient: horizontal;
+        -moz-box-pack: center;
+        -moz-box-align: center;
+    }
+    
+    /* Firefox fix for seamless transitions */
+    .manga-viewer.seamless-mode .manga-page {
+        -moz-transition: opacity var(--manga-transition-duration, 0s) ease-in-out;
+        will-change: opacity;
+    }
+    
+    /* Firefox fix for image rendering and scaling */
+    .manga-image {
+        image-rendering: -moz-crisp-edges;
+        image-rendering: crisp-edges;
+        /* Ensure proper scaling in Firefox */
+        width: auto;
+        height: auto;
+    }
+    
+    /* Firefox fix for scroll mode image gaps */
+    .manga-viewer.scroll-mode .manga-image,
+    .manga-viewer.scroll-double-mode .manga-image {
+        display: block;
+        line-height: 0;
+        font-size: 0;
+        /* Firefox-specific gap prevention */
+        vertical-align: middle;
+    }
+    
+    /* Firefox fix for loading animations */
+    @keyframes loading-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    
+    .manga-image.loading {
+        -moz-animation: loading-shimmer 1.5s infinite;
+    }
+    
+    /* Firefox fix for fullscreen mode */
+    .manga-reader.fullscreen {
+        position: fixed !important;
+    }
+    
+    /* Firefox-specific touch event handling */
+    .manga-viewer {
+        touch-action: pan-y pinch-zoom;
+    }
+    
+    /* Fix Firefox button appearance */
+    .manga-btn {
+        -moz-appearance: none;
+        appearance: none;
+    }
+    
+    /* Fix for Firefox double page gap issues */
+    .manga-viewer.double-page {
+        word-spacing: 0;
+        letter-spacing: 0;
+    }
+    
+    /* Firefox fix for scroll-double-mode flexbox */
+    .manga-viewer.scroll-double-mode .page-pair {
+        display: -moz-box;
+        display: flex;
+        -moz-box-orient: horizontal;
+        -moz-box-pack: center;
+        -moz-box-align: start;
+    }
+}
+
+/* Firefox-specific fixes for :has() selector fallback */
+/* For older Firefox versions without :has() support */
+@supports not selector(:has(*)) {
+    /* Alternative fullscreen body styles */
+    .manga-reader.fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 9999;
+        margin: 0;
+        padding: 0;
+        background-color: var(--color-base);
+    }
+    
+    /* Hide body scrollbar when manga is fullscreen */
+    body.manga-fullscreen-active {
+        overflow: hidden;
+    }
+    
+    /* Alternative for original size mode */
+    .manga-viewer.original-size {
+        position: relative;
+        left: 50%;
+        right: auto;
+        margin-left: -50vw;
+        margin-right: -50vw;
+        max-width: 100vw;
+        width: 100vw;
+    }
+}
+
+/* Additional Firefox-specific performance optimizations */
+@-moz-document url-prefix() {
+    /* Optimize rendering for manga pages */
+    .manga-page {
+        -moz-backface-visibility: hidden;
+        backface-visibility: hidden;
+        -moz-transform: translateZ(0);
+        transform: translateZ(0);
+    }
+    
+    /* Smooth scrolling optimization for Firefox */
+    .manga-viewer.scroll-mode,
+    .manga-viewer.scroll-double-mode {
+        scroll-behavior: smooth;
+        -moz-scroll-behavior: smooth;
+    }
+    
+    /* Firefox-specific image optimization */
+    .manga-image {
+        -moz-user-select: none;
+        -moz-user-drag: none;
+        /* Prevent Firefox image toolbar on hover */
+        -moz-context-properties: none;
+    }
+    
+    /* Fix Firefox button focus outline */
+    .manga-btn::-moz-focus-inner {
+        border: 0;
+        padding: 0;
+    }
+    
+    .manga-btn:focus-visible {
+        outline: 2px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+}
+
 /* Manga chapter text styling */
 .manga-chapter-text {
     margin-top: 3rem;
