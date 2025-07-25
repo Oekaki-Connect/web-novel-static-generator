@@ -1267,6 +1267,24 @@
                     preloadImage(pageNum - 2);
                 }
                 
+                // Position manga image optimally in viewport when changing pages (same as non-seamless mode)
+                setTimeout(() => {
+                    const mangaReader = document.getElementById('manga-reader');
+                    const controls = document.querySelector('.manga-controls');
+                    const controlsHeight = controls ? controls.offsetHeight : 0;
+                    const readerTop = mangaReader.offsetTop;
+                    
+                    // Calculate ideal scroll position to show image optimally
+                    // Position just below controls with some padding
+                    const targetScroll = readerTop + controlsHeight + 10;
+                    
+                    // Always scroll to optimal position for manga viewing
+                    window.scrollTo({ 
+                        top: targetScroll, 
+                        behavior: 'smooth' 
+                    });
+                }, 50); // Small delay to ensure page transition is complete
+                
                 // Trigger completion check for manga chapters
                 if (window.mangaCompletionCheck) {
                     window.mangaCompletionCheck(pageNum);
