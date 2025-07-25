@@ -25,6 +25,8 @@ seo:
 
 # Chapter 1: The Sovereign's Secret Sin
 
+Note: The images are blurred on purpose for testing purposes.
+
 *This is a manga chapter. The story is told through sequential art. Use the manga reader controls to navigate through the pages.*
 
 **Reading Instructions:**
