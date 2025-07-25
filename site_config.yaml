@@ -120,6 +120,12 @@ footer:
   
   # Additional footer links
   links:
+    - text: "Source Code"
+      url: "https://github.com/Oekaki-Connect/web-novel-static-generator"
+    - text: "Join Our Discord"
+      url: "https://discord.gg/oekaki"
+    - text: "Follow on X"      
+      url: "https://x.com/OekakiConnect"
     - text: "Oekaki Connect"
       url: "https://www.oekakiconnect.net/"
     - text: "Oekaki.io"
