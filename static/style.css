@@ -2795,10 +2795,38 @@ body:has(.manga-reader.fullscreen) .manga-settings-modal {
     overflow: hidden; /* Prevent scrollbars in fullscreen */
 }
 
+
 /* Ensure fullscreen images fit without scrollbars */
 .manga-reader.fullscreen .manga-image {
     max-width: 100vw;
     max-height: 100vh;
+    object-position: center; /* Ensure consistent positioning */
+}
+
+/* Mobile-specific fixes for fullscreen vertical jumping */
+@media (max-width: 768px) and (pointer: coarse) {
+    /* Only apply to actual mobile devices with touch screens */
+    .manga-reader.fullscreen .manga-viewer {
+        height: var(--fullscreen-vh, 100vh);
+    }
+    
+    /* Mobile portrait specific fixes */
+    @media (orientation: portrait) {
+        /* Prevent vertical jumping on mobile portrait mode */
+        .manga-reader.fullscreen .manga-viewer.seamless-mode .manga-page {
+            /* Ensure consistent positioning */
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            will-change: opacity;
+        }
+        
+        /* Stabilize image dimensions */
+        .manga-reader.fullscreen .manga-image {
+            max-height: var(--fullscreen-vh, 100vh);
+            object-fit: contain;
+            object-position: center;
+        }
+    }
 }
 
 .manga-controls-left,

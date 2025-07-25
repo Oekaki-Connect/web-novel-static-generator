@@ -1452,3 +1452,4 @@ Feel free to extend this generator with additional features:
 - Maybe convert the webring feature into something dynamic done when someone visits front pages
 - Something you think it needs! If you make pull requests please know what you're doing
 - If you're a Firefox user and a dev, please fix any CSS that's Firefox specific
+- Full screen single image mode on mobile 2:3 jumps around in a weird way when changing images
