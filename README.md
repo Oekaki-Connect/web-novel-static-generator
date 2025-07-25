@@ -94,10 +94,33 @@ web-novel-generator/
 
 ### 1. Setup
 
-Clone or download this generator and install dependencies:
+**Prerequisites:**
+- Python 3.8 or higher ([Download Python](https://www.python.org/downloads/))
+- Git (optional, for cloning the repository)(use Github Desktop if you like GUIs https://desktop.github.com/download/ )
+
+**Verify Python is installed:**
+```bash
+python --version  # Should show Python 3.8 or higher
+# On some systems, you may need to use python3 instead
+```
+
+**Clone or download this generator and install dependencies:**
 
 ```bash
+# Clone the repository (if you have git)
+git clone https://github.com/Oekaki-Connect/web-novel-static-generator.git
+cd web-novel-static-generator
+
+# Or download the ZIP file and extract it, then navigate to the folder
+
+# Or fork it if you plan on contributing changes
+
+# DO NOT fork if you want a private repo, you can't make forks private on Github
+# If you want a private repo, download the ZIP, then make a new private repo
+
+# Install Python dependencies
 pip install -r requirements.txt
+# On some systems, you may need to use pip3 instead
 ```
 
 ### 2. Configure Your Site
@@ -1388,10 +1411,6 @@ Home (/)
 - `watchdog`: File system monitoring for live reload (optional)
 - `websockets`: WebSocket server for live reload (optional)
 
-## License
-
-This generator is provided as-is for creating web novel sites. Customize as needed for your project.
-
 ## Troubleshooting
 
 ### Getting Help
@@ -1429,3 +1448,4 @@ Feel free to extend this generator with additional features:
 - Improve the manga reader (better page transitions, double vertical scroll)
 - Break the current monolith generate.py into sub dependencies
 - Maybe convert the webring feature into something dynamic done when someone visits front pages
+- Something you think it needs! If you make pull requests please know what you're doing
