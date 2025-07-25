@@ -64,10 +64,12 @@
         // Reading settings functionality
         let currentTextSize = 100;
         let currentLineSpacing = 1.6;
+        let autoScrollToContent = false;
         
         function loadReadingSettings() {
             const savedTextSize = localStorage.getItem('readingTextSize');
             const savedLineSpacing = localStorage.getItem('readingLineSpacing');
+            const savedAutoScroll = localStorage.getItem('autoScrollToContent');
             
             if (savedTextSize) {
                 currentTextSize = parseInt(savedTextSize);
@@ -77,6 +79,14 @@
             if (savedLineSpacing) {
                 currentLineSpacing = parseFloat(savedLineSpacing);
                 applyLineSpacing();
+            }
+            
+            if (savedAutoScroll !== null) {
+                autoScrollToContent = savedAutoScroll === 'true';
+                const checkbox = document.getElementById('auto-scroll-content');
+                if (checkbox) {
+                    checkbox.checked = autoScrollToContent;
+                }
             }
             
             updateDisplays();
@@ -111,18 +121,53 @@
             document.getElementById('line-spacing-display').textContent = currentLineSpacing.toFixed(1);
         }
         
+        function toggleAutoScrollContent() {
+            const checkbox = document.getElementById('auto-scroll-content');
+            autoScrollToContent = checkbox.checked;
+            localStorage.setItem('autoScrollToContent', autoScrollToContent);
+        }
+        
         function resetReadingSettings() {
             currentTextSize = 100;
             currentLineSpacing = 1.6;
+            autoScrollToContent = false;
             applyTextSize();
             applyLineSpacing();
             localStorage.removeItem('readingTextSize');
             localStorage.removeItem('readingLineSpacing');
+            localStorage.removeItem('autoScrollToContent');
+            const checkbox = document.getElementById('auto-scroll-content');
+            if (checkbox) {
+                checkbox.checked = false;
+            }
             updateDisplays();
         }
         
+        // Handle scroll parameter on page load
+        function handleScrollParameter() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('scroll') === 'content') {
+                // Find the chapter content element and scroll to it
+                setTimeout(() => {
+                    const contentElement = document.getElementById('chapter-content-wrapper');
+                    if (contentElement) {
+                        const offset = contentElement.offsetTop - 20; // 20px padding from top
+                        window.scrollTo({
+                            top: offset,
+                            behavior: 'smooth'
+                        });
+                    }
+                }, 100); // Small delay to ensure page is loaded
+            }
+        }
+        
         // Load settings when page loads
-        document.addEventListener('DOMContentLoaded', loadReadingSettings);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadReadingSettings();
+            {% if not is_manga_chapter %}
+            handleScrollParameter();
+            {% endif %}
+        });
         
         // Reading progress tracking
         function initReadingProgress() {
@@ -222,15 +267,29 @@
             // Also check on load in case content is short
             setTimeout(checkScrollProgress, 1000);
             
-            // Mark as completed if user clicks next chapter link
-            const nextChapterLinks = document.querySelectorAll('nav a[href*="../"]:not([href*="toc"]), .chapter-nav a[href*="../"]:not([href*="toc"])');
-            nextChapterLinks.forEach(link => {
-                // Only add to links that look like next chapter (not prev or toc)
+            // Handle chapter navigation links
+            const chapterLinks = document.querySelectorAll('nav a[href*="../"]:not([href*="toc"]), .chapter-nav a[href*="../"]:not([href*="toc"])');
+            chapterLinks.forEach(link => {
                 const linkText = link.textContent.toLowerCase();
-                if (linkText.includes('next') || linkText.includes('chapter') && !linkText.includes('previous') && !linkText.includes('prev')) {
-                    link.addEventListener('click', () => {
-                        console.log('Chapter marked as completed - clicked next chapter');
-                        markChapterCompleted(novelSlug, chapterId);
+                const isNextChapter = linkText.includes('next') || (linkText.includes('chapter') && !linkText.includes('previous') && !linkText.includes('prev'));
+                const isPrevChapter = linkText.includes('prev') || linkText.includes('previous');
+                
+                if (isNextChapter || isPrevChapter) {
+                    link.addEventListener('click', (e) => {
+                        // Mark as completed if clicking next chapter
+                        if (isNextChapter) {
+                            console.log('Chapter marked as completed - clicked next chapter');
+                            markChapterCompleted(novelSlug, chapterId);
+                        }
+                        
+                        // Add scroll parameter if auto-scroll is enabled
+                        const autoScroll = localStorage.getItem('autoScrollToContent');
+                        if (autoScroll === 'true') {
+                            e.preventDefault();
+                            const url = new URL(link.href, window.location.href);
+                            url.searchParams.set('scroll', 'content');
+                            window.location.href = url.toString();
+                        }
                     });
                 }
             });
@@ -264,7 +323,15 @@
                         {% if prev_chapter %}
                         const prevLink = document.querySelector('nav.chapter-nav a[href*="{{ prev_chapter.id }}"]');
                         if (prevLink) {
-                            window.location.href = prevLink.href;
+                            let url = prevLink.href;
+                            // Add scroll parameter if auto-scroll is enabled
+                            const autoScroll = localStorage.getItem('autoScrollToContent');
+                            if (autoScroll === 'true') {
+                                const urlObj = new URL(url, window.location.href);
+                                urlObj.searchParams.set('scroll', 'content');
+                                url = urlObj.toString();
+                            }
+                            window.location.href = url;
                         }
                         {% endif %}
                         e.preventDefault();
@@ -276,7 +343,15 @@
                         {% if next_chapter %}
                         const nextLink = document.querySelector('nav.chapter-nav a[href*="{{ next_chapter.id }}"]');
                         if (nextLink) {
-                            window.location.href = nextLink.href;
+                            let url = nextLink.href;
+                            // Add scroll parameter if auto-scroll is enabled
+                            const autoScroll = localStorage.getItem('autoScrollToContent');
+                            if (autoScroll === 'true') {
+                                const urlObj = new URL(url, window.location.href);
+                                urlObj.searchParams.set('scroll', 'content');
+                                url = urlObj.toString();
+                            }
+                            window.location.href = url;
                         }
                         {% endif %}
                         e.preventDefault();
@@ -570,6 +645,12 @@
                             <span id="line-spacing-display">1.6</span>
                             <button onclick="adjustLineSpacing(0.1)">+</button>
                         </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="auto-scroll-content">
+                            <input type="checkbox" id="auto-scroll-content" onchange="toggleAutoScrollContent()">
+                            Auto-scroll to content when navigating chapters
+                        </label>
                     </div>
                     <button onclick="resetReadingSettings()" class="reset-button">Reset to Default</button>
                 </div>
