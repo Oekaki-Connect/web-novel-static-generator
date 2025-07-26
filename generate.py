@@ -1205,7 +1205,7 @@ def generate_webring_data(webring_config, display_config):
     
     all_items = []
     max_items = webring_config.get('max_items', 20)
-    sites_list = webring_config.get('sites', [])
+    sites_list = webring_config.get('sites') or []
     include_own_rss = webring_config.get('include_own_rss', False)
     
     if not sites_list and not include_own_rss:
