@@ -155,9 +155,11 @@
         </div>
         {% endif %}
         <h2>Table of Contents</h2>
+        {% if novel_config.get('navigation', {}).get('show_tags_link', True) %}
         <nav class="toc-nav" aria-label="Story navigation">
             <a href="../tags/" class="tags-link">Browse by Tags</a>
         </nav>
+        {% endif %}
     </header>
     <main>
         {% for arc in novel.arcs %}

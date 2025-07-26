@@ -40,7 +40,7 @@ display:
 # Navigation settings
 navigation:
   # Show "Browse by Tags" link on table of contents
-  show_tags_link: true
+  show_tags_link: false
 
 # Language settings
 languages:
