@@ -209,9 +209,11 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                     continue
                 
                 # Skip hidden chapters, password-protected, or non-indexed chapters
+                seo_config = chapter_metadata.get('seo') or {}
+                seo_allow_indexing = seo_config.get('allow_indexing') if isinstance(seo_config, dict) else None
                 if (is_chapter_hidden(chapter_metadata) or 
                     ('password' in chapter_metadata and chapter_metadata['password']) or
-                    chapter_metadata.get('seo', {}).get('allow_indexing') is False):
+                    seo_allow_indexing is False):
                     continue
                 
                 published_date = chapter_metadata.get('published')
@@ -278,9 +280,11 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                         continue
                     
                     # Skip hidden, password-protected, or non-indexed chapters
+                    seo_config = chapter_metadata.get('seo') or {}
+                    seo_allow_indexing = seo_config.get('allow_indexing') if isinstance(seo_config, dict) else None
                     if (is_chapter_hidden(chapter_metadata) or 
                         ('password' in chapter_metadata and chapter_metadata['password']) or
-                        chapter_metadata.get('seo', {}).get('allow_indexing') is False):
+                        seo_allow_indexing is False):
                         continue
                     
                     published_date = chapter_metadata.get('published')
@@ -564,7 +568,8 @@ def generate_robots_txt(site_config, novels_data):
                             continue
                         
                         # Check chapter-level indexing
-                        chapter_allow_indexing = chapter_metadata.get('seo', {}).get('allow_indexing')
+                        seo_config = chapter_metadata.get('seo') or {}
+                        chapter_allow_indexing = seo_config.get('allow_indexing') if isinstance(seo_config, dict) else None
                         if chapter_allow_indexing is False:
                             disallowed_paths.append(f"Disallow: /{novel_slug}/{lang}/{chapter_id}/")
                         
