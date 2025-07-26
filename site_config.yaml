@@ -132,6 +132,16 @@ front_page:
   # All other novels will follow after, sorted according to sort_by_recent_update
   featured_order:
     - tower-dungeon  # Example: tower-dungeon will always appear first
+  
+  # Primary story display configuration
+  primary_stories:
+    # Enable limiting primary stories shown in full detail
+    limit_enabled: true
+    
+    # Maximum number of stories to show in full detail (with cover art, description, etc.)
+    # Stories beyond this limit will be shown in simplified list form
+    # Only applies when limit_enabled is true
+    max_count: 2
 
 # Footer configuration
 footer:

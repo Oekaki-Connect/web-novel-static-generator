@@ -3201,10 +3201,24 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             display_config = full_config.get('display', {})
     
     webring_data = generate_webring_data(webring_config, display_config)
+    
+    # Split novels into primary and additional based on configuration
+    primary_story_config = site_config.get('front_page', {}).get('primary_stories', {})
+    limit_enabled = primary_story_config.get('limit_enabled', False)
+    max_primary_count = primary_story_config.get('max_count', 3)
+    
+    if limit_enabled and len(front_page_novels_data) > max_primary_count:
+        primary_novels = front_page_novels_data[:max_primary_count]
+        additional_novels = front_page_novels_data[max_primary_count:]
+    else:
+        primary_novels = front_page_novels_data
+        additional_novels = []
 
     # Render front page with novels that should be displayed
     front_page_html = render_template("index.html", 
-                                     novels=front_page_novels_data,
+                                     novels=front_page_novels_data if not limit_enabled else None,  # For backwards compatibility
+                                     primary_novels=primary_novels,
+                                     additional_novels=additional_novels,
                                      site_name=site_config.get('site_name', 'Web Novel Collection'),
                                      social_title=social_meta['title'],
                                      social_description=social_meta['description'],

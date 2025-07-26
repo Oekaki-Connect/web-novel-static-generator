@@ -51,7 +51,30 @@
         <h1>Web Novel Collection</h1>
     </header>
     <main>
-        {% if novels %}
+        {% if primary_novels %}
+            {% for novel in primary_novels %}
+            <section class="novel-card">
+                {% if novel.front_page and novel.front_page.cover_art %}
+                <div class="novel-cover">
+                    <a href="{{ novel.slug }}/en/toc/">
+                        <img src="{{ novel.front_page.cover_art }}" alt="{{ novel.title }} Cover" class="cover-image">
+                    </a>
+                </div>
+                {% endif %}
+                <div class="novel-info">
+                    <h2><a href="{{ novel.slug }}/en/toc/">{{ novel.title }}</a></h2>
+                    {% if novel.status %}
+                    <div class="novel-status">
+                        <span class="status-label">Status:</span>
+                        <span class="status-value status-{{ novel.status }}">{{ novel.status|title }}</span>
+                    </div>
+                    {% endif %}
+                    <p>{{ novel.description }}</p>
+                    <p><a href="{{ novel.slug }}/en/toc/">Read Now</a></p>
+                </div>
+            </section>
+            {% endfor %}
+        {% elif novels %}
             {% for novel in novels %}
             <section class="novel-card">
                 {% if novel.front_page and novel.front_page.cover_art %}
@@ -76,6 +99,25 @@
             {% endfor %}
         {% else %}
             <p>No novels found. Add some novels to the content directory to get started.</p>
+        {% endif %}
+        
+        {% if additional_novels and additional_novels|length > 0 %}
+        <section class="more-stories-section">
+            <h2>More Stories</h2>
+            <div class="more-stories-list">
+                {% for novel in additional_novels %}
+                <article class="more-story-item">
+                    <a href="{{ novel.slug }}/en/toc/" class="more-story-title">
+                        <h3>{{ novel.title }}</h3>
+                    </a>
+                    {% if novel.status %}
+                    <span class="more-story-status status-{{ novel.status }}">{{ novel.status|title }}</span>
+                    {% endif %}
+                    <a href="{{ novel.slug }}/en/toc/" class="more-story-link">Read Now</a>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
         {% endif %}
         
         {% if webring_data and webring_data|length > 0 %}
