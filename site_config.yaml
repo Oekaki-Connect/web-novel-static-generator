@@ -152,6 +152,8 @@ footer:
   links:
     - text: "Source Code"
       url: "https://github.com/Oekaki-Connect/web-novel-static-generator"
+    - text: "ocwn.net"
+      url: "https://www.ocwn.net/"      
     - text: "Join Our Discord"
       url: "https://discord.gg/oekaki"
     - text: "Follow on X"      
