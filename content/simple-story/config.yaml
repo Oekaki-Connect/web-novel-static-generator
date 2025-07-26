@@ -3,7 +3,7 @@ title: "A Simple Story"
 description: "This is a simple test story"
 slug: "simple-story"
 primary_language: "en"
-status: "ongoing"  # "ongoing" or "complete"
+status: "complete"  # "ongoing" or "complete"
 
 # Story genre/theme tags
 tags: ["simple"]
