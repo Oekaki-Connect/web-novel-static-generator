@@ -704,7 +704,7 @@
             
             {% if chapter_metadata.published %}
             <div class="metadata-item">
-                <strong>Published:</strong> {{ chapter_metadata.published }}
+                <strong>Published:</strong> {{ chapter_metadata.published | format_date_for_display }}
             </div>
             {% endif %}
             

@@ -219,12 +219,14 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                 published_date = chapter_metadata.get('published')
                 if published_date:
                     try:
-                        # Handle both string and date object formats
-                        if isinstance(published_date, str):
-                            pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
-                        else:
-                            # Assume it's already a date object, convert to datetime
-                            pub_datetime = datetime.combine(published_date, datetime.min.time())
+                        # Use the parse_publish_date function for better date format support
+                        pub_datetime = parse_publish_date(published_date)
+                        if not pub_datetime:
+                            continue  # Skip if date parsing failed
+                        
+                        # Normalize to timezone-naive datetime for consistent RSS sorting
+                        if pub_datetime.tzinfo is not None:
+                            pub_datetime = pub_datetime.replace(tzinfo=None)
                         
                         # Handle social_embeds safely
                         social_embeds = chapter_metadata.get('social_embeds') or {}
@@ -290,12 +292,14 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                     published_date = chapter_metadata.get('published')
                     if published_date:
                         try:
-                            # Handle both string and date object formats
-                            if isinstance(published_date, str):
-                                pub_datetime = datetime.strptime(published_date, '%Y-%m-%d')
-                            else:
-                                # Assume it's already a date object, convert to datetime
-                                pub_datetime = datetime.combine(published_date, datetime.min.time())
+                            # Use the parse_publish_date function for better date format support
+                            pub_datetime = parse_publish_date(published_date)
+                            if not pub_datetime:
+                                continue  # Skip if date parsing failed
+                            
+                            # Normalize to timezone-naive datetime for consistent RSS sorting
+                            if pub_datetime.tzinfo is not None:
+                                pub_datetime = pub_datetime.replace(tzinfo=None)
                             
                             # Handle social_embeds safely for site-wide RSS
                             social_embeds = chapter_metadata.get('social_embeds') or {}
@@ -478,9 +482,10 @@ def generate_sitemap_xml(site_config, novels_data):
                     lastmod = ""
                     if chapter_metadata.get('published'):
                         try:
-                            # Try to parse the date
-                            pub_date = datetime.strptime(chapter_metadata['published'], '%Y-%m-%d')
-                            lastmod = f"\n        <lastmod>{pub_date.strftime('%Y-%m-%d')}</lastmod>"
+                            # Use parse_publish_date for better date format support
+                            pub_date = parse_publish_date(chapter_metadata['published'])
+                            if pub_date:
+                                lastmod = f"\n        <lastmod>{pub_date.strftime('%Y-%m-%d')}</lastmod>"
                         except:
                             pass
                     
@@ -3116,11 +3121,10 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                                                 published_date_str = chapter_metadata.get('published')
                                                                 if published_date_str:
                                                                     try:
-                                                                        if isinstance(published_date_str, str):
-                                                                            chapter_date = datetime.strptime(published_date_str, '%Y-%m-%d')
-                                                                        else:
-                                                                            # Handle YAML date object
-                                                                            chapter_date = datetime.combine(published_date_str, datetime.min.time())
+                                                                        # Use parse_publish_date for better date format support
+                                                                        chapter_date = parse_publish_date(published_date_str)
+                                                                        if not chapter_date:
+                                                                            continue
                                                                         
                                                                         if most_recent_date is None or chapter_date > most_recent_date:
                                                                             most_recent_date = chapter_date
