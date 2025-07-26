@@ -201,6 +201,8 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
             chapter_id = chapter["id"]
             try:
                 chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, primary_lang)
+                if chapter_metadata is None:
+                    continue
                 
                 # Skip draft chapters unless include_drafts is True
                 if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
@@ -222,15 +224,19 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                             # Assume it's already a date object, convert to datetime
                             pub_datetime = datetime.combine(published_date, datetime.min.time())
                         
+                        # Handle social_embeds safely
+                        social_embeds = chapter_metadata.get('social_embeds') or {}
+                        description = social_embeds.get('description', '') if isinstance(social_embeds, dict) else ''
+                        
                         chapter_items.append({
                             'id': chapter_id,
                             'title': chapter_metadata.get('title', chapter['title']),
                             'link': f"{site_url}/{novel_slug}/{primary_lang}/{chapter_id}/",
-                            'description': chapter_metadata.get('social_embeds', {}).get('description', ''),
+                            'description': description,
                             'pub_date': pub_datetime,
                             'content': convert_markdown_to_html(chapter_content_md[:500] + '...' if len(chapter_content_md) > 500 else chapter_content_md)
                         })
-                    except:
+                    except Exception as e:
                         pass  # Skip chapters with invalid dates
             except:
                 continue
@@ -287,11 +293,15 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
                                 # Assume it's already a date object, convert to datetime
                                 pub_datetime = datetime.combine(published_date, datetime.min.time())
                             
+                            # Handle social_embeds safely for site-wide RSS
+                            social_embeds = chapter_metadata.get('social_embeds') or {}
+                            description = social_embeds.get('description', '') if isinstance(social_embeds, dict) else ''
+                            
                             all_chapter_items.append({
                                 'id': chapter_id,
                                 'title': f"{novel.get('title', '')}: {chapter_metadata.get('title', chapter['title'])}",
                                 'link': f"{site_url}/{novel_slug}/{primary_lang}/{chapter_id}/",
-                                'description': chapter_metadata.get('social_embeds', {}).get('description', ''),
+                                'description': description,
                                 'pub_date': pub_datetime,
                                 'content': convert_markdown_to_html(chapter_content_md[:300] + '...' if len(chapter_content_md) > 300 else chapter_content_md)
                             })
