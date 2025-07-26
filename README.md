@@ -29,7 +29,7 @@ You can see our version of it live on: https://www.ocwn.net/ (not yet live but w
 - **Chapter Pages**: Individual pages for each chapter with navigation
 - **Chapter Navigation**: Dropdown menu for quick chapter jumping and breadcrumb navigation
 - **Story Statistics**: Total length display with language-specific units (words/characters)
-- **Story Metadata**: Publishing status (ongoing/complete) and genre tags
+- **Story Metadata**: Publishing status (ongoing/complete/hiatus) and genre tags
 - **Publication Dates**: Chapter publication dates displayed on table of contents
 - **Tag System**: Categorize chapters with tags for easy discovery
 - **Chapter Images**: Chapter-specific image support with automatic processing
@@ -54,7 +54,7 @@ You can see our version of it live on: https://www.ocwn.net/ (not yet live but w
 - **Modular Template Extensions**: Novel-specific template overrides for unique styling and branding
 - **Scheduled Publishing**: Future-dated chapters automatically publish when their date arrives
 - **Story Length Statistics**: Display word counts with language-specific units
-- **Story Publishing Status**: Show "ongoing" or "complete" badges
+- **Story Publishing Status**: Show "ongoing", "complete", or "hiatus" badges
 - **Story Genre Tags**: Categorize stories by theme and genre
 - **Accessibility Features**: ARIA labels, keyboard navigation, and alt text validation
 - **Manga Features**: Supports comic / manga / manhwa too, though could still use some improvement
@@ -208,7 +208,7 @@ Create `content/your-novel-name/config.yaml`:
 title: "Your Awesome Novel"
 description: "An epic fantasy adventure"
 primary_language: "en"
-status: "ongoing"  # "ongoing" or "complete"
+status: "ongoing"  # "ongoing", "complete", or "hiatus"
 
 # Story genre/theme tags
 tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]
@@ -1229,12 +1229,12 @@ Display the current status of your story on the table of contents:
 
 ```yaml
 # In your story config.yaml
-status: "ongoing"  # "ongoing" or "complete"
+status: "ongoing"  # "ongoing", "complete", or "hiatus"
 ```
 
 **Features:**
-- Shows "Ongoing" or "Complete" badge on TOC page
-- Color-coded badges (blue for ongoing, green for complete)
+- Shows "Ongoing", "Complete", or "Hiatus" badge on TOC page
+- Color-coded badges (blue for ongoing, green for complete, orange for hiatus)
 - Automatic dark mode styling
 
 ### Story Length Statistics

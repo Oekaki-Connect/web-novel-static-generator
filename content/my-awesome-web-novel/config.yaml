@@ -3,7 +3,7 @@ title: "My Awesome Web Novel"
 description: "An epic fantasy adventure following the journey of heroes in the land of Eldoria"
 slug: "my-awesome-web-novel"
 primary_language: "en"
-status: "ongoing"  # "ongoing" or "complete"
+status: "ongoing"  # "ongoing", "complete", or "hiatus"
 
 # Story genre/theme tags
 tags: ["fantasy", "adventure", "magic", "prophecy", "hero's journey"]

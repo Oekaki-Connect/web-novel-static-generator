@@ -1,7 +1,7 @@
 title: "Tower Dungeon"
 description: "A thrilling manga about adventurers exploring a mysterious tower dungeon"
 primary_language: "en"
-status: "ongoing"
+status: "ongoing"  # "ongoing", "complete", or "hiatus"
 
 # Manga-specific configuration
 chapter_type: "manga"  # Sets all chapters as manga by default
