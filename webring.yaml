@@ -11,7 +11,7 @@ webring:
   
   # List of sites in your webring
   sites:
-    - name: "OCWN"
+    - name: "WNSG"
       url: "https://oekaki-connect.github.io/web-novel/"
       rss: "https://oekaki-connect.github.io/web-novel/rss.xml"
       description: "Example web novel site for testing"
