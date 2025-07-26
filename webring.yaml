@@ -6,6 +6,8 @@ webring:
   enabled: true
   max_items: 20  # Maximum number of recent items to display
   cache_duration: 3600  # Cache RSS feeds for 1 hour (in seconds)
+  include_own_rss: false  # Include this site's own RSS feed in the webring
+  own_site_name: "My Site"  # Name to display for your own site (defaults to site_name from site.yaml)
   
   # List of sites in your webring
   sites:

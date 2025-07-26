@@ -1206,9 +1206,10 @@ def generate_webring_data(webring_config, display_config):
     all_items = []
     max_items = webring_config.get('max_items', 20)
     sites_list = webring_config.get('sites', [])
+    include_own_rss = webring_config.get('include_own_rss', False)
     
-    if not sites_list:
-        print("Webring enabled but no sites configured")
+    if not sites_list and not include_own_rss:
+        print("Webring enabled but no sites configured and own RSS not included")
         return []
     
     print("Fetching webring RSS feeds...")
@@ -1241,6 +1242,33 @@ def generate_webring_data(webring_config, display_config):
         else:
             failed_sites += 1
     
+    # Include site's own RSS feed if configured
+    if include_own_rss:
+        own_rss_path = os.path.join(BUILD_DIR, "rss.xml")
+        if os.path.exists(own_rss_path):
+            print("    Including site's own RSS feed...")
+            try:
+                with open(own_rss_path, 'r', encoding='utf-8') as f:
+                    rss_content = f.read()
+                rss_soup = BeautifulSoup(rss_content, 'xml')
+                
+                # Get site info for labeling
+                site_config = load_site_config()
+                site_name = webring_config.get('own_site_name', site_config.get('site_name', 'This Site'))
+                site_url = site_config.get('site_url', '').rstrip('/')
+                
+                items = parse_rss_items(rss_soup, site_name, site_url)
+                if items:
+                    all_items.extend(items)
+                    successful_sites += 1
+                    print(f"      Success: Found {len(items)} items from {site_name}")
+                else:
+                    print(f"      Warning: No valid items found in own RSS feed")
+            except Exception as e:
+                print(f"      Warning: Failed to read own RSS feed: {e}")
+        else:
+            print("      Warning: Own RSS feed not found at build/rss.xml")
+    
     # Sort by publication date (newest first)
     all_items.sort(key=lambda x: x['pub_date'] or datetime.datetime.min, reverse=True)
     
@@ -1255,7 +1283,8 @@ def generate_webring_data(webring_config, display_config):
         else:
             item['formatted_date'] = 'Unknown date'
     
-    print(f"    Generated webring with {len(limited_items)} items from {successful_sites}/{len(sites_list)} sites")
+    total_sites = len(sites_list) + (1 if include_own_rss else 0)
+    print(f"    Generated webring with {len(limited_items)} items from {successful_sites}/{total_sites} sites")
     if failed_sites > 0:
         print(f"    Note: {failed_sites} site(s) failed to load - webring will continue with available content")
     
