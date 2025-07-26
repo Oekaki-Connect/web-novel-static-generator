@@ -1,0 +1,154 @@
+# Configuration file for My Awesome Web Novel
+title: "A Simple Story"
+description: "This is a simple test story"
+slug: "simple-story"
+primary_language: "en"
+status: "ongoing"  # "ongoing" or "complete"
+
+# Story genre/theme tags
+tags: ["simple"]
+
+# Front page display settings
+front_page:
+  show_on_front_page: true  # Set to false to hide this story from the front page
+  cover_art: "chapters/simple-story-cover.jpg"  # Path to cover art image relative to story folder
+
+# Length display configuration
+length_display:
+  # Default unit for story length display on TOC pages
+  default_unit: "words"  # "words" or "characters"
+  
+  # Language-specific overrides for different languages
+  # This is useful because different languages have different conventions:
+  # - Western languages (English, Spanish, French) typically use word count
+  # - East Asian languages (Japanese, Chinese, Korean) typically use character count
+  language_units:
+    en: "words"      # English uses words (typical for Western languages)
+    #jp: "characters" # Japanese uses characters (typical for East Asian languages)
+
+# Display settings - these can be overridden in individual chapter front matter
+display:
+  # Show tags on chapter pages by default (can be overridden with 'show_tags: false' in chapter front matter)
+  show_tags: false
+  
+  # Show chapter metadata (author, published date, etc.) on chapter pages
+  show_metadata: true
+  
+  # Show translation notes on chapter pages
+  show_translation_notes: false
+
+# Navigation settings
+navigation:
+  # Show "Browse by Tags" link on table of contents
+  show_tags_link: true
+
+# Language settings
+languages:
+  default: "en"
+  available: ["en"]
+  
+# Author information
+author:
+  name: "haiku"
+  
+# Copyright settings
+copyright: "Oekaki Connect"
+
+# Social media embeds (Open Graph / Twitter Cards)
+social_embeds:
+  # Story-specific social image (absolute URL or relative to site root)
+  image: "chapters/simple-social.jpg"
+  
+  # Story description for social embeds (overrides site default)
+  description: "This is a simple test story"
+  
+  # Keywords for this story
+  keywords: ["simple"]
+
+# SEO settings
+seo:
+  # Allow indexing for this story (overrides site default)
+  allow_indexing: true
+  
+  # Custom meta description
+  meta_description: "This is a simple test story"
+
+# Downloads configuration
+downloads:
+  # Enable EPUB downloads for this story
+  epub_enabled: true
+  
+  # Generate individual arc downloads
+  include_arcs: true
+
+# Comments settings  
+comments:
+  # Enable comments for this story (overrides site default)
+  enabled: true
+  
+  # Enable comments on table of contents
+  toc_comments: true
+  
+  # Enable comments on chapters by default
+  chapter_comments: true
+
+# Footer settings
+footer:
+  # Custom footer text for this story (optional, uses site default if not specified)
+  custom_text: "© Oekaki Connect. All rights reserved."
+  
+  # Additional story-specific footer links
+  links:
+    # - text: "Support the Author"
+    #   url: "https://ko-fi.com/pyramid"
+    # - text: "OCWN" 
+    #   url: "http://www.ocwn.net/"
+
+# Story structure
+arcs:
+  - title: "Arc 1"
+    cover_art: "chapters/simple-story-cover.jpg"  # Optional cover art for this arc
+    chapters: 
+      - id: "chapter-1"
+        title: "Chapter 1"
+
+  # - title: "Arc 2: The Quest"
+  #   cover_art: "chapters/arc-2-cover.jpg"  # Optional cover art for this arc
+  #   chapters:
+  #     - id: "chapter-3"
+  #       title: "Chapter 3: Ancient Ruins"
+  #     - id: "chapter-4"
+  #       title: "Chapter 4: The Guardian"
+  # - title: "Arc 3: The Trials"
+  #   chapters:
+  #     - id: "chapter-5"
+  #       title: "Chapter 5: The Test"
+  #     - id: "chapter-6"
+  #       title: "Chapter 6: Allies in Darkness"
+  #     - id: "chapter-6-draft"
+  #       title: "Chapter 6 Draft: The Secret Meeting"
+  # - title: "Premium Content"
+  #   chapters:
+  #     - id: "chapter-premium"
+  #       title: "Chapter Premium: Early Access 🔒"
+  #     - id: "chapter-hidden"
+  #       title: "Chapter Hidden: Secret Interlude 👁️"
+  # - title: "Scheduled Content"
+  #   chapters:
+  #     - id: "chapter-recent"
+  #       title: "Chapter Recent: Just Published"
+  #     - id: "chapter-future"
+  #       title: "Chapter Future: Scheduled Release"
+  # - title: "Technical Demonstrations"
+  #   chapters:
+  #     - id: "chapter-markdown-demo"
+  #       title: "Chapter Markdown Demo: The Scholar's Discovery"
+
+# New chapter tags configuration (overrides site defaults)
+new_chapter_tags:
+  # Enable/disable (NEW!) tags for this story
+  enabled: true
+  
+  # Custom threshold for this story (overrides site default)
+  # Uncomment to use a different threshold than the site default
+  # threshold_days: 14  # Show NEW! for 2 weeks instead of default 7 days

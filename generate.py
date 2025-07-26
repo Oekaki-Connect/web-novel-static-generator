@@ -591,8 +591,12 @@ def build_social_meta(site_config, novel_config, chapter_metadata, page_type, ti
     """Build social media metadata for a page"""
     social_meta = {}
     
+    # Handle None chapter_metadata
+    if chapter_metadata is None:
+        chapter_metadata = {}
+    
     # Determine social title
-    if 'social_embeds' in chapter_metadata and 'title' in chapter_metadata['social_embeds']:
+    if chapter_metadata and 'social_embeds' in chapter_metadata and chapter_metadata['social_embeds'] and 'title' in chapter_metadata['social_embeds']:
         social_meta['title'] = chapter_metadata['social_embeds']['title']
     elif page_type == 'chapter':
         social_meta['title'] = title
@@ -606,7 +610,7 @@ def build_social_meta(site_config, novel_config, chapter_metadata, page_type, ti
     social_meta['title'] = title_format.format(title=social_meta['title'])
     
     # Determine social description
-    if 'social_embeds' in chapter_metadata and 'description' in chapter_metadata['social_embeds']:
+    if chapter_metadata and 'social_embeds' in chapter_metadata and chapter_metadata['social_embeds'] and 'description' in chapter_metadata['social_embeds']:
         social_meta['description'] = chapter_metadata['social_embeds']['description']
     elif novel_config.get('social_embeds', {}).get('description'):
         social_meta['description'] = novel_config['social_embeds']['description']
@@ -615,7 +619,7 @@ def build_social_meta(site_config, novel_config, chapter_metadata, page_type, ti
     
     # Determine social image (absolute URL)
     site_url = site_config.get('site_url', '').rstrip('/')
-    if 'social_embeds' in chapter_metadata and 'image' in chapter_metadata['social_embeds']:
+    if chapter_metadata and 'social_embeds' in chapter_metadata and chapter_metadata['social_embeds'] and 'image' in chapter_metadata['social_embeds']:
         image_path = chapter_metadata['social_embeds']['image']
     elif novel_config.get('social_embeds', {}).get('image'):
         image_path = novel_config['social_embeds']['image']
@@ -633,7 +637,7 @@ def build_social_meta(site_config, novel_config, chapter_metadata, page_type, ti
     
     # Build keywords
     keywords = []
-    if 'social_embeds' in chapter_metadata and 'keywords' in chapter_metadata['social_embeds']:
+    if chapter_metadata and 'social_embeds' in chapter_metadata and chapter_metadata['social_embeds'] and 'keywords' in chapter_metadata['social_embeds']:
         keywords.extend(chapter_metadata['social_embeds']['keywords'])
     elif novel_config.get('social_embeds', {}).get('keywords'):
         keywords.extend(novel_config['social_embeds']['keywords'])
@@ -654,6 +658,10 @@ def generate_image_hash(file_path, length=8):
 def build_seo_meta(site_config, novel_config, chapter_metadata, page_type):
     """Build SEO metadata for a page"""
     seo_meta = {}
+    
+    # Handle None chapter_metadata
+    if chapter_metadata is None:
+        chapter_metadata = {}
     
     # Determine if indexing is allowed (chapter > story > site)
     if 'seo' in chapter_metadata and 'allow_indexing' in chapter_metadata['seo']:
@@ -1835,6 +1843,10 @@ def should_show_tags(novel_config, chapter_front_matter, translation_missing=Fal
 
 def should_show_metadata(novel_config, chapter_front_matter):
     """Determine if metadata should be shown based on config and front matter"""
+    # Handle None chapter front matter
+    if chapter_front_matter is None:
+        chapter_front_matter = {}
+    
     # Check front matter override first
     if 'show_metadata' in chapter_front_matter:
         return chapter_front_matter['show_metadata']
@@ -1844,6 +1856,10 @@ def should_show_metadata(novel_config, chapter_front_matter):
 
 def should_show_translation_notes(novel_config, chapter_front_matter):
     """Determine if translation notes should be shown based on config and front matter"""
+    # Handle None chapter front matter
+    if chapter_front_matter is None:
+        chapter_front_matter = {}
+    
     # Check front matter override first
     if 'show_translation_notes' in chapter_front_matter:
         return chapter_front_matter['show_translation_notes']
@@ -5113,7 +5129,7 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
         import time
         import signal
         import sys
-        from http.server import HTTPServer, SimpleHTTPRequestHandler
+        from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
         from watchdog.observers import Observer
         from watchdog.events import FileSystemEventHandler
         import os
@@ -5254,65 +5270,74 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
         
         # Custom HTTP handler that injects live reload script
         class LiveReloadHandler(SimpleHTTPRequestHandler):
+            # Class-level cache for injected scripts
+            _cache = {}
+            _cache_lock = threading.Lock()
+            
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, directory=BUILD_DIR, **kwargs)
             
-            def end_headers(self):
-                if self.path.endswith('.html') or self.path.endswith('/'):
-                    # Inject live reload script
-                    self.send_header('Content-Type', 'text/html; charset=utf-8')
-                super().end_headers()
-            
             def do_GET(self):
-                if self.path.endswith('.html') or self.path.endswith('/'):
-                    # Serve HTML with live reload script injected
+                try:
+                    # For non-HTML files, use the fast default handler
+                    if not (self.path.endswith('.html') or self.path.endswith('/')):
+                        super().do_GET()
+                        return
+                    
+                    # Only inject script for HTML files
+                    # Get the actual file path
+                    if self.path == '/':
+                        file_path = os.path.join(BUILD_DIR, 'index.html')
+                    elif self.path.endswith('/'):
+                        file_path = os.path.join(BUILD_DIR, self.path.strip('/'), 'index.html')
+                    else:
+                        file_path = os.path.join(BUILD_DIR, self.path.strip('/'))
+                    
+                    # Check if file exists
+                    if not os.path.exists(file_path):
+                        self.send_error(404)
+                        return
+                    
+                    # Read file in binary mode for better performance
+                    with open(file_path, 'rb') as f:
+                        content = f.read()
+                    
+                    # Only inject if we find </body>
+                    if b'</body>' in content:
+                        # Inject live reload script
+                        live_reload_script = f'''<script>(function(){{const ws=new WebSocket('ws://localhost:{port + 1}');ws.onmessage=function(e){{if(e.data==='reload')window.location.reload();}};ws.onclose=function(){{setTimeout(()=>window.location.reload(),2000);}};}})();</script>'''.encode('utf-8')
+                        content = content.replace(b'</body>', live_reload_script + b'</body>')
+                    
+                    # Send response
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/html; charset=utf-8')
+                    self.send_header('Content-Length', str(len(content)))
+                    self.end_headers()
+                    self.wfile.write(content)
+                    
+                except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+                    # Silently handle connection errors
+                    pass
+                except Exception as e:
+                    # Fall back to default handler on error
                     try:
-                        # Get the file path
-                        if self.path.endswith('/'):
-                            file_path = Path(BUILD_DIR) / self.path.lstrip('/') / 'index.html'
-                        else:
-                            file_path = Path(BUILD_DIR) / self.path.lstrip('/')
-                        
-                        if file_path.exists():
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
-                            
-                            # Inject live reload script before closing </body> tag
-                            live_reload_script = f"""
-<script>
-(function() {{
-    const ws = new WebSocket('ws://localhost:{port + 1}');
-    ws.onmessage = function(event) {{
-        if (event.data === 'reload') {{
-            window.location.reload();
-        }}
-    }};
-    ws.onclose = function() {{
-        console.log('Live reload disconnected');
-    }};
-    ws.onerror = function() {{
-        console.log('Live reload connection error');
-    }};
-}})();
-</script>"""
-                            
-                            content = content.replace('</body>', f'{live_reload_script}</body>')
-                            
-                            self.send_response(200)
-                            self.send_header('Content-Type', 'text/html; charset=utf-8')
-                            self.send_header('Content-Length', len(content.encode('utf-8')))
-                            self.end_headers()
-                            self.wfile.write(content.encode('utf-8'))
-                            return
-                    except Exception:
-                        pass  # Fall back to default handler
-                
-                # For non-HTML files or if injection fails, use default handler
-                super().do_GET()
+                        super().do_GET()
+                    except:
+                        pass
             
             def log_message(self, format, *args):
                 # Suppress HTTP server logs for cleaner output
                 pass
+            
+            def handle_one_request(self):
+                # Override to add better error handling
+                try:
+                    super().handle_one_request()
+                except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+                    # Silently ignore connection errors
+                    self.close_connection = True
+                except Exception:
+                    self.close_connection = True
         
         # Start file watcher
         event_handler = ChangeHandler()
@@ -5347,8 +5372,8 @@ def start_development_server(port=8000, include_drafts=False, include_scheduled=
         # Store thread reference for cleanup
         cleanup_threads = [websocket_thread]
         
-        # Start HTTP server
-        httpd = HTTPServer(("localhost", port), LiveReloadHandler)
+        # Start HTTP server with threading for better performance
+        httpd = ThreadingHTTPServer(("localhost", port), LiveReloadHandler)
         
         # Global shutdown flag to prevent multiple shutdown attempts
         shutdown_in_progress = False

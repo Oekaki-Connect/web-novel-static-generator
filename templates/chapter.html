@@ -864,6 +864,7 @@
         {% endif %}
         
         <script>
+            {% if manga_data %}
             // Manga reader functionality
             const mangaData = {{ manga_data | tojson }};
             let currentPage = 1;
@@ -873,6 +874,10 @@
             // Use chapter-level reading direction if available, otherwise use story default
             let readingDirection = '{{ chapter_metadata.reading_direction if chapter_metadata.reading_direction else manga_data.config.reading_direction }}';
             let preloadImages = 3; // Default to 3 images
+            {% else %}
+            // Text-only chapter - no manga functionality
+            const mangaData = null;
+            {% endif %}
             let isFullscreen = false;
             let originalViewMode = null; // Store original view mode when entering fullscreen
             let isScrolling = false; // Prevent navigation during scroll
@@ -2084,9 +2089,11 @@
             }
             
             function resetMangaSettings() {
+                {% if manga_data %}
                 viewMode = '{{ manga_data.config.view_mode }}';
                 imageScaling = '{{ manga_data.config.image_scaling }}';
                 zoomLevel = {{ manga_data.config.zoom_level }};
+                {% endif %}
                 preloadImages = 3; // Reset to default
                 
                 saveMangaSettings();
@@ -2451,7 +2458,11 @@
             
             function setupDoublePage() {
                 const pages = document.querySelectorAll('.manga-page');
+                {% if manga_data %}
                 const coverSeparate = {{ manga_data.config.cover_separate | tojson }};
+                {% else %}
+                const coverSeparate = false;
+                {% endif %}
                 
                 pages.forEach(page => {
                     page.style.display = 'none';
@@ -2529,7 +2540,11 @@
             function setupScrollDoublePage() {
                 const viewer = document.getElementById('manga-viewer');
                 const pages = document.querySelectorAll('.manga-page');
+                {% if manga_data %}
                 const coverSeparate = {{ manga_data.config.cover_separate | tojson }};
+                {% else %}
+                const coverSeparate = false;
+                {% endif %}
                 const totalPages = pages.length;
                 
                 // Clear existing structure
@@ -2588,7 +2603,7 @@
         </script>
         
         <!-- Show chapter content below manga pages -->
-        {% if chapter_content %}
+        {% if is_manga_chapter and chapter_content %}
         <div id="chapter-content-wrapper" class="chapter-content manga-chapter-text">
             {{ chapter_content | safe }}
         </div>
@@ -2614,6 +2629,13 @@
             {% endif %}
         </nav>
         
+        {% if not is_manga_chapter %}
+        <!-- Regular Chapter Content -->
+        <div id="chapter-content-wrapper" class="chapter-content">
+            {{ chapter_content | safe }}
+        </div>
+        {% endif %}
+        
         {% if comments_enabled and not is_password_protected %}
         <div class="comments-section">
             <h3>Comments</h3>
@@ -2622,13 +2644,6 @@
                  data-issue-term="{{ comments_issue_term }}"
                  data-label="{{ comments_label }}">
             </div>
-        </div>
-        {% endif %}
-        
-        {% if not is_manga_chapter %}
-        <!-- Regular Chapter Content -->
-        <div id="chapter-content-wrapper" class="chapter-content">
-            {{ chapter_content | safe }}
         </div>
         {% endif %}
     </main>
