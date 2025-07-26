@@ -3183,6 +3183,12 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
     site_rss_content = generate_rss_feed(site_config, all_novels_data)
     with open(os.path.join(BUILD_DIR, "rss.xml"), "w", encoding='utf-8') as f:
         f.write(site_rss_content)
+    
+    # Copy CNAME file if it exists (for GitHub Pages custom domains)
+    cname_path = os.path.join(os.getcwd(), "CNAME")
+    if os.path.exists(cname_path):
+        shutil.copy2(cname_path, os.path.join(BUILD_DIR, "CNAME"))
+        print("Copied CNAME file for GitHub Pages custom domain")
 
     # Build social metadata for front page
     front_page_url = site_config.get('site_url', '').rstrip('/')

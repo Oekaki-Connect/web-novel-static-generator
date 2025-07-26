@@ -414,6 +414,33 @@ Look up how to setup a domain with a github repo if you want to use a domain. We
 
 Your site will be built in the source repository and deployed to: `https://your-username.github.io/my-novel-site/`
 
+#### Custom Domain Setup
+
+If you want to use a custom domain (e.g., `www.yournovel.com`) with GitHub Pages:
+
+1. **Create a CNAME file:**
+   - Create a file named `CNAME` (no extension) in the root directory of your project (next to `generate.py`)
+   - Add your domain name to the file:
+   ```
+   www.yournovel.com
+   ```
+
+2. **The generator will automatically:**
+   - Copy the CNAME file to the build directory during generation
+   - Include it in the deployed site for GitHub Pages to recognize
+
+3. **Configure your domain:**
+   - Set up DNS records with your domain provider to point to GitHub Pages
+   - In your GitHub repository, go to Settings → Pages
+   - Under "Custom domain", enter your domain name
+   - Enable "Enforce HTTPS" (recommended)
+
+4. **Verify the setup:**
+   - After deployment, GitHub Pages will automatically use your custom domain
+   - Your site will be accessible at both the GitHub Pages URL and your custom domain
+
+**Note:** The CNAME file must be in the root directory of your source repository and will be automatically included in every build.
+
 #### Troubleshooting Deployment
 
 - **403 Forbidden errors**: Check that your DEPLOY_TOKEN has the correct permissions
