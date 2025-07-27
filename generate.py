@@ -1966,13 +1966,15 @@ def is_chapter_draft(chapter_metadata):
 
 def parse_publish_date(date_string):
     """
-    Parse a publish date string into a datetime object.
+    Parse a publish date string into a timezone-naive datetime object in UTC.
     Supports multiple formats:
     - "2025-01-15" (date only)
     - "2025-01-15 14:30:00" (date and time)
     - "2025-01-15T14:30:00" (ISO format)
     - "2025-01-15T14:30:00Z" (UTC)
     - "2025-01-15T14:30:00-05:00" (with timezone)
+    
+    All returned datetimes are timezone-naive for consistent cross-platform sorting.
     """
     if not date_string:
         return None
@@ -1980,7 +1982,7 @@ def parse_publish_date(date_string):
     # Convert to string if not already
     date_string = str(date_string).strip()
     
-    # List of date formats to try
+    # List of date formats to try (for timezone-naive dates)
     formats = [
         "%Y-%m-%d",                    # 2025-01-15
         "%Y-%m-%d %H:%M:%S",          # 2025-01-15 14:30:00
@@ -1991,7 +1993,9 @@ def parse_publish_date(date_string):
     # Try parsing with each format
     for fmt in formats:
         try:
-            return datetime.datetime.strptime(date_string, fmt)
+            parsed_date = datetime.datetime.strptime(date_string, fmt)
+            # Always return timezone-naive datetime
+            return parsed_date.replace(tzinfo=None) if parsed_date.tzinfo else parsed_date
         except ValueError:
             continue
     
@@ -2001,7 +2005,10 @@ def parse_publish_date(date_string):
         if ('+' in date_string and '+' in date_string[-6:]) or \
            ('-' in date_string and '-' in date_string[-6:]) or \
            date_string.endswith('Z'):
-            return datetime.datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+            timezone_aware_date = datetime.datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+            # Convert to UTC and make timezone-naive for consistent sorting
+            utc_date = timezone_aware_date.utctimetuple()
+            return datetime.datetime(*utc_date[:6])
     except (ValueError, ImportError):
         pass
     

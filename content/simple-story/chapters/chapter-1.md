@@ -1,7 +1,7 @@
 ---
 title: "Chapter 1"
 author: "haiku"
-published: "2025-07-25 12:12:12"
+published: "2025-07-27"
 
 # Social media embed settings (optional)
 social_embeds:
