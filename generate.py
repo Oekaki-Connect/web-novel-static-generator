@@ -2724,44 +2724,33 @@ def load_all_novels_data():
 
 
 def convert_markdown_to_html(md_content):
-    # Preserve extra line breaks for emotional effect
+    # Hybrid approach: preserve line breaks using a different strategy
     import re
     
-    # First, trim any trailing newlines from the content
-    md_content = md_content.rstrip('\n')
-    
-    # Step 1: Replace sequences of newlines with actual <br> tags
-    # This preserves the author's intended spacing
-    def preserve_breaks(match):
+    # Step 1: Handle multiple consecutive newlines by inserting actual <br> tags
+    # This approach places <br> tags directly in the markdown before processing
+    def preserve_multiple_breaks(match):
         newline_count = len(match.group(0))
-        if newline_count == 2:
-            # Standard paragraph break - let markdown handle it
-            return '\n\n'
-        elif newline_count > 2:
-            # For 3+ newlines, create actual line breaks
-            # Use a placeholder that won't be affected by markdown processing
-            br_count = newline_count - 1
-            return '\n\n' + '<!--LINEBREAK-->' * br_count
+        if newline_count >= 3:
+            # For 3+ newlines, create paragraph break + extra <br> tags
+            # Keep 2 newlines for paragraph, convert the rest to <br> tags
+            extra_breaks = newline_count - 2
+            return '\n\n' + '<br>' * extra_breaks + '\n'
         return match.group(0)
     
-    # Preserve extra line breaks before markdown processing
-    preserved_content = re.sub(r'\n{2,}', preserve_breaks, md_content)
+    # Process multiple consecutive newlines
+    preserved_content = re.sub(r'\n{3,}', preserve_multiple_breaks, md_content)
     
-    # Convert Markdown to HTML with essential extensions for web novels
+    # Step 2: Use nl2br extension to handle single newlines and standard processing
     html_content = markdown.markdown(preserved_content, extensions=[
         'tables',      # Table support for comparisons/data
         'footnotes',   # Author notes, translation notes
         'smarty',      # Professional typography (curly quotes, em-dashes)
         'attr_list',   # Custom CSS classes {: .class-name}
         'md_in_html',  # Mix markdown inside HTML blocks
-        'abbr'         # Abbreviations with hover tooltips
+        'abbr',        # Abbreviations with hover tooltips
+        'nl2br'        # Convert single newlines to <br> tags
     ])
-    
-    # Step 2: Replace our placeholders with actual <br> tags
-    html_content = html_content.replace('<!--LINEBREAK-->', '<br>')
-    
-    # Step 3: Clean up any trailing <br> tags at the very end
-    html_content = re.sub(r'(<br\s*/?>)+\s*$', '', html_content.strip())
     
     return html_content
 
