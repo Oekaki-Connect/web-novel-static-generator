@@ -3198,13 +3198,25 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
     
     # Filter novels for front page display
     front_page_novels_data = []
-    sort_by_recent = site_config.get('front_page', {}).get('sort_by_recent_update', False)
+    
+    # Get story sorting method with backward compatibility
+    front_page_config = site_config.get('front_page', {})
+    story_sort_method = front_page_config.get('story_sort_method')
+    
+    # Backward compatibility: convert old boolean setting to new string format
+    if story_sort_method is None:
+        sort_by_recent_update = front_page_config.get('sort_by_recent_update', True)
+        story_sort_method = "recent_update" if sort_by_recent_update else "original"
+    
+    # Default to recent_update if invalid value
+    if story_sort_method not in ["recent_update", "alphabetical", "original"]:
+        story_sort_method = "recent_update"
     
     for novel_data in all_novels_data:
         show_on_front_page = novel_data.get('front_page', {}).get('show_on_front_page', True)
         if show_on_front_page:
             # Only calculate most recent chapter date if we need it for sorting
-            if sort_by_recent:
+            if story_sort_method == "recent_update":
                 # Find most recent chapter date for this novel (excluding future dates)
                 most_recent_date = None
                 novel_slug = novel_data['slug']
@@ -3251,12 +3263,16 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             
             front_page_novels_data.append(novel_data)
     
-    # Sort novels by most recent chapter date if configured
-    if sort_by_recent:
+    # Sort novels based on configured method
+    if story_sort_method == "recent_update":
         # Sort by most recent chapter date (most recent first)
         # Novels without published chapters go to the end
         from datetime import datetime as dt_class
         front_page_novels_data.sort(key=lambda novel: novel['_most_recent_chapter_date'] or dt_class.min, reverse=True)
+    elif story_sort_method == "alphabetical":
+        # Sort alphabetically by title
+        front_page_novels_data.sort(key=lambda novel: novel.get('title', '').lower())
+    # For "original", keep the order as-is (no sorting)
     
     # Apply manual featured order if configured
     featured_order = site_config.get('front_page', {}).get('featured_order', [])
