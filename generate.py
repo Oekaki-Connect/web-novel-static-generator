@@ -3233,42 +3233,57 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                 most_recent_date = None
                 novel_slug = novel_data['slug']
                 
-                # Check all languages for this novel
+                # Check all languages for this novel (handle both flat and nested structures)
                 content_path = os.path.join(CONTENT_DIR, novel_slug)
                 if os.path.exists(content_path):
+                    # First check for direct chapters directory (flat structure)
+                    direct_chapters_dir = os.path.join(content_path, 'chapters')
+                    chapters_dirs_to_check = []
+                    
+                    if os.path.exists(direct_chapters_dir):
+                        chapters_dirs_to_check.append(direct_chapters_dir)
+                    
+                    # Also check for language subdirectories (nested structure)
                     for item in os.listdir(content_path):
                         lang_path = os.path.join(content_path, item)
-                        if os.path.isdir(lang_path) and item != 'images':  # Skip images directory
-                            chapters_dir = os.path.join(lang_path, 'chapters')
-                            if os.path.exists(chapters_dir):
-                                for chapter_file in os.listdir(chapters_dir):
-                                    if chapter_file.endswith('.md'):
-                                        chapter_path = os.path.join(chapters_dir, chapter_file)
-                                        try:
-                                            with open(chapter_path, 'r', encoding='utf-8') as f:
-                                                content = f.read()
-                                                if content.startswith('---'):
-                                                    # Extract YAML front matter
-                                                    parts = content.split('---', 2)
-                                                    if len(parts) >= 3:
-                                                        chapter_metadata = yaml.safe_load(parts[1])
-                                                        if chapter_metadata:
-                                                            # Check if chapter should be published (not in future)
-                                                            if not is_chapter_scheduled(chapter_metadata, include_scheduled=False):
-                                                                published_date_str = chapter_metadata.get('published')
-                                                                if published_date_str:
-                                                                    try:
-                                                                        # Use parse_publish_date for better date format support
-                                                                        chapter_date = parse_publish_date(published_date_str)
-                                                                        if not chapter_date:
-                                                                            continue
-                                                                        
-                                                                        if most_recent_date is None or chapter_date > most_recent_date:
-                                                                            most_recent_date = chapter_date
-                                                                    except (ValueError, TypeError):
-                                                                        pass  # Skip invalid dates
-                                        except (IOError, yaml.YAMLError):
-                                            pass  # Skip files that can't be read or parsed
+                        if os.path.isdir(lang_path) and item != 'images' and item != 'chapters':  # Skip images directory and direct chapters
+                            nested_chapters_dir = os.path.join(lang_path, 'chapters')
+                            if os.path.exists(nested_chapters_dir):
+                                chapters_dirs_to_check.append(nested_chapters_dir)
+                    
+                    # Process all found chapters directories
+                    for chapters_dir in chapters_dirs_to_check:
+                        for chapter_file in os.listdir(chapters_dir):
+                            if chapter_file.endswith('.md'):
+                                chapter_path = os.path.join(chapters_dir, chapter_file)
+                                try:
+                                    with open(chapter_path, 'r', encoding='utf-8') as f:
+                                        content = f.read()
+                                        if content.startswith('---'):
+                                            # Extract YAML front matter
+                                            parts = content.split('---', 2)
+                                            if len(parts) >= 3:
+                                                try:
+                                                    chapter_metadata = yaml.safe_load(parts[1])
+                                                    if chapter_metadata and isinstance(chapter_metadata, dict):
+                                                        published_date_str = chapter_metadata.get('published')
+                                                        if published_date_str:
+                                                            if should_skip_chapter(chapter_metadata, include_drafts=False, include_scheduled=False):
+                                                                continue  # Skip future/draft chapters
+                                                            
+                                                            try:
+                                                                chapter_date = parse_publish_date(published_date_str)
+                                                                if not chapter_date:
+                                                                    continue
+                                                                
+                                                                if most_recent_date is None or chapter_date > most_recent_date:
+                                                                    most_recent_date = chapter_date
+                                                            except (ValueError, TypeError):
+                                                                pass  # Skip invalid dates
+                                                except (yaml.YAMLError):
+                                                    pass  # Skip invalid YAML
+                                except (IOError, yaml.YAMLError):
+                                    pass  # Skip files that can't be read or parsed
                 
                 # Add the most recent date to novel data
                 novel_data['_most_recent_chapter_date'] = most_recent_date
