@@ -619,7 +619,12 @@ def build_social_meta(site_config, novel_config, chapter_metadata, page_type, ti
     if chapter_metadata and 'social_embeds' in chapter_metadata and chapter_metadata['social_embeds'] and 'title' in chapter_metadata['social_embeds']:
         social_meta['title'] = chapter_metadata['social_embeds']['title']
     elif page_type == 'chapter':
-        social_meta['title'] = title
+        # Include story name in chapter social titles like website titles do
+        novel_title = novel_config.get('title', '') if novel_config else ''
+        if novel_title:
+            social_meta['title'] = f"{title} - {novel_title}"
+        else:
+            social_meta['title'] = title
     elif page_type == 'toc':
         social_meta['title'] = f"{novel_config.get('title', '')} - Table of Contents"
     else:
