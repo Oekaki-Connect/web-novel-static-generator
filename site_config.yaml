@@ -142,6 +142,10 @@ front_page:
     # Stories beyond this limit will be shown in simplified list form
     # Only applies when limit_enabled is true
     max_count: 2
+  
+  # Front page display configuration
+  title_override: ""  # Optional: Override the site name as the front page title (leave empty to use site_name)
+  subtitle: "Web Novel Static Site Generator Demo"        # Optional: Add a subtitle below the main title on the front page
 
 # Footer configuration
 footer:

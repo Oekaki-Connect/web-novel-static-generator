@@ -48,7 +48,10 @@
 </head>
 <body>
     <header>
-        <h1>{{ site_name }}</h1>
+        <h1>{{ front_page_title or site_name }}</h1>
+        {% if front_page_subtitle %}
+        <p class="front-page-subtitle">{{ front_page_subtitle }}</p>
+        {% endif %}
     </header>
     <main>
         {% if primary_novels %}

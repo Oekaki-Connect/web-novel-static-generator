@@ -94,6 +94,15 @@ header h1 a:hover {
     color: var(--color-primary);
 }
 
+.front-page-subtitle {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 400;
+    margin: 0.5rem 0 0 0;
+    color: var(--color-secondary);
+    text-align: center;
+}
+
 header h2 {
     font-family: var(--font-heading);
     font-size: 18px;
