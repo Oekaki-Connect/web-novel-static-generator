@@ -1771,9 +1771,6 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
     # Calculate story length statistics
     story_length_stats = calculate_story_length_stats(novel_slug, lang)
     
-    # Process story metadata
-    story_metadata = process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang)
-    
     # Determine which unit to display based on configuration
     length_config = novel_config.get('length_display', {})
     language_units = length_config.get('language_units', {})
@@ -1788,6 +1785,9 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
     else:
         story_length_count = story_length_stats['words']
         story_length_unit = 'words'
+    
+    # Process story metadata with the correct display unit
+    story_metadata = process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang, story_length_unit, story_length_count)
     
     # Re-generate the TOC page with download links
     with open(toc_file, "w", encoding='utf-8') as f:
@@ -2210,7 +2210,7 @@ def calculate_story_length_stats(novel_slug, lang):
         'words': total_words
     }
 
-def process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang):
+def process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang, display_unit, story_length_count):
     """Process and format story metadata for display"""
     metadata = novel_config.get('metadata', {})
     story_metadata_config = site_config.get('story_metadata', {})
@@ -2266,10 +2266,11 @@ def process_story_metadata(novel_config, story_length_stats, site_config, novel_
                 total_chapters -= 1
                 continue
     
-    # Calculate average words per chapter
-    avg_words_per_chapter = 0
-    if total_chapters > 0 and story_length_stats['words'] > 0:
-        avg_words_per_chapter = round(story_length_stats['words'] / total_chapters)
+    # Calculate average per chapter using the same unit as story length display
+    avg_per_chapter = 0
+    avg_unit = display_unit
+    if total_chapters > 0 and story_length_count > 0:
+        avg_per_chapter = round(story_length_count / total_chapters)
     
     # Format last updated date
     formatted_last_updated = None
@@ -2289,7 +2290,8 @@ def process_story_metadata(novel_config, story_length_stats, site_config, novel_
         'author_contributions': author_contributions,
         'last_updated': formatted_last_updated,
         'total_chapters': total_chapters,
-        'avg_words_per_chapter': avg_words_per_chapter,
+        'avg_per_chapter': avg_per_chapter,
+        'avg_unit': avg_unit,
         'show_update_schedule': show_update_schedule,
         'show_story_stats': show_story_stats,
         'show_author_contributions': show_author_contributions,
@@ -3450,9 +3452,6 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             # Calculate story length statistics
             story_length_stats = calculate_story_length_stats(novel_slug, lang)
             
-            # Process story metadata
-            story_metadata = process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang)
-            
             # Determine which unit to display based on configuration
             length_config = novel_config.get('length_display', {})
             language_units = length_config.get('language_units', {})
@@ -3467,6 +3466,9 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             else:
                 story_length_count = story_length_stats['words']
                 story_length_unit = 'words'
+            
+            # Process story metadata with the correct display unit
+            story_metadata = process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang, story_length_unit, story_length_count)
             
             # Generate download links for this story
             download_links = generate_download_links(novel_slug, novel_config, site_config, lang)

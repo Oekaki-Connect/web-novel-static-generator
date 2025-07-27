@@ -1480,3 +1480,4 @@ Feel free to extend this generator with additional features:
 - Something you think it needs! If you make pull requests please know what you're doing
 - If you're a Firefox user and a dev, please fix any CSS that's Firefox specific
 - Full screen single image mode on mobile 2:3 jumps around in a weird way when changing images
+- Need to make the entire site text easier to localize, if the site lang is on a certain lang it should default to chapters of that lang if available

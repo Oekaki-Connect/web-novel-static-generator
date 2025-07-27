@@ -158,15 +158,15 @@
         {% if story_metadata %}
         <section class="story-metadata">
             <div class="metadata-grid">
-                {% if story_metadata.show_story_stats and (story_metadata.total_chapters or story_metadata.avg_words_per_chapter) %}
+                {% if story_metadata.show_story_stats and (story_metadata.total_chapters or story_metadata.avg_per_chapter) %}
                 <div class="metadata-item">
                     <h3>Story Statistics</h3>
                     <div class="metadata-content">
                         {% if story_metadata.total_chapters %}
                         <span class="stat-item">{{ story_metadata.total_chapters }} chapters</span>
                         {% endif %}
-                        {% if story_metadata.avg_words_per_chapter %}
-                        <span class="stat-item">{{ "{:,}".format(story_metadata.avg_words_per_chapter) }} avg words/chapter</span>
+                        {% if story_metadata.avg_per_chapter %}
+                        <span class="stat-item">{{ "{:,}".format(story_metadata.avg_per_chapter) }} avg {{ story_metadata.avg_unit }}/chapter</span>
                         {% endif %}
                     </div>
                 </div>
