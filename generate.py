@@ -2724,8 +2724,28 @@ def load_all_novels_data():
 
 
 def convert_markdown_to_html(md_content):
+    # Preserve extra line breaks for emotional effect
+    import re
+    
+    # Step 1: Replace sequences of newlines with actual <br> tags
+    # This preserves the author's intended spacing
+    def preserve_breaks(match):
+        newline_count = len(match.group(0))
+        if newline_count == 2:
+            # Standard paragraph break - let markdown handle it
+            return '\n\n'
+        elif newline_count > 2:
+            # For 3+ newlines, create actual line breaks
+            # Use a placeholder that won't be affected by markdown processing
+            br_count = newline_count - 1
+            return '\n\n' + '<!--LINEBREAK-->' * br_count
+        return match.group(0)
+    
+    # Preserve extra line breaks before markdown processing
+    preserved_content = re.sub(r'\n{2,}', preserve_breaks, md_content)
+    
     # Convert Markdown to HTML with essential extensions for web novels
-    return markdown.markdown(md_content, extensions=[
+    html_content = markdown.markdown(preserved_content, extensions=[
         'tables',      # Table support for comparisons/data
         'footnotes',   # Author notes, translation notes
         'smarty',      # Professional typography (curly quotes, em-dashes)
@@ -2733,6 +2753,11 @@ def convert_markdown_to_html(md_content):
         'md_in_html',  # Mix markdown inside HTML blocks
         'abbr'         # Abbreviations with hover tooltips
     ])
+    
+    # Step 2: Replace our placeholders with actual <br> tags
+    html_content = html_content.replace('<!--LINEBREAK-->', '<br>')
+    
+    return html_content
 
 def calculate_file_hash(filepath, length=8):
     """Calculate a partial hash of a file for cache busting"""

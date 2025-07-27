@@ -459,6 +459,7 @@ main {
     margin-bottom: 0;
 }
 
+
 /* Reading settings CSS custom properties */
 .chapter-content {
     font-size: var(--reading-font-size, 1rem);
@@ -4021,6 +4022,14 @@ dd {
     /* Ensure smart quotes and typography render properly */
     font-feature-settings: "liga" 1, "kern" 1;
     text-rendering: optimizeLegibility;
+}
+
+/* Preserve extra line breaks for emotional effect */
+.chapter-content br {
+    /* Each br creates 1 line of vertical space */
+    display: block;
+    margin: 0;
+    line-height: inherit;
 }
 
 /* More Stories Section Styling */
