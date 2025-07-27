@@ -120,6 +120,23 @@ manga:
     enabled: true  # Disabled by default for instant page changes
     duration: 0.15  # Transition duration in seconds (0.1-1.0)
 
+# Story metadata display configuration
+story_metadata:
+  # Show update schedule information on TOC
+  show_update_schedule: true
+  
+  # Show story statistics on TOC
+  show_story_stats: true
+  
+  # Show author contributions on TOC
+  show_author_contributions: true
+  
+  # Show last updated date on TOC
+  show_last_updated: true
+  
+  # Show license information on TOC
+  show_license_info: true
+
 # Front page configuration
 front_page:
   # Sort novels by most recent chapter update

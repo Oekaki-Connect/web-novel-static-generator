@@ -844,6 +844,201 @@ footer p {
 
 /* Removed pipe separators from language switcher for cleaner look */
 
+/* Story metadata styling - compact layout */
+.story-metadata {
+    margin: 1rem auto; /* Center the section */
+    padding: 0.75rem 1rem;
+    background-color: var(--color-accent);
+    border-radius: var(--border-radius);
+    border: 1px solid transparent;
+    max-width: 800px; /* Limit the maximum width */
+    width: calc(100% - 2rem); /* Account for page margins */
+    box-sizing: border-box; /* Include padding in width calculation */
+}
+
+.metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.4rem;
+}
+
+.metadata-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.metadata-item h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metadata-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.metadata-content span {
+    font-size: 13px;
+    color: var(--color-contrast);
+    line-height: 1.3;
+}
+
+.stat-item, .author-item {
+    display: inline-block;
+}
+
+.stat-item:not(:last-child)::after {
+    content: " • ";
+    color: var(--color-secondary);
+    margin: 0 0.25rem;
+}
+
+.author-item:not(:last-child)::after {
+    content: " • ";
+    color: var(--color-secondary);
+    margin: 0 0.25rem;
+}
+
+.last-updated-footer {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-secondary);
+    opacity: 0.7;
+}
+
+.last-updated-text {
+    font-size: 11px;
+    color: var(--color-secondary);
+    font-style: italic;
+    margin: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 700px) {
+    .metadata-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.6rem;
+    }
+    
+    .story-metadata {
+        margin: 1rem auto;
+        width: calc(100% - 2rem);
+        max-width: 600px;
+    }
+}
+
+@media (max-width: 500px) {
+    .metadata-grid {
+        /* Use 2 equal columns that will stack nicely */
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+    }
+    
+    .story-metadata {
+        margin: 0.75rem auto;
+        padding: 0.5rem 0.75rem;
+        width: calc(100% - 1.5rem);
+        max-width: none;
+    }
+    
+    .metadata-content {
+        gap: 0.1rem;
+    }
+    
+    .metadata-item h3 {
+        font-size: 11px;
+    }
+    
+    .metadata-content span {
+        font-size: 12px;
+        word-break: break-word;
+    }
+}
+
+/* When we get to narrow widths where 2 columns don't work well */
+@media (max-width: 450px) {
+    .metadata-grid {
+        /* Force single column to avoid orphaned items */
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+    }
+    
+    /* Adjust bullet separators for single column */
+    .stat-item:not(:last-child)::after,
+    .author-item:not(:last-child)::after {
+        content: "\A";
+        white-space: pre;
+        margin: 0;
+    }
+}
+
+@media (max-width: 400px) {
+    .metadata-grid {
+        /* Force single column on very small screens to avoid awkward layouts */
+        grid-template-columns: 1fr !important;
+        gap: 0.4rem;
+    }
+    
+    .story-metadata {
+        margin: 0.5rem auto;
+        padding: 0.4rem 0.6rem;
+        width: calc(100% - 1rem);
+    }
+    
+    .metadata-item {
+        gap: 0.15rem;
+    }
+    
+    .metadata-item h3 {
+        font-size: 10px;
+        letter-spacing: 0.2px;
+    }
+    
+    .metadata-content span {
+        font-size: 11px;
+        line-height: 1.2;
+        word-break: break-word;
+    }
+    
+    .last-updated-footer {
+        margin-top: 0.3rem;
+        padding-top: 0.3rem;
+    }
+    
+    .last-updated-text {
+        font-size: 10px;
+    }
+    
+    /* Single column layout, so remove bullet separators */
+    .stat-item:not(:last-child)::after,
+    .author-item:not(:last-child)::after {
+        content: "\A";
+        white-space: pre;
+        margin: 0;
+    }
+}
+
+/* Extra small screens - single column guaranteed */
+@media (max-width: 320px) {
+    .metadata-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.3rem;
+    }
+    
+    .story-metadata {
+        margin: 0.4rem auto;
+        padding: 0.4rem 0.5rem;
+        width: calc(100% - 0.8rem);
+    }
+}
+
 /* Translation notice styling */
 .translation-notice {
     background-color: #f39c12;

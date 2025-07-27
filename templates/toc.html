@@ -154,6 +154,66 @@
             {% endfor %}
         </div>
         {% endif %}
+        
+        {% if story_metadata %}
+        <section class="story-metadata">
+            <div class="metadata-grid">
+                {% if story_metadata.show_story_stats and (story_metadata.total_chapters or story_metadata.avg_words_per_chapter) %}
+                <div class="metadata-item">
+                    <h3>Story Statistics</h3>
+                    <div class="metadata-content">
+                        {% if story_metadata.total_chapters %}
+                        <span class="stat-item">{{ story_metadata.total_chapters }} chapters</span>
+                        {% endif %}
+                        {% if story_metadata.avg_words_per_chapter %}
+                        <span class="stat-item">{{ "{:,}".format(story_metadata.avg_words_per_chapter) }} avg words/chapter</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if story_metadata.show_update_schedule and story_metadata.update_schedule %}
+                <div class="metadata-item">
+                    <h3>Update Schedule</h3>
+                    <div class="metadata-content">
+                        <span>{{ story_metadata.update_schedule }}</span>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if story_metadata.show_author_contributions and story_metadata.author_contributions %}
+                <div class="metadata-item">
+                    <h3>{% if story_metadata.author_contributions|length == 1 %}Author{% else %}Authors{% endif %}</h3>
+                    <div class="metadata-content">
+                        {% for author, chapter_count in story_metadata.author_contributions.items() %}
+                        {% if story_metadata.author_contributions|length == 1 %}
+                        <span class="author-item">{{ author }}</span>
+                        {% else %}
+                        <span class="author-item">{{ author }} ({{ chapter_count }})</span>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if story_metadata.show_license_info and story_metadata.license %}
+                <div class="metadata-item">
+                    <h3>License</h3>
+                    <div class="metadata-content">
+                        <span>{{ story_metadata.license }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if story_metadata.show_last_updated and story_metadata.last_updated %}
+            <div class="last-updated-footer">
+                <span class="last-updated-text">{{ story_metadata.last_updated }}</span>
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+        
         <h2>Table of Contents</h2>
         {% if novel_config.get('navigation', {}).get('show_tags_link', True) %}
         <nav class="toc-nav" aria-label="Story navigation">

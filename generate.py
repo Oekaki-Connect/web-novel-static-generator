@@ -1771,6 +1771,9 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
     # Calculate story length statistics
     story_length_stats = calculate_story_length_stats(novel_slug, lang)
     
+    # Process story metadata
+    story_metadata = process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang)
+    
     # Determine which unit to display based on configuration
     length_config = novel_config.get('length_display', {})
     language_units = length_config.get('language_units', {})
@@ -1812,7 +1815,8 @@ def update_toc_with_downloads(novel, novel_slug, novel_config, site_config, lang
                                comments_repo=comments_config['repo'],
                                comments_issue_term=comments_config['issue_term'],
                                comments_label=comments_config['label'],
-                               comments_theme=comments_config['theme']))
+                               comments_theme=comments_config['theme'],
+                               story_metadata=story_metadata))
 
 def generate_download_links(novel_slug, novel_config, site_config, language='en'):
     """Generate download links data for TOC template"""
@@ -2204,6 +2208,93 @@ def calculate_story_length_stats(novel_slug, lang):
     return {
         'characters': total_chars,
         'words': total_words
+    }
+
+def process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang):
+    """Process and format story metadata for display"""
+    metadata = novel_config.get('metadata', {})
+    story_metadata_config = site_config.get('story_metadata', {})
+    display_config = metadata.get('display', {})
+    
+    # Get total chapter count and calculate author contributions and last updated
+    total_chapters = 0
+    author_contributions = {}
+    latest_published_date = None
+    
+    # Process all chapters to extract metadata
+    for arc in novel_config.get("arcs", []):
+        for chapter in arc.get("chapters", []):
+            chapter_id = chapter["id"]
+            total_chapters += 1
+            
+            try:
+                # Load chapter metadata
+                chapter_content_md, chapter_metadata = load_chapter_content(novel_slug, chapter_id, lang)
+                
+                # Skip chapters that should be skipped
+                if should_skip_chapter(chapter_metadata, INCLUDE_DRAFTS, INCLUDE_SCHEDULED):
+                    total_chapters -= 1  # Don't count skipped chapters
+                    continue
+                
+                # Extract author information
+                chapter_author = chapter_metadata.get('author')
+                if chapter_author:
+                    if chapter_author in author_contributions:
+                        author_contributions[chapter_author] += 1
+                    else:
+                        author_contributions[chapter_author] = 1
+                
+                # Extract published date
+                published_date = chapter_metadata.get('published')
+                if published_date:
+                    try:
+                        from datetime import datetime
+                        if isinstance(published_date, str):
+                            date_obj = datetime.strptime(published_date, '%Y-%m-%d')
+                        else:
+                            # Handle case where it might already be a date object
+                            date_obj = published_date
+                        
+                        if latest_published_date is None or date_obj > latest_published_date:
+                            latest_published_date = date_obj
+                    except:
+                        # Skip invalid dates
+                        continue
+                        
+            except:
+                # Skip chapters that can't be loaded
+                total_chapters -= 1
+                continue
+    
+    # Calculate average words per chapter
+    avg_words_per_chapter = 0
+    if total_chapters > 0 and story_length_stats['words'] > 0:
+        avg_words_per_chapter = round(story_length_stats['words'] / total_chapters)
+    
+    # Format last updated date
+    formatted_last_updated = None
+    if latest_published_date:
+        formatted_last_updated = latest_published_date.strftime('Updated %b %d, %Y')
+    
+    # Determine which settings to use (story-level display config overrides global config)
+    show_update_schedule = display_config.get('show_update_schedule', story_metadata_config.get('show_update_schedule', True))
+    show_story_stats = display_config.get('show_story_stats', story_metadata_config.get('show_story_stats', True))
+    show_author_contributions = display_config.get('show_author_contributions', story_metadata_config.get('show_author_contributions', True))
+    show_last_updated = display_config.get('show_last_updated', story_metadata_config.get('show_last_updated', True))
+    show_license_info = display_config.get('show_license_info', story_metadata_config.get('show_license_info', True))
+    
+    return {
+        'update_schedule': metadata.get('update_schedule'),
+        'license': metadata.get('license'),
+        'author_contributions': author_contributions,
+        'last_updated': formatted_last_updated,
+        'total_chapters': total_chapters,
+        'avg_words_per_chapter': avg_words_per_chapter,
+        'show_update_schedule': show_update_schedule,
+        'show_story_stats': show_story_stats,
+        'show_author_contributions': show_author_contributions,
+        'show_last_updated': show_last_updated,
+        'show_license_info': show_license_info
     }
 
 def filter_hidden_chapters_from_novel(novel, novel_slug, lang):
@@ -3359,6 +3450,9 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
             # Calculate story length statistics
             story_length_stats = calculate_story_length_stats(novel_slug, lang)
             
+            # Process story metadata
+            story_metadata = process_story_metadata(novel_config, story_length_stats, site_config, novel_slug, lang)
+            
             # Determine which unit to display based on configuration
             length_config = novel_config.get('length_display', {})
             language_units = length_config.get('language_units', {})
@@ -3402,7 +3496,8 @@ def build_site(include_drafts=False, include_scheduled=False, no_epub=False, opt
                                        comments_repo=comments_config['repo'],
                                        comments_issue_term=comments_config['issue_term'],
                                        comments_label=comments_config['label'],
-                                       comments_theme=comments_config['theme']))
+                                       comments_theme=comments_config['theme'],
+                                       story_metadata=story_metadata))
 
             # Render chapter pages for this novel/language
             all_chapters = []

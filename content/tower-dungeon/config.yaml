@@ -23,6 +23,22 @@ image_processing:
 # Story genre/theme tags
 tags: ["manga", "adventure", "dungeon", "fantasy", "action"]
 
+# Story metadata display settings
+metadata:
+  # Update schedule information (optional)
+  update_schedule: "Weekly on Sundays"
+  
+  # License information (optional)
+  license: "Copyrighted"  # Options: "Copyrighted", "CC0", "Public Domain", "CC BY", "CC BY-SA", etc.
+  
+  # Display settings - control what metadata is shown on TOC
+  display:
+    show_update_schedule: true      # Show update schedule if provided
+    show_license_info: true         # Show license information if provided
+    show_author_contributions: true # Show calculated author contributions
+    show_last_updated: true         # Show calculated last chapter update date
+    show_story_stats: true          # Show calculated story statistics
+
 # Story arcs and chapters
 arcs:
   - title: "Volume 1: The Tower's Secret"
