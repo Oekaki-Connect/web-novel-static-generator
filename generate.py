@@ -2727,6 +2727,9 @@ def convert_markdown_to_html(md_content):
     # Preserve extra line breaks for emotional effect
     import re
     
+    # First, trim any trailing newlines from the content
+    md_content = md_content.rstrip('\n')
+    
     # Step 1: Replace sequences of newlines with actual <br> tags
     # This preserves the author's intended spacing
     def preserve_breaks(match):
@@ -2756,6 +2759,9 @@ def convert_markdown_to_html(md_content):
     
     # Step 2: Replace our placeholders with actual <br> tags
     html_content = html_content.replace('<!--LINEBREAK-->', '<br>')
+    
+    # Step 3: Clean up any trailing <br> tags at the very end
+    html_content = re.sub(r'(<br\s*/?>)+\s*$', '', html_content.strip())
     
     return html_content
 
