@@ -4,7 +4,7 @@ A Python-based static website generator specifically designed for web novels, wi
 
 You can see a demo build live on: https://oekaki-connect.github.io/web-novel/
 
-You can see our version of it live on: https://www.ocwn.net/ (not yet live but will be soon)
+You can see our version of it live on: https://www.ocwn.net/ 
 
 ## Why?
 
