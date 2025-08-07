@@ -105,7 +105,7 @@ def get_novel_template_env(novel_slug):
 def check_novel_has_custom_templates(novel_slug):
     """Check if a novel has any custom templates"""
     novel_templates_dir = os.path.join(CONTENT_DIR, novel_slug, "templates")
-    return os.path.exists(novel_templates_dir) and os.listdir(novel_templates_dir)
+    return os.path.exists(novel_templates_dir) and bool(os.listdir(novel_templates_dir))
 
 def list_novel_custom_templates(novel_slug):
     """List all custom templates for a novel"""
