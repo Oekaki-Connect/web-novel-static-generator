@@ -175,7 +175,7 @@ def build_footer_content(site_config, novel_config=None, page_type='site'):
 
 def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=None):
     """Generate RSS feed for site or specific story"""
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     site_url = site_config.get('site_url', '').rstrip('/')
     site_name = site_config.get('site_name', 'Web Novel Collection')
@@ -322,8 +322,8 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
         all_chapter_items.sort(key=lambda x: x['pub_date'], reverse=True)
         feed_items = all_chapter_items[:50]
     
-    # Build RSS XML
-    current_time = datetime.now()
+    # Build RSS XML using timezone-aware dates to satisfy RSS spec
+    current_time = datetime.now(timezone.utc)
     
     rss_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -337,7 +337,10 @@ def generate_rss_feed(site_config, novels_data, novel_config=None, novel_slug=No
 """
     
     for item in feed_items:
-        pub_date_str = item['pub_date'].strftime('%a, %d %b %Y %H:%M:%S %z') if item['pub_date'] else ''
+        pub_date_str = (
+            item['pub_date'].replace(tzinfo=timezone.utc).strftime('%a, %d %b %Y %H:%M:%S %z')
+            if item['pub_date'] else ''
+        )
         
         rss_content += f"""    <item>
         <title>{item['title']}</title>
