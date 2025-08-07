@@ -10,7 +10,7 @@ You can see our version of it live on: https://www.ocwn.net/
 
 * I didn't see an existing static site generator for web novels which already existed
 * Didn't want the baggage of trying to modifying an existing generic static site generator
-* This generator works out of box fully with github for free, it's easy to use, easy to modify
+* This generator works out of box fully with GitHub for free, it's easy to use, easy to modify
 
 ## Support
 
@@ -96,7 +96,7 @@ web-novel-generator/
 
 **Prerequisites:**
 - Python 3.8 or higher ([Download Python](https://www.python.org/downloads/))
-- Git (optional, for cloning the repository)(use Github Desktop if you like GUIs https://desktop.github.com/download/ )
+- Git (optional, for cloning the repository)(use GitHub Desktop if you like GUIs https://desktop.github.com/download/ )
 
 **Verify Python is installed:**
 ```bash
@@ -115,7 +115,7 @@ cd web-novel-static-generator
 
 # Or fork it if you plan on contributing changes
 
-# DO NOT fork if you want a private repo, you can't make forks private on Github
+# DO NOT fork if you want a private repo, you can't make forks private on GitHub
 # If you want a private repo, download the ZIP, then make a new private repo
 
 # Install Python dependencies
@@ -364,7 +364,7 @@ Here's how to set it up:
 
 This method keeps your source code (and unpublished chapters) private while publishing only the built site.
 
-Look up how to setup a domain with a github repo if you want to use a domain. We're doing this with ocwn.net!
+Look up how to setup a domain with a GitHub repo if you want to use a domain. We're doing this with ocwn.net!
 
 1. **Create two repositories:**
    - **Source repository**: Your private repository with the generator code (e.g., `my-novel-source`)
@@ -772,7 +772,7 @@ Chapters are displayed in the order they appear in the `chapters` array within e
 
 ### Password Protection
 
-If you use password protection, you should not have your main repo public. This static generator wants you to have two different github repos one for the source code and your project files, and another which you publish to. Although you're not required to publish to a github repo. It's a static site generator, you can upload the static files to any server.
+If you use password protection, you should not have your main repo public. This static generator wants you to have two different GitHub repos one for the source code and your project files, and another which you publish to. Although you're not required to publish to a GitHub repo. It's a static site generator, you can upload the static files to any server.
 
 Secure premium or beta content with client-side encryption:
 
@@ -811,7 +811,7 @@ This chapter won't appear in navigation but can be accessed directly.
 - Special event content
 - Author notes or behind-the-scenes content
 
-Note: If you are hosting on github on a public repo anyone can discover hidden pages easily.
+Note: If you are hosting on GitHub on a public repo anyone can discover hidden pages easily.
 
 ### Draft Chapters
 
