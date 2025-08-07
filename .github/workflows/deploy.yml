@@ -1,47 +1,46 @@
+---
 name: Build and Deploy to External Repository
-
-on:
+"on":
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Build site
-      run: |
-        echo "Building web novel site..."
-        python generate.py
-        echo "Build completed successfully!"
-        
-    - name: Check build output
-      run: |
-        echo "Checking build directory..."
-        ls -la build/
-        echo "Build directory contents verified"
-    
-    - name: Deploy to Oekaki-Connect/web-novel
-      uses: peaceiris/actions-gh-pages@v4
-      if: github.ref == 'refs/heads/main'
-      with:
-        personal_token: ${{ secrets.DEPLOY_TOKEN }}
-        external_repository: Oekaki-Connect/web-novel
-        publish_dir: ./build
-        publish_branch: main
-        user_name: 'github-actions[bot]'
-        user_email: 'github-actions[bot]@users.noreply.github.com'
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build site
+        run: |
+          echo "Building web novel site..."
+          python generate.py
+          echo "Build completed successfully!"
+
+      - name: Check build output
+        run: |
+          echo "Checking build directory..."
+          ls -la build/
+          echo "Build directory contents verified"
+
+      - name: Deploy to Oekaki-Connect/web-novel
+        uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          personal_token: ${{ secrets.DEPLOY_TOKEN }}
+          external_repository: Oekaki-Connect/web-novel
+          publish_dir: ./build
+          publish_branch: main
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
