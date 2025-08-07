@@ -63,7 +63,7 @@ You can see our version of it live on: https://www.ocwn.net/
 ## Project Structure
 
 ```
-web-novel-generator/
+web-novel-static-generator/
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml          # GitHub Actions workflow
